@@ -40,6 +40,8 @@ export function useAIInterpret() {
         setStatus('done');
       },
       (code, message) => {
+        // 出错即锁定终态：流结束后若再触发兜底 onDone，也不得覆盖错误状态（否则会误把流式累积的原始文字当结果展示）
+        doneRef.current = true;
         setErrorMsg(message || code);
         setStatus('error');
       },

@@ -78,4 +78,24 @@ describe('报告结构化展示', () => {
     expect(t).not.toContain('人生阶段');
     expect(t).not.toContain('参详建议');
   });
+  it('AI 输出不完整时：原生家庭/心智模式/自定义字段内容不丢失', () => {
+    const partial: AIReport = {
+      ...MOCK_MINGPAN,
+      lifeStages: undefined, career: undefined, love: undefined, wealth: undefined, advice: '',
+      family: { background: '家境普通，父母关爱有加。', parents: '父母和蔼可亲。', imprint: '温暖但过度保护。' },
+      mind: { action: '行动力偏弱。', pattern: '拖延循环。', growth: '增强行动力。' },
+      extraSections: [{ skill: '流年运势', content: '今年财运稳中有升。' }],
+    };
+    const { container } = render(<ReportView report={partial} artName="紫微斗数" onExport={() => {}} />);
+    const t = container.textContent || '';
+    expect(t).toContain('原生家庭');
+    expect(t).toContain('家境普通');
+    expect(t).toContain('心智与行动模式');
+    expect(t).toContain('行为循环');
+    expect(t).toContain('更多参详');
+    expect(t).toContain('流年运势');
+    expect(t).toContain('今年财运稳中有升');
+    // 仍不渲染缺失区块
+    expect(t).not.toContain('事业 · 爱情 · 财富');
+  });
 });

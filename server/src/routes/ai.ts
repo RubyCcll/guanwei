@@ -141,7 +141,9 @@ export interface AIReportNormalized {
   title: string;
   overview: string;
   rawReading: RawReading;
-  character?: { summary: string; traits: { name: string; desc: string }[] };
+  character?: { summary: string; traits: { name: string; desc: string }[]; coreConflict?: string; emotion?: string };
+  family?: { background?: string; parents?: string; imprint?: string };
+  mind?: { action?: string; pattern?: string; growth?: string };
   lifeStages?: { stage: string; age: string; summary: string }[];
   career?: { summary: string; direction: string; advice: string };
   love?: { summary: string; advice: string };
@@ -194,7 +196,7 @@ function stripJson(text: string): string {
   return t;
 }
 
-function parseReport(text: string, kind: 'mingpan' | 'zhanwen'): AIReportNormalized {
+export function parseReport(text: string, kind: 'mingpan' | 'zhanwen'): AIReportNormalized {
   const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
   let obj: any = {};
   try { obj = JSON.parse(cleaned); } catch {
@@ -227,7 +229,13 @@ function parseReport(text: string, kind: 'mingpan' | 'zhanwen'): AIReportNormali
     out.character = {
       summary: str(ch.summary),
       traits: Array.isArray(ch.traits) ? ch.traits.filter((t: any) => t && t.name).map((t: any) => ({ name: String(t.name), desc: str(t.desc) })) : [],
+      coreConflict: str(ch.coreConflict),
+      emotion: str(ch.emotion),
     };
+    const fam = (obj.family || {}) as any;
+    out.family = { background: str(fam.background), parents: str(fam.parents), imprint: str(fam.imprint) };
+    const mind = (obj.mind || {}) as any;
+    out.mind = { action: str(mind.action), pattern: str(mind.pattern), growth: str(mind.growth) };
     out.lifeStages = Array.isArray(obj.lifeStages) ? obj.lifeStages.filter((s: any) => s && s.stage).map((s: any) => ({ stage: String(s.stage), age: str(s.age), summary: str(s.summary) })) : [];
     const career = (obj.career || {}) as any;
     out.career = { summary: str(career.summary), direction: str(career.direction), advice: str(career.advice) };
@@ -243,7 +251,7 @@ function parseReport(text: string, kind: 'mingpan' | 'zhanwen'): AIReportNormali
     out.timing = str(obj.timing);
   }
   // 兜底：AI 返回的自定义字段（如 minggong/dayun/liunian）转为通用章节，保证任何输出都有结构化展示
-  const KNOWN = new Set(['title', 'overview', 'rawReading', 'character', 'lifeStages', 'career', 'love', 'wealth', 'health', 'advice', 'conclusion', 'disclaimer', 'suitability', 'situation', 'trend', 'timing', 'chapters', 'sections', 'kind']);
+  const KNOWN = new Set(['title', 'overview', 'rawReading', 'character', 'family', 'mind', 'lifeStages', 'career', 'love', 'wealth', 'health', 'advice', 'conclusion', 'disclaimer', 'suitability', 'situation', 'trend', 'timing', 'chapters', 'sections', 'kind']);
   const extra: { skill: string; content: string }[] = [];
   Object.keys(obj).forEach((k: string) => {
     if (KNOWN.has(k)) return;
@@ -269,6 +277,9 @@ function parseReport(text: string, kind: 'mingpan' | 'zhanwen'): AIReportNormali
     if (out.lifeStages && out.lifeStages.length > 0 && out.lifeStages.some(s => has(s.summary))) score += 20;
     if (has(out.career?.summary) || has(out.love?.summary) || has(out.wealth?.summary)) score += 15;
     if (has(out.health?.summary)) score += 5;
+    // 模板要求的扩展维度（原生家庭 / 心智模式）：AI 已认真展开的内容不应被丢弃或判劣
+    if (out.family && (has(out.family.background) || has(out.family.parents) || has(out.family.imprint))) score += 5;
+    if (out.mind && (has(out.mind.action) || has(out.mind.pattern) || has(out.mind.growth))) score += 5;
   } else {
     if (has(out.situation)) score += 20;
     if (has(out.trend)) score += 20;
@@ -279,7 +290,7 @@ function parseReport(text: string, kind: 'mingpan' | 'zhanwen'): AIReportNormali
   out.quality = score >= 60 ? 'ok' : 'poor';
   return out;
 }
-function parseSections(text: string): { title: string; content: string }[] {
+export function parseSections(text: string): { title: string; content: string }[] {
   const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/\s*```$/, '');
   try {
     const obj = JSON.parse(cleaned);
@@ -296,6 +307,16 @@ function parseSections(text: string): { title: string; content: string }[] {
       const ch = obj.character;
       const traits = Array.isArray(ch.traits) ? ch.traits.map((t: any) => t?.name + '：' + (t?.desc || '')).join('\n') : '';
       push('性格', ch.summary + (traits ? '\n' + traits : ''));
+    }
+    if (obj.family) {
+      const fam = obj.family;
+      const parts = [fam.background && '家境与氛围：' + fam.background, fam.parents && '父母关系：' + fam.parents, fam.imprint && '家庭印记：' + fam.imprint].filter(Boolean);
+      push('原生家庭', parts.join('\n\n'));
+    }
+    if (obj.mind) {
+      const mind = obj.mind;
+      const parts = [mind.action && '行动力与坚持：' + mind.action, mind.pattern && '行为循环：' + mind.pattern, mind.growth && '成长方向：' + mind.growth].filter(Boolean);
+      push('心智与行动模式', parts.join('\n\n'));
     }
     if (Array.isArray(obj.lifeStages)) push('人生阶段', obj.lifeStages.map((s: any) => '【' + s.stage + (s.age ? '（' + s.age + '）' : '') + '】' + s.summary).join('\n'));
     if (obj.career) push('事业', (obj.career.summary || '') + (obj.career.direction ? '\n方向：' + obj.career.direction : '') + (obj.career.advice ? '\n建议：' + obj.career.advice : ''));
