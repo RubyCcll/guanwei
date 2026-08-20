@@ -78,4 +78,44 @@ describe('AI 报告全流程（点击→流式→ReportView）', () => {
       (globalThis as any).fetch = origFetch;
     }
   });
+
+  it('换档案重新起占后，内容区不再残留上一档案的 AI 报告', async () => {
+    const origFetch = globalThis.fetch;
+    const divineMock = installDivineFetchMock(origFetch);
+    (globalThis as any).fetch = (url: any, opts: any) => {
+      if (String(url).includes('/api/ai/interpret/stream')) {
+        const payload = JSON.stringify(MOCK_REPORT);
+        const chunks = [
+          'data: {"type":"start"}\n\n',
+          'data: ' + JSON.stringify({ type: 'done', report: MOCK_REPORT, full: payload, truncated: false, quality: 'ok' }) + '\n\n',
+        ];
+        return Promise.resolve(mockSSE(chunks));
+      }
+      return divineMock(url, opts);
+    };
+    try {
+      const { container } = render(
+        <MemoryRouter initialEntries={['/art/bazi']}>
+          <Routes><Route path="/art/:artId" element={<ModulePage />} /></Routes>
+        </MemoryRouter>
+      );
+      // 第一次起占 → 召 AI → 报告渲染
+      const btn = container.querySelector('.btn-divine')!;
+      await act(async () => { fireEvent.click(btn); });
+      await waitFor(() => expect(container.textContent).toContain('四柱命盘'), { timeout: 3000 });
+      const aiBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.includes('召 AI 成报告'))!;
+      await act(async () => { fireEvent.click(aiBtn); });
+      await waitFor(() => expect(container.textContent).toContain('壬水日主命局解读报告'), { timeout: 5000 });
+
+      // 第二次起占（换档案重新排盘）→ 旧 AI 报告必须清空，回到「可召 AI」待命态
+      await act(async () => { fireEvent.click(btn); });
+      await waitFor(() => expect(container.textContent).toContain('四柱命盘'), { timeout: 3000 });
+      // 新排盘完成后：AI 卡片应回到 idle 文案，而非旧报告
+      await waitFor(() => expect(container.textContent).toContain('可召 AI 以现代语言为君详解'), { timeout: 3000 });
+      expect(container.textContent).not.toContain('壬水日主命局解读报告');
+      expect(container.textContent).not.toContain('命主性格');
+    } finally {
+      (globalThis as any).fetch = origFetch;
+    }
+  });
 });
