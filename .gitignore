@@ -42,5 +42,9 @@ divination-app.zip
 .DS_Store
 *.sw?
 
+# ===== 评测数据与报告（可再拉取/再生成） =====
+server/scripts/eval/datasets/
+server/scripts/eval/reports/
+
 # ===== 测试临时文件 =====
 tmp-test-*
