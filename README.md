@@ -1,5 +1,7 @@
 # 观微 · 以术问道
 
+[![CI](https://github.com/RubyCcll/guanwei/actions/workflows/ci.yml/badge.svg)](https://github.com/RubyCcll/guanwei/actions/workflows/ci.yml)
+
 东玄为主、中西合参的玄学占卜应用：九术排盘、AI 深度解读、古籍引证、学馆修习，一条链路贯通「排盘 → 解读 → 归档 → 回看」。
 
 > 占问所得，仅供修身养性、怡情遣兴之用，不构成任何决策依据。
