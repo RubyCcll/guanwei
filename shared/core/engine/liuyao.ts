@@ -1,6 +1,15 @@
-// 六爻：三枚铜钱摇卦（rng 可注入，保证测试可复现）
+// 六爻：三枚铜钱摇卦（rng 可注入，保证测试可复现）+ 纳甲筮法（补齐层）
 import { GUA_LOOKUP } from '../data/gua64';
+import { GONG_SH, NAJIA, GONG_WX, SHEN_LIU, GAN_WX, ZHI_WX, liuqin } from '../data/liuyao';
+import { daysSince, monthBranchOf } from './calendar';
 import type { LiuyaoResult } from '../types';
+
+const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+const mod = (a: number, n: number) => ((a % n) + n) % n;
+
+// 起卦日期信息（可选）：日干支/月支 → 六神/月破/旬空
+export interface LiuyaoDateInfo { y: number; m: number; d: number }
 
 const BIT_TO_BA: Record<number, number> = { 7: 1, 6: 2, 5: 3, 4: 4, 3: 5, 2: 6, 1: 7, 0: 8 };
 
@@ -15,7 +24,7 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-export function liuyaoCalc(rng: () => number = Math.random): LiuyaoResult {
+export function liuyaoCalc(rng: () => number = Math.random, date?: LiuyaoDateInfo): LiuyaoResult {
   const yao: number[] = [];
   const names: { v: number; nm: string; backs: number }[] = [];
   for (let i = 0; i < 6; i++) {
@@ -37,5 +46,48 @@ export function liuyaoCalc(rng: () => number = Math.random): LiuyaoResult {
   const bianGua = GUA_LOOKUP[uB2 * 10 + lB2]!;
   const dongYao: number[] = [];
   names.forEach((n, i) => { if (n.nm === '老阴' || n.nm === '老阳') dongYao.push(i + 1); });
-  return { yao, names, benGua, bianGua, dongYao };
+
+  // ─── 补齐层：纳甲筮法（需起卦日期）───
+  let najia: LiuyaoResult['najia'] = undefined;
+  if (date) {
+    const gs = GONG_SH[benGua.name];
+    if (gs) {
+      const gz6 = NAJIA[gs.gong] || [];
+      // 日干支（历元 +55）与月支
+      const dIdx = mod(daysSince(date.y, date.m, date.d) + 55, 60);
+      const dayGZ = GAN[dIdx % 10] + ZHI[dIdx % 12];
+      const monthZhi = ZHI[mod(2 + monthBranchOf(date.y, date.m, date.d, 12), 12)];
+      // 六神（日干起，初爻→上爻）
+      const shenSeq = SHEN_LIU[dayGZ[0]] || [];
+      // 月破：月支之冲（±6）
+      const mIdx = ZHI.indexOf(monthZhi);
+      const yuePo = [ZHI[mod(mIdx + 6, 12)]];
+      // 旬空：日柱所在旬
+      const xunStart = dIdx - (dIdx % 10);
+      const xunKong = [ZHI[mod(xunStart + 10, 12)], ZHI[mod(xunStart + 11, 12)]];
+      // 世应
+      const shiPos = gs.shi;
+      const yingPos = mod(shiPos + 2, 6) + 1;
+      const gongWx = GONG_WX[gs.gong] || '金';
+      const lines = gz6.map((gz, i) => {
+        const zhi = gz[1];
+        return {
+          gz,
+          ganWx: GAN_WX[gz[0]] || '',
+          zhiWx: ZHI_WX[zhi] || '',
+          liuqin: liuqin(gongWx, ZHI_WX[zhi] || ''),
+          shen: shenSeq[i] || '',
+          isShi: i + 1 === shiPos,
+          isYing: i + 1 === yingPos,
+          kong: xunKong.includes(zhi),
+        };
+      });
+      najia = {
+        gong: gs.gong, lines, shiPos, yingPos,
+        dayGZ, monthZhi, yuePo, xunKong,
+        shiLiQin: lines[shiPos - 1]?.liuqin || '',
+      };
+    }
+  }
+  return { yao, names, benGua, bianGua, dongYao, najia };
 }

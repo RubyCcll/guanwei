@@ -364,6 +364,11 @@ select.input-line{appearance:none;background-image:linear-gradient(45deg,transpa
 .result-cell .v.hot{color:var(--cinnabar)}
 .result-cell .v.cool{color:var(--celadon-deep)}
 .result-text{color:var(--ink-soft);font-size:var(--fs-sm);line-height:2.2;letter-spacing:.04em;margin-top:.5rem}
+/* AI 解读正文用标准系统字体（易读性），其余界面保持宋式 */
+.report-view, .report-view p, .report-view li, .report-view h3,
+.result-text, .result-text p, .result-text li{
+  font-family:system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
 .result-text strong{color:var(--ink);font-weight:600}
 .result-text .tag-hot{color:var(--cinnabar);font-weight:500}
 .result-text .tag-cool{color:var(--celadon-deep);font-weight:500}
@@ -1058,21 +1063,3 @@ select.input-line{appearance:none;background-image:linear-gradient(45deg,transpa
 .mh-intro summary::before{content:'▸';font-size:.7rem;transition:transform var(--dur-fast)}
 .mh-intro[open] summary::before{transform:rotate(90deg)}
 .mh-intro p{font-size:var(--fs-sm);color:var(--ink-soft);line-height:2;margin-top:.5rem}
-.mh-intro .source{color:var(--ink-faint);font-size:var(--fs-xs)}
-
-/* 内容页顶部统一紧凑 */
-.page-compact{padding-top:var(--sp-4) !important}
-.page-compact .section-title{font-size:var(--fs-xl);margin-top:.4rem}
-.page-compact .section-note{margin-top:.3rem}
-
-/* 档案卡紧凑 */
-.profile-card{padding:.7rem 1rem}
-.pc-title{font-size:.9rem;margin-bottom:.1rem}
-.pc-info{white-space:normal;line-height:1.6}
-.pc-action{font-size:var(--fs-xs)}
-
-/* 紧凑页标题（档案详情等） */
-.page-title-compact{
-  font-family:var(--font-kai);font-size:var(--fs-xl);letter-spacing:.18em;color:var(--ink);
-}
-.page-title-compact + *{margin-top:0}

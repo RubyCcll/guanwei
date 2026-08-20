@@ -1,0 +1,12 @@
+import { baziCalc } from '../../shared/core/engine/bazi.ts';
+const r = baziCalc({ y: 1990, m: 6, d: 15, hourIndex: 6, gender: '男' });
+console.log('四柱:', r.yearGZ, r.monthGZ, r.dayGZ, r.hourGZ, '| 日主:', r.dayGan, r.dayGanWx, '| 纳音:', r.nayin);
+console.log('藏干:', JSON.stringify(r.canggan.map(c => c.zhi + ':' + c.gans.map(g => g.gan + g.shishen).join('/'))));
+console.log('加权五行:', JSON.stringify(r.wxWeighted));
+console.log('旺衰:', r.strength, '分', r.strengthDetail.score, '|', r.strengthDetail.reasons.join('; '));
+console.log('用神:', JSON.stringify({ wx: r.yongshen.wx, ss: r.yongshen.shishen, xi: r.yongshen.xi, ji: r.yongshen.ji, th: r.yongshen.tiaohou }));
+console.log('起运:', r.qiYun.detail);
+console.log('大运:', r.dayun.slice(0, 4).map(d => d.gz + '[' + d.startAge + '岁/' + d.startYear + '-' + d.endYear + ']').join(' '));
+console.log('流年:', r.liunian.year, r.liunian.gz, r.liunian.ganShishen, '|', r.liunian.zhiShishen);
+console.log('神煞:', r.shensha.map(s => s.name + s.zhi + s.type).join(' ') || '无');
+console.log('胎元:', r.taiyuan, '命宫:', r.minggong, '身宫:', r.shengong);
