@@ -81,6 +81,7 @@ export interface ZiweiResult {
   forward?: boolean;
   // ─── 补齐层（2026-08-20 排盘要点调研）───
   shen: number;                          // 身宫地支位 0=寅
+  mingGZ: string;                         // 命宫干支（五行局之源）
   fuStars: Record<string, number>;       // 辅星位置（0=寅起）
   sihua: { lu: string; quan: string; ke: string; ji: string };   // 生年四化星名
   sihuaPos: { lu?: number; quan?: number; ke?: number; ji?: number };  // 四化落宫位

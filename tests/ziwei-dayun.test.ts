@@ -3,12 +3,12 @@ import { ziweiCalc } from '../shared/core/engine/ziwei';
 import { Solar, Lunar } from 'lunar-typescript';
 
 describe('紫微大限与流年', () => {
-  it('五行局定起运岁数（金四局 → 4 岁起）', () => {
+  it('五行局定起运岁数（水二局 → 2 岁起，iztro 校准）', () => {
     const r = ziweiCalc({ ganzhi: '癸酉', month: 1, day: 1, hour: 0, gender: '男', birthYear: 1993 });
-    expect(r.startAge).toBe(4);
+    expect(r.startAge).toBe(2);
     expect(r.dayun?.length).toBe(12);
-    expect(r.dayun?.[0].start).toBe(4);
-    expect(r.dayun?.[0].end).toBe(13);
+    expect(r.dayun?.[0].start).toBe(2);
+    expect(r.dayun?.[0].end).toBe(11);
   });
   it('大限顺逆：癸酉年（阴干）男命 → 逆行', () => {
     const r = ziweiCalc({ ganzhi: '癸酉', month: 1, day: 1, hour: 0, gender: '男', birthYear: 1993 });

@@ -74,18 +74,21 @@ describe('== 1. 四柱八字 ==', () => {
 });
 
 describe('== 2. 紫微斗数（五行局 + 主星定位）==', () => {
-  it('干支→纳音→五行局六组对照', () => {
-    const cases: [string, string, string][] = [
-      ['癸酉', '剑锋金', '金四局'],
-      ['甲子', '海中金', '金四局'],
-      ['壬申', '剑锋金', '金四局'],
-      ['戊辰', '大林木', '木三局'],
-      ['丙寅', '炉中火', '火六局'],
-      ['庚午', '路旁土', '土五局'],
+  it('五行局 = 命宫干支纳音（iztro 校准：2026-08-20 修正，原误用年干支纳音）', () => {
+    // 正月子时 → 命宫在寅；命宫天干 = 五虎遁年干起寅月
+    // 甲寅大溪水→水二 / 丙寅炉中火→火六 / 壬寅金箔金→金四 / 庚寅松柏木→木三 / 戊寅城头土→土五
+    const cases: [string, string, string, string][] = [
+      ['癸酉', '剑锋金', '甲寅', '水二局'],
+      ['甲子', '海中金', '丙寅', '火六局'],
+      ['壬申', '剑锋金', '壬寅', '金四局'],
+      ['戊辰', '大林木', '甲寅', '水二局'],
+      ['丙寅', '炉中火', '庚寅', '木三局'],
+      ['庚午', '路旁土', '戊寅', '土五局'],
     ];
-    cases.forEach(([gz, nayin, ju]) => {
+    cases.forEach(([gz, nayin, mingGZ, ju]) => {
       const r = ziweiCalc({ ganzhi: gz, month: 1, day: 1, hour: 0 });
       expect(r.nayin).toBe(nayin);
+      expect(r.mingGZ).toBe(mingGZ);
       expect(r.juName).toBe(ju);
     });
   });
@@ -93,8 +96,8 @@ describe('== 2. 紫微斗数（五行局 + 主星定位）==', () => {
     expect(ziweiCalc({ ganzhi: '癸酉', month: 1, day: 1, hour: 0 }).ming).toBe(0);
     expect(ziweiCalc({ ganzhi: '癸酉', month: 1, day: 1, hour: 6 }).ming).toBe(6);
   });
-  it('紫微：金四局正月初一@寅', () => {
-    expect(ziweiCalc({ ganzhi: '癸酉', month: 1, day: 1, hour: 0 }).zwPos).toBe(0);
+  it('紫微：水二局正月初一@丑（iztro 校准：1993-01-23 子时男 → 水二局/紫微丑）', () => {
+    expect(ziweiCalc({ ganzhi: '癸酉', month: 1, day: 1, hour: 0 }).zwPos).toBe(11);
   });
 });
 

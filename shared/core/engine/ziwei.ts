@@ -24,22 +24,44 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   const ming = mod((month - 1) - correctedHour, 12);
   /* 身宫：寅起正月顺数生月，再从生月宫起子时顺数生时 */
   const shen = mod((month - 1) + correctedHour, 12);
-  /* 五行局 */
-  const nayin = NAYIN[Math.floor(ganZhiIndex(gz) / 2) % 30];
-  const juName = NAYIN_JU[nayin] || '金四局';
+  const nayin = NAYIN[Math.floor(ganZhiIndex(gz) / 2) % 30]; // 年柱纳音（展示用）
+  /* ── 补齐修正（2026-08-20，以 iztro《紫微斗数全书》安星为准）──
+     五行局：由「命宫干支」纳音取数定局（非年干支纳音） */
+  // 命宫天干：五虎遁起寅月，顺数至命宫位（TIGER_RULE：甲己丙、乙庚戊、丙辛庚、丁壬壬、戊癸甲）
+  const TIGER: Record<string, string> = { 甲: '丙', 乙: '戊', 丙: '庚', 丁: '壬', 戊: '甲', 己: '丙', 庚: '戊', 辛: '庚', 壬: '壬', 癸: '甲' };
+  const mingGan = GAN[mod(GAN.indexOf(TIGER[gan] as any) + ming, 10)];
+  const mingGZ = mingGan + DIZHI[ming];
+  // 纳音五行取数：天干 甲乙1 丙丁2 戊己3 庚辛4 壬癸5；地支 子丑午未1 寅卯申酉2 辰巳戌亥3；和 >5 减 5；1木 2金 3水 4火 5土
+  const ganNum = Math.floor(GAN.indexOf(mingGan as any) / 2) + 1;
+  const zhiNum = Math.floor(mod(ming + 2, 6) / 2) + 1; // 寅起序 +2 → 子起序（子丑午未1 寅卯申酉2 辰巳戌亥3）
+  let fiveIdx = ganNum + zhiNum;
+  while (fiveIdx > 5) fiveIdx -= 5;
+  const FIVE_CLASS = ['木三局', '金四局', '水二局', '火六局', '土五局'];
+  const juName = FIVE_CLASS[fiveIdx - 1];
   const JU_NUM: Record<string, number> = { 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
   const juNum = JU_NUM[juName[1]] || 4;
-  /* 紫微定位 */
-  const ziweiPos = mod(Math.ceil(day / juNum) - 1, 12) * (juNum === 4 ? 1 : -1) % 12 + 12;
-  const zwPos = mod(ziweiPos, 12);
+  /* 紫微定位（起紫微星诀）：(生日+offset) 可被局数整除，商定宫位，offset 奇偶定顺逆 */
+  let offset = -1, quotient = 0, remainder = -1;
+  do {
+    offset++;
+    const divisor = day + offset;
+    quotient = Math.floor(divisor / juNum);
+    remainder = divisor % juNum;
+  } while (remainder !== 0);
+  quotient %= 12;
+  let ziweiIdx = quotient - 1;
+  if (offset % 2 === 0) ziweiIdx += offset;
+  else ziweiIdx -= offset;
+  const zwPos = mod(ziweiIdx, 12);
+  /* 天府与紫微相对（寅起 12 之补） */
+  const tianfu = mod(12 - zwPos, 12);
   /* 十四主星 */
   const zwStars: Record<string, number> = {};
   const ziweiList = ['紫微', '天机', '太阳', '武曲', '天同', '廉贞'];
   const ziweiOff = [0, -1, -3, -4, -5, -8];
   ziweiList.forEach((s, i) => { zwStars[s] = mod(zwPos + ziweiOff[i], 12); });
-  const tianfu = mod(0 - zwPos, 12);
   const tianfuList = ['天府', '太阴', '贪狼', '巨门', '天相', '天梁', '七杀', '破军'];
-  const tianfuOff = [0, 1, 2, 3, 4, 5, 6, 9];
+  const tianfuOff = [0, 1, 2, 3, 4, 5, 6, 10]; // 七杀空三宫后破军（iztro 校准）
   tianfuList.forEach((s, i) => { zwStars[s] = mod(tianfu + tianfuOff[i], 12); });
   /* 十二宫布列：命宫起逆布 */
   const palaces: Record<number, number> = {};
@@ -49,12 +71,12 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
 
   /* 1. 辅星安星 */
   const fuStars: Record<string, number> = {};
-  // 左辅右弼：辰起，左辅顺数至生月，右弼逆数
+  // 左辅右弼：左辅辰起顺数至生月，右弼戌起逆数至生月（iztro 校准）
   fuStars['左辅'] = mod(zhiIdx('辰') + (month - 1), 12);
-  fuStars['右弼'] = mod(zhiIdx('辰') - (month - 1), 12);
-  // 文昌文曲：戌起，文昌顺数至生时，文曲逆数
-  fuStars['文昌'] = mod(zhiIdx('戌') + correctedHour, 12);
-  fuStars['文曲'] = mod(zhiIdx('戌') - correctedHour, 12);
+  fuStars['右弼'] = mod(zhiIdx('戌') - (month - 1), 12);
+  // 文昌文曲：文昌戌起逆数至生时，文曲辰起顺数至生时（iztro 校准）
+  fuStars['文昌'] = mod(zhiIdx('戌') - correctedHour, 12);
+  fuStars['文曲'] = mod(zhiIdx('辰') + correctedHour, 12);
   // 天魁天钺（年干）
   const ky = KUI_YUE[gan] || [];
   if (ky[0]) fuStars['天魁'] = zhiIdx(ky[0]);
@@ -67,11 +89,11 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
     fuStars['擎羊'] = mod(luIdx + 1, 12);
     fuStars['陀罗'] = mod(luIdx - 1, 12);
   }
-  // 火星铃星（年支三合起宫，火顺行、铃逆行至生时）
+  // 火星铃星（年支三合起宫，均顺数至生时——iztro 校准，铃星原误为逆行）
   const hStart = HUO_START[zhi];
   if (hStart) fuStars['火星'] = mod(zhiIdx(hStart) + correctedHour, 12);
   const lStart = LING_START[zhi];
-  if (lStart) fuStars['铃星'] = mod(zhiIdx(lStart) - correctedHour, 12);
+  if (lStart) fuStars['铃星'] = mod(zhiIdx(lStart) + correctedHour, 12);
   // 地空地劫：亥起，地空逆数、地劫顺数至生时
   fuStars['地空'] = mod(zhiIdx('亥') - correctedHour, 12);
   fuStars['地劫'] = mod(zhiIdx('亥') + correctedHour, 12);
@@ -169,5 +191,5 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   const liunianPalaceName = PALACE_NAMES[Object.keys(palaces).find(k => palaces[Number(k)] === liunianIdx) ? Number(Object.keys(palaces).find(k => palaces[Number(k)] === liunianIdx)) : 0];
   const liunianStars = Object.keys(zwStars).filter(s => zwStars[s] === liunianIdx);
 
-  return { ming, shen, zwPos, zwStars, fuStars, palaces, juName, nayin, correctedHour, dayun, curDayunIdx, nominalAge, liunianIdx, liunianPalaceName, liunianStars, startAge, forward, sihua, sihuaPos, brightness, geju };
+  return { ming, shen, zwPos, zwStars, fuStars, palaces, juName, mingGZ, nayin, correctedHour, dayun, curDayunIdx, nominalAge, liunianIdx, liunianPalaceName, liunianStars, startAge, forward, sihua, sihuaPos, brightness, geju };
 }
