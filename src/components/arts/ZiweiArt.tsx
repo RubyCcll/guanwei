@@ -45,8 +45,10 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
     let lm = 1, ld = 1, gz = '甲子', birthYear = yy;
     try {
       const lunar = Solar.fromYmd(yy, mm, dd).getLunar();
-      lm = Math.abs(lunar.getMonth());
+      const rawMonth = lunar.getMonth();
       ld = lunar.getDay();
+      // 闰月（lunar 返回负数）：按 iztro fixLeap 规则，后半月算下月
+      lm = Math.abs(rawMonth) + (rawMonth < 0 && ld > 15 ? 1 : 0);
       gz = lunar.getYearInGanZhi();
       birthYear = lunar.getYear();
     } catch { /* 非法日期回退默认 */ }
