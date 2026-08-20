@@ -1,0 +1,46 @@
+# ===== 依赖与构建 =====
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+
+# ===== 环境变量（含密钥，绝不提交） =====
+.env
+.env.*
+!.env.example
+!.env.development.example
+server/.env
+server/.env.*
+
+# ===== 运行时数据（用户数据/占卜历史） =====
+server/data/
+server/src/data/db.json
+server/src/data/guanwei.db
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== 日志 =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== 参考项目（版权材料，不入库） =====
+divination-app/
+divination-app.zip
+
+# ===== 编辑器与系统 =====
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.trae/
+.trae-html-share-packages/
+.DS_Store
+*.sw?
+
+# ===== 测试临时文件 =====
+tmp-test-*

@@ -1,0 +1,60 @@
+/* ============================================================
+   观微 · 宋式美学设计系统 —— 设计令牌
+   以宋瓷之釉、宋画之留白、宋字之筋骨为法
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&display=swap');
+
+:root{
+  /* —— 色彩体系：低饱和 · 暖调宣纸底 —— */
+  --paper:        #F5F1E7;   /* 宣纸底 */
+  --paper-deep:   #EDE8D9;   /* 旧纸 */
+  --paper-dim:    #E4DECC;   /* 深纸 */
+  --ink:          #37342C;   /* 浓墨（主文字）*/
+  --ink-soft:     #6B675C;   /* 中墨（次级）*/
+  --ink-faint:    #97917F;   /* 淡墨（弱化）*/
+  --line:         rgba(55,52,44,.16);
+  --line-soft:    rgba(55,52,44,.10);
+  --celadon:      #96A88F;   /* 豆青 */
+  --celadon-deep: #5F7660;   /* 深豆青（可交互强调）*/
+  --celadon-tint: #E3E8DC;   /* 豆青淡染 */
+  --crab:         #7C9792;   /* 蟹壳青 */
+  --crab-tint:    #DCE4E0;
+  --rice:         #D9CDAC;   /* 米黄 */
+  --rice-tint:    #EDE5CE;
+  --cinnabar:     #A5402D;   /* 朱砂（仅印章/卦动/要点）*/
+  --cinnabar-deep:#8C3526;
+  --cinnabar-tint:#F3E3DC;
+  --white-paper:  #FBF9F3;   /* 新纸（浮层）*/
+
+  /* —— 字体 —— */
+  --font-song: "Noto Serif SC","Songti SC","Source Han Serif SC","SimSun","STSong",serif;
+  --font-kai:  "Ma Shan Zheng","Kaiti SC","KaiTi","STKaiti","Noto Serif SC",serif;
+  --font-zm:   "Zhi Mang Xing","Ma Shan Zheng","Kaiti SC",serif;
+
+  /* —— 字阶：1.25 大三度 —— */
+  --fs-xs:  0.75rem;
+  --fs-sm:  0.875rem;
+  --fs-base:1.05rem;
+  --fs-lg:  1.35rem;
+  --fs-xl:  clamp(1.6rem, 3.2vw, 2.2rem);
+  --fs-2xl: clamp(2.2rem, 5.5vw, 3.6rem);
+  --fs-3xl: clamp(3rem, 9vw, 6rem);
+  --fs-display: clamp(4.2rem, 14vw, 10rem);
+
+  /* —— 间距：8pt 律 —— */
+  --sp-1:.5rem; --sp-2:1rem; --sp-3:1.5rem; --sp-4:2rem;
+  --sp-5:3rem; --sp-6:4.5rem; --sp-7:6.5rem; --sp-8:9rem;
+
+  /* —— 圆角：克制的折角，无大圆角 —— */
+  --r-sm:2px; --r-md:4px; --r-lg:8px;
+
+  /* —— 阴影：纸影，非悬浮 —— */
+  --shadow-paper: 0 1px 2px rgba(55,52,44,.06), 0 10px 30px -18px rgba(55,52,44,.18);
+
+  /* —— 动效 —— */
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --ease-ink: cubic-bezier(.5,0,.1,1);
+  --dur-fast: 220ms;
+  --dur-mid: 600ms;
+  --dur-slow: 1200ms;
+}
