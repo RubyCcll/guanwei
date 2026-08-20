@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { buildMessages, buildReportMessages, buildStep1Messages, buildStep2Messages } from '../services/promptBuilder.js';
 import { chatOnce, chatStream, activeProvider, providerStatus, lastFinishReason } from '../services/llmProvider.js';
 import { getDivination, attachReport, markAiFailed } from '../services/divineStore.js';
+import { verifyRelatives, fixFamilyRelatives } from '../services/relativesCheck.js';
 
 const router = Router();
 
@@ -32,7 +33,7 @@ router.post('/interpret', async (req, res) => {
     const kind = ['bazi', 'ziwei', 'astrology'].includes(artId) ? 'mingpan' : 'zhanwen';
     let step1Text = '';
     try {
-      step1Text = await chatOnce(buildStep1Messages(artId, question || '', resultRaw, recProfile));
+      step1Text = await getStep1(divineId, artId, question || '', resultRaw, recProfile);
     } catch (e1: any) {
       console.warn('[ai] Step1 盘面解析失败，降级为单步模式:', e1.message);
     }
@@ -41,6 +42,15 @@ router.post('/interpret', async (req, res) => {
       : buildReportMessages(artId, question || '', resultRaw, profile, semantic, fit);
     const text = await chatOnce(messages);
     const parsed = parseReport(text, kind);
+    // 六亲事实校验：模型长输出常编造宫位/主星（如把父母宫写成无主星），检测到矛盾则定向重写 family 区块
+    const relErrs = verifyRelatives(artId, resultRaw, parsed);
+    if (relErrs.length && relErrs.length <= 6) {
+      console.warn('[ai] 六亲表述矛盾，定向修正:', relErrs.join('；'));
+      const fixed = await fixFamilyRelatives(artId, resultRaw, parsed, relErrs);
+      if (fixed) parsed.family = fixed as any;
+    } else if (relErrs.length > 6) {
+      console.warn('[ai] 六亲校验异常项过多（' + relErrs.length + ' 条，疑误报），跳过修正:', relErrs.slice(0, 3).join('；'));
+    }
     if (parsed.quality === 'poor') {
       console.error('[ai] 输出不符合报告结构，拒绝返回（不入库）');
       markAiFailed(divineId, artId, kind, '质量评分未达标', text.slice(0, 4000));
@@ -77,10 +87,10 @@ router.post('/interpret/stream', async (req, res) => {
   }
   const resultRaw = rec.resultRaw;
   try {
-    // 两步管线（2026-08-20）：Step1 盘面解析（内部非流式，短输出）→ Step2 深度报告（流式）
+    // 两步管线（2026-08-20）：Step1 盘面解析（内部非流式，短输出，带缓存）→ Step2 深度报告（流式）
     let step1Text = '';
     try {
-      step1Text = await chatOnce(buildStep1Messages(artId, question || '', resultRaw, rec.profile));
+      step1Text = await getStep1(divineId, artId, question || '', resultRaw, rec.profile);
     } catch (e1: any) {
       console.warn('[ai] Step1 盘面解析失败，降级为单步模式:', e1.message);
       step1Text = '';
@@ -100,6 +110,15 @@ router.post('/interpret/stream', async (req, res) => {
     // 统一结构化报告：后端完成文本清洗与结构归一，前端只做渲染
     const kind2 = ['bazi', 'ziwei', 'astrology'].includes(artId) ? 'mingpan' : 'zhanwen';
     const rep = parseReport(full, kind2);
+    // 六亲事实校验与修正（同非流式路径）
+    const relErrs = verifyRelatives(artId, resultRaw, rep);
+    if (relErrs.length && relErrs.length <= 6) {
+      console.warn('[ai/stream] 六亲表述矛盾，定向修正:', relErrs.join('；'));
+      const fixed = await fixFamilyRelatives(artId, resultRaw, rep, relErrs);
+      if (fixed) rep.family = fixed as any;
+    } else if (relErrs.length > 6) {
+      console.warn('[ai/stream] 六亲校验异常项过多（' + relErrs.length + ' 条，疑误报），跳过修正:', relErrs.slice(0, 3).join('；'));
+    }
     const sections = parseSections(full);
     const truncated = lastFinishReason === 'length';
     // 质量门槛：ok → 报告回写入库；poor/截断 → 不入库 + fail 留档
@@ -135,6 +154,26 @@ router.post('/interpret/stream', async (req, res) => {
 
 // 报告解析：按两套 Schema 归一化（命盘类/占问类），字段缺失兜底
 interface RawReading { summary: string; keyPoints: string[] }
+
+// ─── Step1 盘面解析缓存 ───
+// 同一 divineId + 同一问题复用同一份盘面解析：多次解读的输入一致 → 输出不再互相矛盾
+// （Step1 每次调用结果都不同是「一会严格一会宽松」的主因之一）
+const step1Cache = new Map<string, string>();
+const STEP1_CACHE_MAX = 300;
+async function getStep1(divineId: string, artId: string, question: string, resultRaw: unknown, profile: unknown): Promise<string> {
+  const key = divineId + '|' + (question || '');
+  const hit = step1Cache.get(key);
+  if (hit) return hit;
+  try {
+    const text = await chatOnce(buildStep1Messages(artId, question, resultRaw, profile));
+    if (step1Cache.size > STEP1_CACHE_MAX) step1Cache.clear();
+    step1Cache.set(key, text);
+    return text;
+  } catch (e: any) {
+    console.warn('[ai] Step1 盘面解析失败，降级为单步模式:', e.message);
+    return '';
+  }
+}
 
 export interface AIReportNormalized {
   kind: 'mingpan' | 'zhanwen';

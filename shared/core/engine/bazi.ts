@@ -44,11 +44,13 @@ const WX_ORDER = ['木', '火', '土', '金', '水'];
 export function baziCalc(input: BaziInput): BaziResult {
   let { y, m, d, hourIndex } = input;
   const gender = input.gender;
+  // 时辰未知：hourIndex < 0（或缺失）→ 不排时柱，年月日三柱照排，大运/起运不受影响
+  const hourUnknown = hourIndex === undefined || hourIndex === null || hourIndex < 0;
 
-  // 1. 真太阳时校正（出生地点 → 经度；优先用输入精确时刻，缺省用时辰中点）
-  let correctedHourIndex = hourIndex;
+  // 1. 真太阳时校正（出生地点 → 经度；仅时辰已知时做；优先用输入精确时刻，缺省用时辰中点）
+  let correctedHourIndex = hourUnknown ? -1 : hourIndex;
   let trueSolar;
-  if (input.location) {
+  if (!hourUnknown && input.location) {
     const [th, tm] = input.time ? input.time.split(':').map(Number) : [(hourIndex * 2) % 24, 30];
     trueSolar = trueSolarTime(y, m, d, th, tm, input.location.lng);
     correctedHourIndex = trueSolar.hourIndex;
@@ -56,7 +58,7 @@ export function baziCalc(input: BaziInput): BaziResult {
       [y, m, d] = shiftedDate(y, m, d, trueSolar.dateOffset);
     }
   }
-  const hour = (correctedHourIndex * 2) % 24;
+  const hour = hourUnknown ? 12 : (correctedHourIndex * 2) % 24;
   const min = 0;
 
   // 2. 年柱（立春为界）
@@ -85,19 +87,23 @@ export function baziCalc(input: BaziInput): BaziResult {
   const dayGan = dayGZ[0];
   const dayGanWx = WUXING[dayGan];
 
-  // 5. 时柱（五鼠遁）
-  const dgIdx = GAN.indexOf(dayGan as any);
-  const hgIdx = mod((dgIdx % 5) * 2 + correctedHourIndex, 10);
-  const hourGZ = GAN[hgIdx] + ZHI[correctedHourIndex];
+  // 5. 时柱（五鼠遁；时辰未知则不排）
+  let hourGZ = '未知';
+  if (!hourUnknown) {
+    const dgIdx = GAN.indexOf(dayGan as any);
+    const hgIdx = mod((dgIdx % 5) * 2 + correctedHourIndex, 10);
+    hourGZ = GAN[hgIdx] + ZHI[correctedHourIndex];
+  }
 
-  // 6. 基础五行统计 + 天干十神（保留原口径）
+  // 6. 基础五行统计 + 天干十神（保留原口径；时辰未知时仅三柱）
   const wxCount: Record<string, number> = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
-  const gzList = [yearGZ, monthGZ, dayGZ, hourGZ];
+  const gzList = hourUnknown ? [yearGZ, monthGZ, dayGZ] : [yearGZ, monthGZ, dayGZ, hourGZ];
   gzList.forEach(gz => { wxCount[WUXING[gz[0]]]++; wxCount[WUXING[gz[1]]]++; });
   const shishenList = gzList.map(gz => ({ gan: gz[0], name: shishen(dayGan, gz[0]) }));
+  if (hourUnknown) shishenList.push({ gan: '□', name: '未知' });
   const nayin = NAYIN[Math.floor(jiaziIndex(y) / 2) % 30];
   const support = wxCount[dayGanWx] + wxCount[WX_ORDER[(WX_ORDER.indexOf(dayGanWx) + 4) % 5]];
-  const drain = 8 - support;
+  const drain = gzList.length * 2 - support;
   const strength = support > drain ? '身强' : (support < drain ? '身弱' : '中和');
 
   // ─── 7. 地支藏干 + 藏干十神 + 加权五行 ───
@@ -107,6 +113,7 @@ export function baziCalc(input: BaziInput): BaziResult {
       gan: c.gan, wx: WUXING[c.gan], qi: c.qi, shishen: shishen(dayGan, c.gan),
     })),
   }));
+  if (hourUnknown) canggan.push({ zhi: '？', gans: [] });
   const wxWeighted: Record<string, number> = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
   gzList.forEach(gz => { wxWeighted[WUXING[gz[0]]] += 1; });
   canggan.forEach(cg => cg.gans.forEach(c => { wxWeighted[c.wx] += c.qi === '本气' ? 2 : 1; }));
@@ -128,7 +135,7 @@ export function baziCalc(input: BaziInput): BaziResult {
     else if (zhong) { gen += 1; genDetails.push(gz[1] + '藏' + zhong.gan + '微根'); }
   });
   let shi = 0;
-  [yearGZ[0], monthGZ[0], hourGZ[0]].forEach(gan => {
+  [yearGZ[0], monthGZ[0], dayGZ[0]].forEach(gan => {
     const gw = WUXING[gan];
     if (gw === dayGanWx) shi += 1;
     else if (mod(WX_ORDER.indexOf(gw) - dayWxIdx, 5) === 4) shi += 1; // 生我
@@ -142,8 +149,8 @@ export function baziCalc(input: BaziInput): BaziResult {
   const finalStrength: BaziResult['strength'] = score >= 7 ? '身强' : score <= 4 ? '身弱' : '中和';
 
   // ─── 9. 用神/喜忌（扶抑 + 季节调候）───
-  const XI_Q: Record<string, string[]> = { 身强: ['官杀', '食伤', '财'], 身弱: ['印', '比劫'] };
-  const JI_Q: Record<string, string[]> = { 身强: ['印', '比劫'], 身弱: ['财', '官杀', '食伤'] };
+  const XI_Q: Record<string, string[]> = { 身强: ['官杀', '食伤', '财'], 身弱: ['印', '比劫'], 中和: ['食伤', '财', '印'] };
+  const JI_Q: Record<string, string[]> = { 身强: ['印', '比劫'], 身弱: ['财', '官杀', '食伤'], 中和: ['比劫', '官杀'] };
   const xi = XI_Q[finalStrength] || [];
   const ji = JI_Q[finalStrength] || [];
   // 调候：按季节（月支）
@@ -250,10 +257,8 @@ export function baziCalc(input: BaziInput): BaziResult {
   };
   // ─── 13. 胎元 / 命宫 / 身宫 ───
   const taiyuan = GAN[mod(mgIdx2 + 1, 10)] + ZHI[mod(mzIdx2 + 3, 12)];
-  const mingIdx = mod((mb) - correctedHourIndex, 12); // 寅起正月顺数生月，再逆数生时（mb=月支序0寅）
-  const shenIdx = mod((mb) + correctedHourIndex, 12);
-  const minggong = ZHI[mod(2 + mingIdx, 12)];
-  const shengong = ZHI[mod(2 + shenIdx, 12)];
+  const minggong = hourUnknown ? '未知' : ZHI[mod(2 + mod((mb) - correctedHourIndex, 12), 12)];
+  const shengong = hourUnknown ? '未知' : ZHI[mod(2 + mod((mb) + correctedHourIndex, 12), 12)];
 
   return {
     yearGZ, monthGZ, dayGZ, hourGZ,
