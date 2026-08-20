@@ -108,6 +108,21 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   const tm = TIAN_MA[zhi];
   if (tm) fuStars['天马'] = zhiIdx(tm);
 
+
+  /* 1.5 小星（年支起法，2026-08-20 补全） */
+  const yearZhiIdx = zhiIdx(zhi);
+  fuStars['红鸾'] = mod(11 - yearZhiIdx, 12);   // 卯起子年逆数（寅起序验证：子→卯）
+  fuStars['天喜'] = mod(fuStars['红鸾'] + 6, 12);
+  const XIANCHI: Record<string, string> = { 申: '酉', 子: '酉', 辰: '酉', 寅: '卯', 午: '卯', 戌: '卯', 巳: '午', 酉: '午', 丑: '午', 亥: '子', 卯: '子', 未: '子' };
+  fuStars['咸池'] = zhiIdx(XIANCHI[zhi] || '酉');
+  fuStars['天姚'] = mod(yearZhiIdx + 2, 12);      // 寅起子年顺行
+  fuStars['天刑'] = mod(yearZhiIdx + 9, 12);      // 酉起子年顺行
+  const GU_GUA: Record<string, [string, string]> = { 亥: ['寅', '戌'], 子: ['寅', '戌'], 丑: ['寅', '戌'], 寅: ['巳', '丑'], 卯: ['巳', '丑'], 辰: ['巳', '丑'], 巳: ['申', '辰'], 午: ['申', '辰'], 未: ['申', '辰'], 申: ['亥', '未'], 酉: ['亥', '未'], 戌: ['亥', '未'] };
+  fuStars['孤辰'] = zhiIdx((GU_GUA[zhi] || ['寅', '戌'])[0]);
+  fuStars['寡宿'] = zhiIdx((GU_GUA[zhi] || ['寅', '戌'])[1]);
+  fuStars['天哭'] = mod(yearZhiIdx + 6, 12);      // 午起子年顺行
+  fuStars['天虚'] = mod(fuStars['天哭'] + 6, 12);
+
   /* 2. 生年四化 */
   const sh = ZW_SIHUA[gan] || { lu: '', quan: '', ke: '', ji: '' };
   const sihua = { lu: sh.lu, quan: sh.quan, ke: sh.ke, ji: sh.ji };

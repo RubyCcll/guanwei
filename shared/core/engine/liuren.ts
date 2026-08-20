@@ -68,7 +68,16 @@ export function liurenCalc(dt: string | Date): LiurenResult {
     return { chuan: ch, jiang: tianJiang[cz] || '' };
   });
 
-  return { dayGZ, hourGZ, jiang, jqName, tianpan, ganJi, ke1, ke2, ke3, ke4, chuan1, chuan2, chuan3, guiRen, isDay, tianJiang, chuanJiang };
+  /* ── 补齐层：课体分类（2026-08-20）── */
+  const hourZhi = ZHI[hourIndex];
+  let keti = '常课';
+  if (jiang === hourZhi) keti = '伏吟课';
+  else if (mod(ZHI.indexOf(jiang as any) - hourIndex, 12) === 6) keti = '反吟课';
+  const ketiNote = keti === '伏吟课' ? '天地盘同位，诸事迟滞反复，宜静待其变，不宜躁进。'
+    : keti === '反吟课' ? '天地盘相冲，事有反复翻覆，来去无常，宜缓不宜急。'
+    : '四课三传乘常气，事机明朗，顺其自然即可。';
+
+  return { dayGZ, hourGZ, jiang, jqName, tianpan, ganJi, ke1, ke2, ke3, ke4, chuan1, chuan2, chuan3, guiRen, isDay, tianJiang, chuanJiang, keti, ketiNote };
 }
 
 export const jiangName = (zhi: string): string => {

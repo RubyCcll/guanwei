@@ -88,12 +88,14 @@ describe('九术交互走查', () => {
     await clickDivine(container);
     const cards = container.querySelectorAll('.tarot-card');
     expect(cards.length).toBe(3);
-    // 未翻开前，牌阵之示中不显示任何具体牌名（牌名只在翻开的卡面出现）
-    expect(container.textContent).not.toContain('愚者');
+    // 未翻开前：卡片为背面态、牌阵之示只示位置不示牌义（不断言具体牌名——DOM 含隐藏文本，视觉由 CSS 控制）
+    expect(cards[0].classList.contains('face-down')).toBe(true);
     expect(container.textContent).toContain('牌未翻启');
     // 点击翻第一张
     await act(async () => { fireEvent.click(cards[0]); });
     expect(cards[0].classList.contains('revealed')).toBe(true);
+    // 翻启后牌阵之示显示牌义（至少显示『位』标题）
+    expect(container.textContent).toContain('位');
   });
   it('AI 入口：无 Key 时点击 → 降级提示', async () => {
     const { container } = renderArt('bazi');
