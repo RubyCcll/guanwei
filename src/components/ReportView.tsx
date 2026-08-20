@@ -78,6 +78,36 @@ export default function ReportView({ report, artName, onExport }: Props) {
             </div>
           )}
 
+          {(r.family?.background || r.family?.parents || r.family?.imprint) && (
+            <div className="result-card">
+              <h3>原生家庭</h3>
+              {r.family.background && (
+                <div className="fam-block"><p className="tiny muted" style={{ margin: '.3rem 0 .4rem' }}>家境与氛围</p><p className="result-text">{r.family.background}</p></div>
+              )}
+              {r.family.parents && (
+                <div className="fam-block"><p className="tiny muted" style={{ margin: '.3rem 0 .4rem' }}>父母关系</p><p className="result-text">{r.family.parents}</p></div>
+              )}
+              {r.family.imprint && (
+                <div className="fam-block"><p className="tiny muted" style={{ margin: '.3rem 0 .4rem' }}>家庭印记</p><p className="result-text">{r.family.imprint}</p></div>
+              )}
+            </div>
+          )}
+
+          {(r.mind?.action || r.mind?.pattern || r.mind?.growth) && (
+            <div className="result-card">
+              <h3>心智与行动模式</h3>
+              {r.mind.action && (
+                <div className="mind-block"><p className="tiny muted" style={{ margin: '.3rem 0 .4rem' }}>行动力与坚持</p><p className="result-text">{r.mind.action}</p></div>
+              )}
+              {r.mind.pattern && (
+                <div className="mind-block"><p className="tiny muted" style={{ margin: '.3rem 0 .4rem' }}>行为循环</p><p className="result-text">{r.mind.pattern}</p></div>
+              )}
+              {r.mind.growth && (
+                <div className="mind-block"><p className="tiny muted" style={{ margin: '.3rem 0 .4rem' }}>成长方向</p><p className="result-text">{r.mind.growth}</p></div>
+              )}
+            </div>
+          )}
+
           {(r.career?.summary || r.love?.summary || r.wealth?.summary || r.health?.summary) && (
             <div className="result-card">
               <h3>学业事业 · 爱情 · 财富 · 健康</h3>
@@ -144,6 +174,25 @@ export default function ReportView({ report, artName, onExport }: Props) {
         <div className="result-card">
           <h3>结语</h3>
           <p className="result-text">{r.conclusion}</p>
+        </div>
+      )}
+
+      {/* AI 自定义扩展章节兜底（family/mind 之外的任意字段 / 旧版 chapters 结构）：任何内容都不丢失 */}
+      {((r as any).extraSections?.length > 0 || (r as any).chapters?.length > 0) && (
+        <div className="result-card">
+          <h3>更多参详</h3>
+          {(r as any).chapters?.map((c: any, i: number) => (
+            <div key={'ch' + i} style={{ marginBottom: 'var(--sp-2)' }}>
+              <p className="tag-cool" style={{ marginBottom: '.3rem' }}><strong>{c.skill || '参详'}</strong></p>
+              <p className="result-text" style={{ whiteSpace: 'pre-wrap' }}>{c.content}</p>
+            </div>
+          ))}
+          {(r as any).extraSections?.map((s: any, i: number) => (
+            <div key={'ex' + i} style={{ marginBottom: 'var(--sp-2)' }}>
+              <p className="tag-cool" style={{ marginBottom: '.3rem' }}><strong>{s.skill || '参详'}</strong></p>
+              <p className="result-text" style={{ whiteSpace: 'pre-wrap' }}>{s.content}</p>
+            </div>
+          ))}
         </div>
       )}
 
