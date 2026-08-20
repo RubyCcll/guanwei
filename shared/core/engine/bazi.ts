@@ -45,12 +45,12 @@ export function baziCalc(input: BaziInput): BaziResult {
   let { y, m, d, hourIndex } = input;
   const gender = input.gender;
 
-  // 1. 真太阳时校正（出生地点 → 经度）
+  // 1. 真太阳时校正（出生地点 → 经度；优先用输入精确时刻，缺省用时辰中点）
   let correctedHourIndex = hourIndex;
   let trueSolar;
   if (input.location) {
-    const hour = (hourIndex * 2) % 24;
-    trueSolar = trueSolarTime(y, m, d, hour, 30, input.location.lng);
+    const [th, tm] = input.time ? input.time.split(':').map(Number) : [(hourIndex * 2) % 24, 30];
+    trueSolar = trueSolarTime(y, m, d, th, tm, input.location.lng);
     correctedHourIndex = trueSolar.hourIndex;
     if (trueSolar.dateOffset !== 0) {
       [y, m, d] = shiftedDate(y, m, d, trueSolar.dateOffset);

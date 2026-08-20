@@ -38,13 +38,13 @@
 前端 React 18 + TS + Vite + Tailwind（宋式美学 UI）
 后端 Express + tsx（SSE 流式 + SQLite 存储）
 共享引擎 shared/core/engine/*（lunar-typescript 历法 + astronomy-engine 星历）
-AI 层 DeepSeek（兼容 Gemini/Groq/Qwen/自定义 OpenAI 端点）
+AI 层：多 LLM 适配（兼容 OpenAI 兼容端点与 Google 格式，服务商由 server/.env 配置）
 ```
 
 ### 数据流
 ```
 ① 排盘：登录用户 → 前端输入 → POST /api/divine → 后端引擎计算 → SQLite 入库 → 前端渲染
-② AI：点击解读 → POST /api/ai/interpret/stream(divineId) → 后端读库 → 组装 Prompt → DeepSeek SSE
+② AI：点击解读 → POST /api/ai/interpret/stream(divineId) → 后端读库 → 组装 Prompt → LLM SSE 流式返回
      → 后端 parseReport 结构化匹配（清洗/映射/质量评分）→ quality=ok 才入库 → 前端 ReportView
 ③ 历史：GET /api/divine?username= → 档案管理页列表/详情/删除
 ```
@@ -59,7 +59,7 @@ AI 层 DeepSeek（兼容 Gemini/Groq/Qwen/自定义 OpenAI 端点）
 
 ### 环境要求
 - Node.js ≥ 22（使用内置 node:sqlite）
-- 一个 DeepSeek API Key（或其他 LLM Key）
+- 一个 LLM API Key（OpenAI 兼容端点或 Google 格式均可，见 server/.env.example）
 
 ### 安装与启动
 
@@ -70,7 +70,7 @@ cd server && npm install && cd ..
 
 # 2. 配置后端环境变量
 cp server/.env.example server/.env
-# 编辑 server/.env，填入 LLM_DEEPSEEK_KEY
+# 编辑 server/.env，填入所选服务商的 Key（见 .env.example 注释）
 
 # 3. 配置前端开发环境（可选）
 cp .env.development.example .env.development
@@ -101,7 +101,8 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 │   ├── data/          # SQLite 与用户数据（gitignore）
 │   └── .env.example
 ├── shared/core/       # 前后端共用引擎（排盘算法/数据）
-├── docs/              # 需求与设计文档
+├── shared/core/       # 前后端共用引擎（排盘算法/数据）
+├── docs/              # 需求与设计文档（本地）
 └── tests/             # 测试
 ```
 
@@ -111,17 +112,17 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 
 ## 🗺️ 迭代计划
 
-本项目长期维护、持续迭代，**完整路线图见 [docs/开源路线与规划.md](docs/开源路线与规划.md)**（M0 开源治理 → M1 评测闭环 → M2 开放分发 → M3 生态兼容与深度 → M4/M5 强化与商业化衔接）。
+本项目长期维护、持续迭代，已完成与计划方向（随版本推进更新）：
 
-已完成（2026-08）：
-- ✅ **排盘补齐**：八字（藏干十神/旺衰拆解/用神喜忌/大运流年/神煞/胎元命宫身宫）、紫微（辅曜安星/身宫/生年四化/庙旺落陷/格局识别）——详见 [docs/排盘要点调研与补齐计划.md](docs/排盘要点调研与补齐计划.md)
-- ✅ **评测闭环 M1**：接入 MingLi-Bench（160 题）建立 AI 解读评测基线（最优配置 40.0%），评测驱动 prompt 迭代——详见 [docs/evals/](docs/evals/) 与 [server/scripts/eval/](server/scripts/eval/)
-- ✅ **古籍参考库**：断语库 v1（15 条种子，7 术）+ 收录规范与版权核查——详见 [docs/古籍参考库收录规范.md](docs/古籍参考库收录规范.md)
+已完成：
+- ✅ **排盘精度**：八字（藏干十神/旺衰拆解/用神喜忌/大运流年/神煞/胎元命宫身宫）、紫微（辅曜安星/生年四化/庙旺落陷/格局识别）、星盘（宫位/行星入宫/庙旺逆行）、六爻纳甲（六亲六神世应/月破旬空）、奇门（值使/暗干/八神）、六壬（贵人/十二天将）、梅花（体用旺衰）
+- ✅ **AI 解读**：两步管线（盘面解析 → 深度报告）、盘面事实注入、画像级 Schema（原生家庭/心理行为模式/亲密关系）、多 LLM 适配
+- ✅ **评测闭环**：接入 MingLi-Bench（160 题）建立 AI 解读评测基线，评测驱动 prompt 迭代（server/scripts/eval/）
 
-计划方向（随版本推进更新）：
-- **排盘精度**：紫微辅星小星补全（红鸾/天喜/咸池/天刑）、八字格局（月令取格）；Placidus 宫位制、外行星；六爻六亲世应、大六壬九宗门等进阶推演
+计划方向：
+- **排盘精度**：紫微小星补全、八字月令取格；Placidus 宫位制、外行星；六爻六亲世应、大六壬九宗门等进阶推演
 - **AI 解读**：断语库 reviewed 后注入引证闭环；报告结构继续打磨；提示词与质量评分持续调优（评测 + `ai_fail_logs` 双驱动）
-- **开放分发 M2**：MCP Server / Agent Skill / REST API（复用 shared/core 单一算法副本）
+- **开放分发**：MCP Server / Agent Skill / REST API（复用 shared/core 单一算法副本）
 - **体验**：更多 UI 打磨、移动端适配、性能优化
 
 ### 如何参与

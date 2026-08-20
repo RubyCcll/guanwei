@@ -52,5 +52,36 @@ export function meihuaCalc(input: MeihuaInput): MeihuaResult {
   const rel = mod(wxOrder2.indexOf(yongWx) - wxOrder2.indexOf(tiWx), 5);
   const shengkeMap: Record<number, string> = { 1: '用生体，吉', 4: '体克用，吉', 2: '用克体，凶', 3: '体生用，泄气' };
   const shengke = shengkeMap[rel] || '体用比和，平';
-  return { upper, lower, move, benGua, bianGua, huGua, tiGua, yongGua, tiWx, yongWx, shengke, benYao };
+
+  /* ── 补齐层：旺衰时令（月令卦气）── */
+  let monthWx: string | undefined;
+  let tiWangShuai: MeihuaResult['tiWangShuai'];
+  let yongWangShuai: MeihuaResult['yongWangShuai'];
+  let wangShuaiNote: string | undefined;
+  if (input.mode === 'time') {
+    const d = input.now || new Date();
+    const lunar = Solar.fromYmdHms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), 0, 0).getLunar();
+    // 月支五行（农历月：寅=正月...丑=腊月）
+    const ZHI2 = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
+    const lm = Math.abs(lunar.getMonth());
+    const mz = ZHI2[(lm - 1 + 12) % 12];
+    const ZHI_WX: Record<string, string> = { 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水', 子: '水', 丑: '土' };
+    monthWx = ZHI_WX[mz];
+    // 旺相休囚死：旺=同令 相=令生 休=生令者 囚=克令者 死=被令克
+    const wxOrder = ['木', '火', '土', '金', '水'];
+    const mIdx = wxOrder.indexOf(monthWx as any);
+    const wsOf = (wx: string): '旺' | '相' | '休' | '囚' | '死' => {
+      const rel2 = mod(wxOrder.indexOf(wx) - mIdx, 5);
+      return rel2 === 0 ? '旺' : rel2 === 1 ? '死' : rel2 === 2 ? '囚' : rel2 === 3 ? '休' : '相';
+    };
+    tiWangShuai = wsOf(tiWx);
+    yongWangShuai = wsOf(yongWx);
+    // 吉凶加成：体旺用衰→大吉；体衰用旺→力不从心
+    const tiRank = ['旺', '相', '休', '囚', '死'].indexOf(tiWangShuai);
+    const yongRank = ['旺', '相', '休', '囚', '死'].indexOf(yongWangShuai);
+    if (tiRank < yongRank) wangShuaiNote = '体卦' + tiWangShuai + '、用卦' + yongWangShuai + '：体气胜于用气，所占之事主方占优，吉象更实。';
+    else if (tiRank > yongRank) wangShuaiNote = '体卦' + tiWangShuai + '、用卦' + yongWangShuai + '：用气胜于体气，所占之事客方势强，宜缓图之。';
+    else wangShuaiNote = '体用卦气同' + tiWangShuai + '：势均力敌，成败系于' + (tiWangShuai === '旺' ? '当下时令之助' : '行运之机');
+  }
+  return { upper, lower, move, benGua, bianGua, huGua, tiGua, yongGua, tiWx, yongWx, shengke, benYao, monthWx, tiWangShuai, yongWangShuai, wangShuaiNote };
 }

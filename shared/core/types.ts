@@ -63,6 +63,7 @@ export interface ZiweiInput {
   location?: GeoLocation;
   gender?: '男' | '女';
   birthYear?: number;        // 公历出生年（算虚岁/流年用）
+  solarDate?: [number, number, number];  // 公历出生日期（完整真太阳时含均时差用）
 }
 export interface ZiweiResult {
   ming: number;              // 命宫地支位 0=寅
@@ -97,6 +98,10 @@ export interface QimenResult {
   xunShou: string; xunshouName: string;
   zfStar: string; zsMen: string; zfPalace: number;
   pan: Record<number, { yi: string; men: string; star: string }>;
+  // ─── 补齐层（2026-08-20）───
+  zsPalace: number;              // 值使门落宫（时干加临）
+  tianYi: Record<number, string>; // 天盘奇仪（暗干）
+  shen: Record<number, string>;   // 八神布宫
 }
 
 // 梅花输入输出
@@ -110,6 +115,11 @@ export interface MeihuaResult {
   benGua: GuaEntry; bianGua: GuaEntry; huGua: GuaEntry | null;
   tiGua: number; yongGua: number; tiWx: string; yongWx: string;
   shengke: string; benYao: number[];
+  // ─── 补齐层（2026-08-20）───
+  monthWx?: string;              // 起卦月支五行
+  tiWangShuai?: '旺' | '相' | '休' | '囚' | '死';    // 体卦旺衰（月令）
+  yongWangShuai?: '旺' | '相' | '休' | '囚' | '死';  // 用卦旺衰
+  wangShuaiNote?: string;        // 旺衰吉凶加成说明
 }
 
 // 六十四卦条目
@@ -142,6 +152,11 @@ export interface LiurenResult {
   tianpan: Record<number, string>;
   ganJi: string; ke1: string; ke2: string; ke3: string; ke4: string;
   chuan1: string; chuan2: string; chuan3: string;
+  // ─── 补齐层（2026-08-20）───
+  guiRen: string;                // 贵人（昼夜贵人地支）
+  isDay: boolean;                // 昼占/夜占
+  tianJiang: Record<number, string>;  // 十二天将布宫（地盘支 → 天将）
+  chuanJiang: { chuan: string; jiang: string }[];  // 三传所乘天将
 }
 
 // 小六壬输出

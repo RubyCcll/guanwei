@@ -36,7 +36,7 @@ function ensureUser(username: string): boolean {
 
 // POST /api/divine —— 起占入库
 router.post('/', (req, res) => {
-  const { artId, inputs, profile, question, username } = req.body || {};
+  const { artId, inputs, profile, question, username, profileId } = req.body || {};
   // 游客不允许
   if (!ensureUser(username)) {
     return res.status(401).json({ error: 'UNAUTHORIZED', message: '请先入馆（登录）再起占' });
@@ -103,6 +103,7 @@ router.post('/', (req, res) => {
   const rec = createDivination({
     username, artId, kind,
     question: question || undefined,
+    profileId: profileId || 'main',
     profile: profile || undefined,
     params: inputs,
     resultRaw,
@@ -116,7 +117,7 @@ router.get('/', (req, res) => {
   const page = Number(req.query.page || 1);
   const pageSize = Number(req.query.pageSize || 20);
   if (!ensureUser(username)) return res.status(401).json({ error: 'UNAUTHORIZED' });
-  res.json(listDivinations(username, page, pageSize));
+  res.json(listDivinations(username, page, pageSize, String(req.query.profileId || '')));
 });
 
 // GET /api/divine/:id —— 详情（排盘 + AI 报告）

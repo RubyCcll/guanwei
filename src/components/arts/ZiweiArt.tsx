@@ -29,7 +29,7 @@ function ganzhiOptions() {
   return out;
 }
 
-interface PanelProps { onDivine: (inputs: unknown, profile?: UserProfile, question?: string) => void; }
+interface PanelProps { onDivine: (inputs: unknown, profile?: UserProfile, question?: string, profileId?: string) => void; }
 
 export function ZiweiPanel({ onDivine }: PanelProps) {
   const p = currentUser()?.profile;
@@ -38,6 +38,7 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
   const [gender, setGender] = useState<'男' | '女'>(p?.gender || '男');
   const [loc, setLoc] = useState<GeoLocation | null>(p?.location || null);
   const [question, setQuestion] = useState('');
+  const [profileSrc, setProfileSrc] = useState<{ id: string; name: string } | null>(null);
 
   const go = () => {
     const [yy, mm, dd] = date.split('-').map(Number);
@@ -55,15 +56,16 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
     const hourIdx = timeToHourIndex(birthTime);
     const profile: UserProfile = { birthDate: date, birthTime, birthHourIndex: hourIdx, gender, location: loc };
     onDivine(
-      { ganzhi: gz, month: lm, day: ld, hour: hourIdx, time: birthTime, location: loc ?? undefined, gender, birthYear: yy },
+      { ganzhi: gz, month: lm, day: ld, hour: hourIdx, time: birthTime, location: loc ?? undefined, gender, birthYear: yy, solarDate: [yy, mm, dd] },
       profile,
-      question.trim()
+      question.trim(),
+      profileSrc?.id || 'main'
     );
   };
 
   return (
     <>
-      <ProfilePicker onPick={p => { setDate(p.birthDate); setBirthTime(p.birthTime || '00:00'); setGender(p.gender); setLoc(p.location); }} />
+      <ProfilePicker onPick={(p, src) => { setDate(p.birthDate); setBirthTime(p.birthTime || '00:00'); setGender(p.gender); setLoc(p.location); if (src) setProfileSrc(src); }} />
       <div className="field"><label htmlFor="zw-date">出生日期（公历 / 农历，紫微依农历排盘）</label>
         <DateInput id="zw-date" value={date} onChange={setDate} />
       </div>

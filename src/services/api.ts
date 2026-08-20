@@ -128,7 +128,9 @@ export interface AIReport {
   title: string;
   overview: string;
   rawReading: { summary: string; keyPoints: string[] };
-  character?: { summary: string; traits: { name: string; desc: string }[] };
+  character?: { summary: string; traits: { name: string; desc: string }[]; coreConflict?: string; emotion?: string };
+  family?: { background?: string; parents?: string; imprint?: string };
+  mind?: { action?: string; pattern?: string; growth?: string };
   lifeStages?: { stage: string; age: string; summary: string }[];
   career?: { summary: string; direction: string; advice: string };
   love?: { summary: string; advice: string };
@@ -220,7 +222,7 @@ export interface DivineResult {
   display?: unknown;
 }
 
-export async function apiDivine(username: string, artId: string, inputs: unknown, profile?: unknown, question?: string): Promise<DivineResult> {
+export async function apiDivine(username: string, artId: string, inputs: unknown, profile?: unknown, question?: string, profileId?: string): Promise<DivineResult> {
   const res = await fetch(API_BASE + '/divine', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -243,8 +245,8 @@ export interface DivineHistoryItem {
   status: string;
 }
 
-export async function apiDivineHistory(username: string, page = 1, pageSize = 20): Promise<{ list: DivineHistoryItem[]; total: number }> {
-  const res = await fetch(API_BASE + '/divine?username=' + encodeURIComponent(username) + '&page=' + page + '&pageSize=' + pageSize);
+export async function apiDivineHistory(username: string, page = 1, pageSize = 20, profileId?: string): Promise<{ list: DivineHistoryItem[]; total: number }> {
+  const res = await fetch(API_BASE + '/divine?username=' + encodeURIComponent(username) + '&page=' + page + '&pageSize=' + pageSize + (profileId ? '&profileId=' + encodeURIComponent(profileId) : ''));
   if (!res.ok) return { list: [], total: 0 };
   return res.json();
 }

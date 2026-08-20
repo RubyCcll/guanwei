@@ -12,7 +12,7 @@ import SongSelect from '@/components/SongSelect';
 import DateInput from '@/components/DateInput';
 import ProfilePicker from '@/components/ProfilePicker';
 
-interface PanelProps { onDivine: (inputs: unknown, profile?: UserProfile, question?: string) => void; }
+interface PanelProps { onDivine: (inputs: unknown, profile?: UserProfile, question?: string, profileId?: string) => void; }
 
 export function AstrologyPanel({ onDivine }: PanelProps) {
   const user = currentUser();
@@ -21,6 +21,7 @@ export function AstrologyPanel({ onDivine }: PanelProps) {
   const [time, setTime] = useState(() => { const h = (p?.birthHourIndex ?? 4) * 2; return String(h).padStart(2, '0') + ':30'; });
   const [loc, setLoc] = useState<GeoLocation | null>(p?.location || null);
   const [gender, setGender] = useState<'男' | '女'>(p?.gender || '男');
+  const [profileSrc, setProfileSrc] = useState<{ id: string; name: string } | null>(null);
 
   const filled = p && date === p.birthDate && gender === p.gender;
   const go = () => {
@@ -29,12 +30,12 @@ export function AstrologyPanel({ onDivine }: PanelProps) {
     if (!y || !m || !d) return;
     const birthHourIndex = Math.floor(((hh || 0) + 1) % 24 / 2);
     const profile: UserProfile = { birthDate: date, birthTime: time, birthHourIndex, gender, location: loc };
-    onDivine({ y, m, d, hour: hh || 0, min: mm || 0, lng: loc?.lng, lat: loc?.lat }, profile);
+    onDivine({ y, m, d, hour: hh || 0, min: mm || 0, lng: loc?.lng, lat: loc?.lat }, profile, undefined, profileSrc?.id || 'main');
   };
 
   return (
     <>
-      <ProfilePicker onPick={p => { setDate(p.birthDate); setTime(p.birthTime || '08:30'); setGender(p.gender); setLoc(p.location); }} />
+      <ProfilePicker onPick={(p, src) => { setDate(p.birthDate); setTime(p.birthTime || '08:30'); setGender(p.gender); setLoc(p.location); if (src) setProfileSrc(src); }} />
       {user && filled && <p className="hint" style={{ color: 'var(--celadon-deep)', marginTop: 'var(--sp-2)' }}>已依主档案预填（可改，改后以所书为准）</p>}
       <div className="field"><label htmlFor="as-date">出生日期（公历 / 农历）</label>
         <DateInput id="as-date" value={date} onChange={setDate} /></div>
