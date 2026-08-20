@@ -1,0 +1,189 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-void text-stardust font-body;
+    overflow-x: hidden;
+  }
+  
+  ::selection {
+    @apply bg-ancient/30 text-stardust;
+  }
+  
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-void;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ancient/30 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ancient/50;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-abyss/60 backdrop-blur-md border border-ancient/20 rounded-lg;
+  }
+  
+  .gold-border {
+    @apply border border-ancient/40 hover:border-ancient/80 transition-all duration-500;
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 10px rgba(201, 162, 39, 0.5), 0 0 20px rgba(201, 162, 39, 0.3);
+  }
+  
+  .card-3d {
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+  
+  .card-face {
+    backface-visibility: hidden;
+  }
+  
+  .card-back {
+    transform: rotateY(180deg);
+  }
+  
+  .mystic-gradient {
+    background: linear-gradient(135deg, rgba(26,26,46,0.9) 0%, rgba(10,10,15,0.95) 100%);
+  }
+  
+  .shimmer-text {
+    background: linear-gradient(90deg, #c9a227 0%, #ffd700 50%, #c9a227 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+  }
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(201, 162, 39, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(201, 162, 39, 0.6);
+  }
+}
+
+@keyframes typing-cursor {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .animate-typing-cursor {
+    animation: typing-cursor 1s step-end infinite;
+  }
+}
+
+/* ===== 打印 / 存为 PDF：仅打印报告区 ===== */
+@media print {
+  /* 只打印报告区：display:none 释放布局空间（visibility 会保留占位导致空白页） */
+  body { background: #fff !important; }
+  header, footer, nav, aside, .site-head, .site-nav, .back-link,
+  .module-hero, .mh-intro, .mh-row, .altar-panel, .fit-card, .fit-note,
+  .btn-row, .ai-streaming, .ai-error, .result-placeholder, .disclaimer,
+  .d-title, .motes, .ink-vein, .bamboo, .cal-grid, .profile-card, .no-print { display: none !important; }
+  main { display: block !important; padding: 0 !important; }
+  .wrap { max-width: none !important; padding: 0 !important; }
+  .altar { display: block !important; }
+  .altar-result { width: 100% !important; max-width: none !important; }
+  .report-view { color: #000 !important; background: #fff !important; }
+  /* 卡片允许跨页（避免整卡跳页在前页留白）；仅小元素防截断 */
+  .report-view .result-card {
+    break-inside: auto;
+    border: 1px solid #ddd !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    margin-bottom: 6mm;
+  }
+  .report-view .result-card h3 { break-after: avoid; }
+  .report-view .domain-cell, .report-view li, .report-view .traits-grid .trait { break-inside: avoid; }
+  .report-view .result-title { break-after: avoid; }
+  .report-view .result-text, .report-view p, .report-view li, .report-view h3 { color: #000 !important; }
+  .report-view .domain-name { color: #555 !important; }
+  @page { margin: 12mm; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: .55; }
+  50% { opacity: 1; }
+}
