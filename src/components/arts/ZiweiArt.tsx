@@ -37,6 +37,7 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
   const [birthTime, setBirthTime] = useState(p?.birthTime || '00:00');
   const [gender, setGender] = useState<'男' | '女'>(p?.gender || '男');
   const [loc, setLoc] = useState<GeoLocation | null>(p?.location || null);
+  const [question, setQuestion] = useState('');
 
   const go = () => {
     const [yy, mm, dd] = date.split('-').map(Number);
@@ -53,7 +54,8 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
     const profile: UserProfile = { birthDate: date, birthTime, birthHourIndex: hourIdx, gender, location: loc };
     onDivine(
       { ganzhi: gz, month: lm, day: ld, hour: hourIdx, time: birthTime, location: loc ?? undefined, gender, birthYear: yy },
-      profile
+      profile,
+      question.trim()
     );
   };
 
@@ -74,7 +76,10 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
         <label>出生地点（时辰经度校正）</label>
         <LocationPicker value={loc} onChange={setLoc} previewHourIndex={timeToHourIndex(birthTime)} />
       </div>
-      <button className="btn-divine" onClick={go}>布 盘<span className="small">安命宫 · 定紫微 · 布主星</span></button>
+            <div className="field"><label htmlFor="q-input">所问之事（可选）</label>
+        <input className="input-line" id="q-input" placeholder="可书所问，AI 报告将由此而发…" maxLength={60} value={question} onChange={e => setQuestion(e.target.value)} />
+      </div>
+<button className="btn-divine" onClick={go}>布 盘<span className="small">安命宫 · 定紫微 · 布主星</span></button>
       <p className="hint" style={{ marginTop: '.8rem' }}>演示级简盘：十四主星入十二宫，辅曜从略。</p>
     </>
   );
@@ -95,13 +100,30 @@ export function ZiweiResult({ data }: { data: ZiweiResult }) {
     if (!cellStars[pos]) cellStars[pos] = [];
     cellStars[pos].push(s);
   });
+  const cellFu: Record<number, string[]> = {};
+  Object.keys(r.fuStars || {}).forEach(s => {
+    const pos = r.fuStars[s];
+    if (!cellFu[pos]) cellFu[pos] = [];
+    cellFu[pos].push(s);
+  });
+  const sihuaMark: Record<number, string[]> = {};
+  (Object.keys(r.sihuaPos || {}) as Array<'lu' | 'quan' | 'ke' | 'ji'>).forEach(k => {
+    const pos = r.sihuaPos![k];
+    if (pos !== undefined) {
+      if (!sihuaMark[pos]) sihuaMark[pos] = [];
+      sihuaMark[pos].push(k === 'lu' ? '禄' : k === 'quan' ? '权' : k === 'ke' ? '科' : '忌');
+    }
+  });
   const cells = GRID_POS.map(([zhi, c, rw]) => {
     const pos = DIZHI.indexOf(zhi);
     const stars = cellStars[pos] || [];
+    const fus = cellFu[pos] || [];
+    const marks = sihuaMark[pos] || [];
     const palIdx = Object.keys(r.palaces).find(k => r.palaces[Number(k)] === pos);
     const palName = palIdx !== undefined ? PALACE_NAMES[Number(palIdx)] : '';
     const isMing = r.ming === pos;
-    return { zhi, c, rw, stars, palName, isMing, pos };
+    const isShen = r.shen === pos;
+    return { zhi, c, rw, stars, fus, marks, palName, isMing, isShen, pos };
   });
   return (
     <>
@@ -116,12 +138,19 @@ export function ZiweiResult({ data }: { data: ZiweiResult }) {
           </div>
           {cells.sort((a, b) => a.rw === b.rw ? a.c - b.c : a.rw - b.rw).map(c => (
             <div className={"zw-cell" + (c.isMing ? ' ming-cell' : '')} key={c.zhi} style={{ gridColumn: c.c + 1, gridRow: c.rw + 1 }}>
-              <div className="zw-name"><span>{c.zhi} · {c.palName || '—'}</span>{c.isMing ? <span className="zw-extra" style={{ color: 'var(--cinnabar)' }}>命</span> : null}</div>
+              <div className="zw-name">
+                <span>{c.zhi} · {c.palName || '—'}</span>
+                {c.marks.map((m, i) => <span key={i} className="zw-extra" style={{ color: m === '忌' ? 'var(--cinnabar)' : 'var(--celadon-deep)' }}>{m}</span>)}
+                {c.isMing ? <span className="zw-extra" style={{ color: 'var(--cinnabar)' }}>命</span> : null}
+                {c.isShen ? <span className="zw-extra" style={{ color: 'var(--celadon-deep)' }}>身</span> : null}
+              </div>
               <div className="zw-stars">{c.stars.map(s => {
                 const hot = ['紫微', '七杀', '破军', '贪狼', '廉贞'].includes(s);
                 const cool = ['天机', '天同', '天相', '天梁', '天府'].includes(s);
-                return <span key={s} className={"star-name " + (hot ? 'star-hot' : cool ? 'star-cool' : '')}>{s}</span>;
+                const b = (r.brightness || {})[s] || '';
+                return <span key={s} className={"star-name " + (hot ? 'star-hot' : cool ? 'star-cool' : '')}>{s}<em className="tiny" style={{ fontStyle: 'normal', opacity: .65 }}>{b}</em></span>;
               })}{c.stars.length === 0 && <span className="muted">—</span>}</div>
+              {c.fus.length > 0 && <div className="tiny muted" style={{ marginTop: '.15rem', lineHeight: 1.5 }}>{c.fus.join('·')}</div>}
             </div>
           ))}
         </div>
@@ -138,8 +167,22 @@ export function ZiweiResult({ data }: { data: ZiweiResult }) {
       <ResultCard title="命盘基础">
         <p>五行局 <strong>{r.juName}</strong>（{r.nayin}），起运 <strong>{r.startAge} 岁</strong>，大限{' '}
           <strong>{r.forward ? '顺行' : '逆行'}</strong>（{r.nominalAge} 虚岁，行至第 {((r.curDayunIdx ?? 0) + 1)} 大限）。</p>
-        <p>命宫在<strong>{DIZHI[r.ming]}</strong>，身主随命；紫微星落<strong>{DIZHI[r.zwPos]}</strong>宫。</p>
-        <p className="tiny muted">简盘以十四主星为限，辅曜从略；大限起运岁数按五行局数计。</p>
+        <p>命宫在<strong>{DIZHI[r.ming]}</strong>，身宫在<strong>{DIZHI[r.shen]}</strong>{r.shen === r.ming ? '（与命宫同宫）' : ''}；紫微星落<strong>{DIZHI[r.zwPos]}</strong>宫。</p>
+        <p>生年四化：{r.sihua.lu}化禄、{r.sihua.quan}化权、{r.sihua.ke}化科、{r.sihua.ji}化忌（{r.sihua.lu}化禄主财缘流通，化忌之星须防其暗伤）。</p>
+        <p className="tiny muted">大限起运岁数按五行局数计；四化为斗数断流年吉凶之枢。</p>
+      </ResultCard>
+      <ResultCard title="格局">
+        {r.geju.length > 0 ? (
+          <>
+            <p>{r.geju.map((g, i) => (
+              <span key={i}><strong className={g.ji === '吉' ? 'tag-cool' : g.ji === '凶' ? 'tag-hot' : ''}>{g.name}</strong>{g.ji === '吉' ? '（吉格）' : g.ji === '凶' ? '（凶格）' : '（平格）'}　</span>
+            ))}</p>
+            {r.geju.map((g, i) => (
+              <p key={i} style={{ marginTop: '.5rem' }}><strong>{g.name}</strong>：{g.desc}<span className="tiny muted">（{g.why}）</span></p>
+            ))}
+          </>
+        ) : <p>本命未会明显格局，以主星庙陷与四化合参论之。</p>}
+        <p className="tiny muted" style={{ marginTop: '.5rem' }}>格局为星曜组合之定式：成格者一生趋向鲜明，破格者（煞忌冲破）则吉格亦减力。</p>
       </ResultCard>
       {r.dayun && r.dayun.length > 0 && (
         <div className="result-card stagger">

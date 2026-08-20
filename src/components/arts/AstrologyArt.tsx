@@ -65,6 +65,21 @@ export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCal
     const deg = mod(lon, 30);
     return { name, sym, s, deg };
   });
+  const detailRows = (r.planetDetails || []).map(p => (
+    <div className="result-cell" key={p.cn}>
+      <div className="k">{p.cn} {p.sym} {p.retrograde ? '· 逆行' : ''}</div>
+      <div className="v">{p.sign} {p.degree.toFixed(1)}°</div>
+      <div className="tiny">落{p.house}宫{p.dignity.status ? ' · ' + p.dignity.status : ''}</div>
+      {p.dignity.note && <div className="tiny muted">{p.dignity.note}</div>}
+    </div>
+  ));
+  const houseRows = (r.houses || []).map(h => (
+    <div className="result-cell" key={h.num}>
+      <div className="k">{h.num}宫</div>
+      <div className="v">{h.sign}</div>
+      <div className="tiny">宫主 {h.ruler}</div>
+    </div>
+  ));
   const aspectHtml = r.aspects.length
     ? r.aspects.map((a, i) => <p key={i}><strong>{a[0]}</strong> 与 <strong>{a[1]}</strong> 成 <span className="tag-cool">{a[2]}</span> —— {a[3]}</p>)
     : <p>诸星无显著相位，气机平和。</p>;
@@ -82,6 +97,12 @@ export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCal
         }))}>
         {signRows.map(p => <p key={p.name} className="tiny muted">{ZODIAC_MEAN[ZODIAC[p.s][0]]}</p>)}
       </ResultCard>
+      <ResultCard title="行星入宫 · 庙旺 · 逆行">
+        <div className="result-grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' }}>
+          {detailRows}
+        </div>
+        <p className="tiny muted" style={{ marginTop: '.6rem' }}>庙=本垣力量最显，旺=擢升助力显著，陷/弱=力量受抑；逆行行星主内省与回炉，其宫位事务易有反复。</p>
+      </ResultCard>
       <ResultCard title="相位经纬">{aspectHtml}</ResultCard>
       <ResultCard title="行星落宫参详">
         {r.planets.map((p) => {
@@ -93,7 +114,10 @@ export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCal
       </ResultCard>
       <ResultCard title="十二宫位（整宫制）">
         <p>{HOUSES.map((hname, i) => <span key={hname}><strong>{hname}</strong>·{ZODIAC[mod(ascSign + i, 12)][0]}　</span>)}</p>
-        <p className="mt-1">命宫即上升所落之座，为一生行运之门户。</p>
+        <div className="result-grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', marginTop: '.7rem' }}>
+          {houseRows}
+        </div>
+        <p className="mt-1">命宫即上升所落之座，为一生行运之门户；宫主星为该宫头星座之古典守护星（不含三王星）。Placidus 宫位制在迭代计划中。</p>
       </ResultCard>
     </>
   );

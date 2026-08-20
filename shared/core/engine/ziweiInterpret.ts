@@ -118,11 +118,43 @@ export function interpretZiwei(r: ZiweiResult): ZiweiInsight[] {
     out.push({ title: '流年之示', content: c5 });
   }
 
+  // 5.5 格局 + 四化 + 庙旺
+  if (r.geju && r.geju.length > 0) {
+    const g = r.geju.map(x => x.name + (x.ji === '吉' ? '（吉格）' : x.ji === '凶' ? '（凶格）' : '（平格）')).join('、');
+    const gDetail = r.geju.map(x => x.name + '：' + x.desc.split('。')[0] + '。').join('');
+    out.push({
+      title: '格局定式',
+      content: '本命会 ' + g + '。' + gDetail + '成格之局趋向鲜明：' + (r.geju.some(x => x.ji === '吉') ? '吉格者顺势而取，是命盘中最可依托的优势方向。' : '') + (r.geju.some(x => x.ji === '凶') ? '凶格者（或煞忌冲破）须早作防备，化被动为主动。' : '') + '平格者动静皆宜，重在行运把握。',
+    });
+  }
+  if (r.sihua) {
+    const s = r.sihua;
+    const luPal = r.sihuaPos?.lu !== undefined ? palaceNameOf(r, r.sihuaPos.lu) : '';
+    const jiPal = r.sihuaPos?.ji !== undefined ? palaceNameOf(r, r.sihuaPos.ji) : '';
+    out.push({
+      title: '生年四化',
+      content: s.lu + '化禄（入' + (luPal || '某宫') + '）主财缘与福荫所钟；' + s.quan + '化权主魄力与开创所在；' + s.ke + '化科主名声与文华所显；' + s.ji + '化忌（入' + (jiPal || '某宫') + '）是命中最须留意之处——忌星所落之宫，其事务易生阻滞、消耗与执着，宜以' + s.ji + '之性反求克制（' + ZW_STAR_MEAN[s.ji]?.split('，')[0] + '）。四化合观，禄权科为吉化，忌为暗伤，一生取舍可由此参详。',
+    });
+  }
+  const brightNotes: string[] = [];
+  if (r.brightness) {
+    Object.keys(r.zwStars).forEach(s => {
+      const b = r.brightness[s];
+      if (b === '庙' && (r.zwStars[s] === r.ming || r.zwStars[s] === r.shen)) brightNotes.push(s + '坐' + (r.zwStars[s] === r.ming ? '命' : '身') + '宫庙旺');
+    });
+    if (brightNotes.length) {
+      out.push({
+        title: '庙旺点睛',
+        content: brightNotes.join('；') + '——星曜得地，力量全发，是盘中最有力的支撑点；行运至此宫之年，多有实质性进展。',
+      });
+    }
+  }
+
   // 6. 总述
   const keyStar = mingStars[0] || '紫微';
   const c6 = '盘主以' + keyStar + '为命宫主星（' + (mingStars.length ? ZW_STARS[keyStar] : '借对宫之力') + '），紫微落' + (zwPalace || '') + '宫、五行属' + r.juName + '。'
     + '纵观全局，' + (mingStars.length ? keyStar + '主' + (ZW_STAR_MEAN[keyStar].includes('贵') ? '格局与担当' : '其性之显') + '，一生之成在于' + (zwPalace || '未明之宫') + '之经营。' : '命宫虚而借力，一生之成在于择善而从。')
-    + '大限顺逆已定，行运起伏观其宫位主星之得地与否。此盘为简盘所推，辅曜从略，供修身养性、怡情遣兴之用。';
+    + '大限顺逆已定，行运起伏观其宫位主星之庙陷与四化之忌。' + (r.geju && r.geju.length ? '格局' + r.geju.map(x => x.name).join('、') + '定其一生趋向，' : '') + '此盘为观微所推（含辅曜四化），供修身养性、怡情遣兴之用。';
   out.push({ title: '命盘总述', content: c6 });
 
   return out;
