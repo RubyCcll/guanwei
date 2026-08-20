@@ -1,0 +1,53 @@
+name: Bug 报告
+description: 报告排盘错误 / AI 解读异常 / 界面问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: input
+    id: art
+    attributes:
+      label: 涉及术数
+      description: 八字 / 紫微 / 星盘 / 奇门 / 梅花 / 六爻 / 大六壬 / 小六壬 / 塔罗 / 其他
+      placeholder: 如：紫微斗数
+    validations:
+      required: true
+  - type: textarea
+    id: desc
+    attributes:
+      label: 问题描述
+      description: 发生了什么？与预期有何不同？
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 尽量详细：输入了什么（出生日期时刻/地点/问题），点击了什么
+      placeholder: |
+        1. 打开九术页，选择「紫微」
+        2. 输入出生 1995-06-15 14:30，地点杭州
+        3. 点击布盘后召 AI 成报告
+        4. 报告中上升星座与排盘不一致（排盘显示 X，AI 显示 Y）
+    validations:
+      required: true
+  - type: textarea
+    id: expect
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: dropdown
+    id: env
+    attributes:
+      label: 运行环境
+      options:
+        - 本地开发（localhost:5178）
+        - GitHub Pages 演示站
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他信息
+      description: 截图 / 浏览器版本 / 报错信息（注意：请勿粘贴 API Key 等敏感信息）
