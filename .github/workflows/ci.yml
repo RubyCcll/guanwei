@@ -26,12 +26,6 @@ jobs:
       - name: Type check (frontend)
         run: npx tsc --noEmit
 
-      - name: Run tests
-        run: npx vitest run
-
-      - name: Build frontend
-        run: npm run build
-
       - name: Install server dependencies
         working-directory: server
         run: npm ci
@@ -39,6 +33,31 @@ jobs:
       - name: Type check (server)
         working-directory: server
         run: npx tsc --noEmit
+
+      - name: Start backend (for integration tests)
+        working-directory: server
+        run: |
+          npx tsx src/index.ts > /tmp/backend.log 2>&1 &
+          echo $! > /tmp/backend.pid
+          # 等待就绪
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3018/api/health > /dev/null 2>&1; then
+              echo "backend ready"
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:3018/api/health || (echo "backend failed to start"; cat /tmp/backend.log; exit 1)
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Kill backend
+        run: |
+          kill $(cat /tmp/backend.pid) 2>/dev/null || true
+
+      - name: Build frontend
+        run: npm run build
 
       - name: Server smoke (divineStore)
         working-directory: server
