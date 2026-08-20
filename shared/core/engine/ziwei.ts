@@ -1,6 +1,6 @@
 // 紫微斗数：简式星盘（命宫/五行局/紫微定位/十四主星）+ 补齐层（辅星/身宫/四化/庙旺/格局）
 import { NAYIN, NAYIN_JU, ganZhiIndex, mod } from '../data/ganzhi';
-import { longitudeCorrectedHourIndex } from './trueSolarTime';
+import { trueSolarTime } from './trueSolarTime';
 import type { ZiweiInput, ZiweiResult } from '../types';
 import { GAN, ZHI } from '../data/ganzhi';
 import { PALACE_NAMES, ZW_SIHUA, ZW_BRIGHTNESS, LU_CUN, KUI_YUE, TIAN_MA, HUO_START, LING_START, ZW_GEJU } from '../data/ziwei';
@@ -14,11 +14,18 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   const gz = input.ganzhi;
   const gan = gz[0];
   const zhi = gz[1];
-  // 时辰经度修正（真太阳时之经度部分）
+  // 时辰真太阳时校正（经度 + 均时差；有公历日期用完整版）
   let correctedHour = hour;
   if (input.location) {
-    const [th, tm] = input.time ? input.time.split(':').map(Number) : [(hour * 2) % 24, 0];
-    correctedHour = longitudeCorrectedHourIndex(th + (tm || 0) / 60, input.location.lng);
+    const [th, tm] = input.time ? input.time.split(':').map(Number) : [(hour * 2) % 24, 30];
+    if (input.solarDate) {
+      const ts = trueSolarTime(input.solarDate[0], input.solarDate[1], input.solarDate[2], th, tm, input.location.lng);
+      correctedHour = ts.hourIndex;
+    } else {
+      // 无公历日期：仅经度修正（均时差 ≤15 分钟，边界时辰有风险——建议传 solarDate）
+      const localMean = th + (tm || 0) / 60 + (input.location.lng - 120) * 4 / 60;
+      correctedHour = Math.floor((((localMean + 24) % 24) + 1) % 24 / 2);
+    }
   }
   /* 命宫：寅宫起正月顺数至生月，再从生月宫起子时逆数至生时 */
   const ming = mod((month - 1) - correctedHour, 12);

@@ -38,7 +38,37 @@ export function liurenCalc(dt: string | Date): LiurenResult {
   const ke4 = tianpan[ZHI.indexOf(ke3 as any)];
   /* 三传（简式取传：依次取四课初传、中传、末传上神） */
   const chuan1 = ke1, chuan2 = ke2, chuan3 = ke3;
-  return { dayGZ, hourGZ, jiang, jqName, tianpan, ganJi, ke1, ke2, ke3, ke4, chuan1, chuan2, chuan3 };
+
+  /* ── 补齐层：贵人 + 十二天将 ── */
+  // 贵人起法（日干）：甲戊庚牛羊 乙己鼠猴乡 丙丁猪鸡位 壬癸兔蛇藏 六辛逢马虎
+  const GUIREN: Record<string, [string, string]> = {
+    甲: ['丑', '未'], 戊: ['丑', '未'], 庚: ['丑', '未'],
+    乙: ['子', '申'], 己: ['子', '申'],
+    丙: ['亥', '酉'], 丁: ['亥', '酉'],
+    壬: ['卯', '巳'], 癸: ['卯', '巳'],
+    辛: ['午', '寅'],
+  };
+  // 昼占：卯时至酉时前（hourIndex 2..7）；夜占：酉时至卯时前
+  const isDay = hourIndex >= 2 && hourIndex < 8;
+  const guiRen = (GUIREN[dayGZ[0]] || ['丑', '未'])[isDay ? 0 : 1];
+  // 天将序列（贵人起）：贵人 螣蛇 朱雀 六合 勾陈 青龙 天空 白虎 太常 玄武 太阴 天后
+  const JIANG_SEQ = ['贵人', '螣蛇', '朱雀', '六合', '勾陈', '青龙', '天空', '白虎', '太常', '玄武', '太阴', '天后'];
+  // 贵人加临天盘后定顺逆：贵人落支在亥子丑寅卯辰 → 顺布；巳午未申酉戌 → 逆布
+  const grIdx = ZHI.indexOf(guiRen as any);
+  const grPan = tianpan[grIdx];          // 贵人在天盘所加之支
+  const grPanIdx = ZHI.indexOf(grPan as any);
+  const forwardJiang = [10, 11, 0, 1, 2, 3].includes(grPanIdx); // 亥子丑寅卯辰顺
+  const tianJiang: Record<number, string> = {};
+  for (let i = 0; i < 12; i++) {
+    const step = forwardJiang ? i : -i;
+    tianJiang[mod(grPanIdx + step, 12)] = JIANG_SEQ[i];
+  }
+  const chuanJiang = [chuan1, chuan2, chuan3].map(ch => {
+    const cz = ZHI.indexOf(ch as any);
+    return { chuan: ch, jiang: tianJiang[cz] || '' };
+  });
+
+  return { dayGZ, hourGZ, jiang, jqName, tianpan, ganJi, ke1, ke2, ke3, ke4, chuan1, chuan2, chuan3, guiRen, isDay, tianJiang, chuanJiang };
 }
 
 export const jiangName = (zhi: string): string => {

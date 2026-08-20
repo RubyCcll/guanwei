@@ -1,6 +1,6 @@
 // AI 解读路由：/api/ai/interpret（非流式）+ /api/ai/interpret/stream（SSE）
 import { Router } from 'express';
-import { buildMessages, buildReportMessages } from '../services/promptBuilder.js';
+import { buildMessages, buildReportMessages, buildStep1Messages, buildStep2Messages } from '../services/promptBuilder.js';
 import { chatOnce, chatStream, activeProvider, providerStatus, lastFinishReason } from '../services/llmProvider.js';
 import { getDivination, attachReport, markAiFailed } from '../services/divineStore.js';
 
@@ -18,17 +18,27 @@ router.post('/interpret', async (req, res) => {
   try {
     // 从 SQLite 读排盘数据（v6：不再信任前端直传 resultRaw）
     let resultRaw: unknown = null;
+    let recProfile: unknown = undefined;
     if (divineId) {
       const rec = getDivination(divineId);
       if (!rec) return res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
       if (username && rec.username !== username) return res.status(403).json({ error: 'FORBIDDEN' });
       resultRaw = rec.resultRaw;
+      recProfile = rec.profile;
     } else {
       return res.status(400).json({ error: 'DIVINE_REQUIRED', message: '请先起占（divineId 缺失）' });
     }
-    // 统一报告模式：无论 report 标志，均按 Schema 输出结构化报告
+    // 统一报告模式：两步管线（Step1 盘面解析 → Step2 深度报告），Step1 失败降级单步
     const kind = ['bazi', 'ziwei', 'astrology'].includes(artId) ? 'mingpan' : 'zhanwen';
-    const messages = buildReportMessages(artId, question || '', resultRaw, profile, semantic, fit);
+    let step1Text = '';
+    try {
+      step1Text = await chatOnce(buildStep1Messages(artId, question || '', resultRaw, recProfile));
+    } catch (e1: any) {
+      console.warn('[ai] Step1 盘面解析失败，降级为单步模式:', e1.message);
+    }
+    const messages = step1Text
+      ? buildStep2Messages(artId, question || '', resultRaw, step1Text, recProfile, semantic, fit)
+      : buildReportMessages(artId, question || '', resultRaw, profile, semantic, fit);
     const text = await chatOnce(messages);
     const parsed = parseReport(text, kind);
     if (parsed.quality === 'poor') {
@@ -67,7 +77,17 @@ router.post('/interpret/stream', async (req, res) => {
   }
   const resultRaw = rec.resultRaw;
   try {
-    const messages = buildReportMessages(artId, question || '', resultRaw, profile, semantic, fit);
+    // 两步管线（2026-08-20）：Step1 盘面解析（内部非流式，短输出）→ Step2 深度报告（流式）
+    let step1Text = '';
+    try {
+      step1Text = await chatOnce(buildStep1Messages(artId, question || '', resultRaw, rec.profile));
+    } catch (e1: any) {
+      console.warn('[ai] Step1 盘面解析失败，降级为单步模式:', e1.message);
+      step1Text = '';
+    }
+    const messages = step1Text
+      ? buildStep2Messages(artId, question || '', resultRaw, step1Text, rec.profile, semantic, fit)
+      : buildReportMessages(artId, question || '', resultRaw, profile, semantic, fit);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');

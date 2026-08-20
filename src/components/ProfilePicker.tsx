@@ -4,7 +4,7 @@ import { currentUser, type UserProfile } from '@/utils/userStore';
 import SongSelect from '@/components/SongSelect';
 
 interface Props {
-  onPick: (p: UserProfile) => void;
+  onPick: (p: UserProfile, source?: { id: string; name: string }) => void;
   onPicked?: () => void;
 }
 
@@ -18,10 +18,10 @@ export default function ProfilePicker({ onPick, onPicked }: Props) {
   ];
   if (items.length <= 1) return null;
   const pick = (v: string) => {
-    if (v === 'primary') onPick(user.profile);
+    if (v === 'primary') onPick(user.profile, { id: 'main', name: '主档案' });
     else {
       const s = user.samples.find(x => x.id === v);
-      if (s) onPick(s.profile);
+      if (s) onPick(s.profile, { id: s.id, name: s.name });
     }
     setValue('');
     onPicked?.();

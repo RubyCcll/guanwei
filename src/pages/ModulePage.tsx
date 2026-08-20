@@ -63,9 +63,13 @@ export default function ModulePage() {
   // 面板上报的出生档案（供存为档案）
   const profileRef = useRef<UserProfile | null>(null);
   const questionRef = useRef('');
+  const inputsRef = useRef<unknown>(null);
+  const profileIdRef = useRef('main');
   const [fit, setFit] = useState<{ suitable: boolean | 'partial'; reason: string; suggestion: string } | null>(null);
-  const divineWithProfile = async (inputs: unknown, profile?: UserProfile, question?: string) => {
+  const divineWithProfile = async (inputs: unknown, profile?: UserProfile, question?: string, profileId?: string) => {
     if (profile) profileRef.current = profile;
+    inputsRef.current = inputs;
+    profileIdRef.current = profileId || 'main';
     if (question !== undefined) questionRef.current = question;
     // 问题适配性分析（无问题时不提示）
     const q = question !== undefined ? question : ((document.getElementById('q-input') as HTMLInputElement)?.value || '');
@@ -77,7 +81,7 @@ export default function ModulePage() {
       return;
     }
     divine(async () => {
-      const r = await apiDivine(user.username, art?.id || '', inputs, profile || undefined, q.trim() || undefined);
+      const r = await apiDivine(user.username, art?.id || '', inputs, profile || user.profile, q.trim() || undefined, profileId || 'main');
       return { resultRaw: r.resultRaw, divineId: r.divineId };
     });
   };
@@ -138,11 +142,16 @@ export default function ModulePage() {
     if (status === 'done' && result && art && savedRef.current !== result) {
       savedRef.current = result;
       const loc = profileRef.current?.location;
+      const prof = profileRef.current;
       saveRecord({
         artId: art.id,
         createdAt: Date.now(),
         result,
         location: loc ? { lng: loc.lng, lat: loc.lat, province: loc.province, city: loc.city, district: loc.district } : undefined,
+        profileId: profileIdRef.current,
+        profile: prof ? { birthDate: prof.birthDate, birthTime: prof.birthTime, gender: prof.gender, location: prof.location } : null,
+        inputs: inputsRef.current,
+        question: questionRef.current || undefined,
       });
     }
   }, [status, result, art]);

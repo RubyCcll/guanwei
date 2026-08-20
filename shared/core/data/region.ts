@@ -1,4 +1,7 @@
-// 中国省市区县 → 经纬度数据集（首期精简版：34 省级 + 主要城市 + 城区默认值）
+// 中国省市区县 → 经纬度数据集
+// 全量数据（34 省/391 市/2728 区县）见 region-full.ts（DataV.GeoAtlas 中心点坐标 + 台湾手动补充）
+// 本文件保留精简版 REGIONS（旧结构兼容）+ 全量查找入口
+import { REGION_FULL } from './region-full';
 // 坐标取各市市中心/政府驻地近似值，数据来源：公开地理数据整理
 
 export interface District {
@@ -182,19 +185,51 @@ export interface GeoSelection {
   lat: number;
 }
 
+// 名称归一化：去掉行政区后缀（广东省→广东、锦州市→锦州、北镇市→北镇）
+function stripSuffix(name: string, suffixes: string[]): string {
+  for (const s of suffixes) {
+    if (name.endsWith(s) && name.length > s.length) return name.slice(0, -s.length);
+  }
+  return name;
+}
+const PROV_SUFFIX = ['壮族自治区', '回族自治区', '维吾尔自治区', '特别行政区', '自治区', '省', '市'];
+const CITY_SUFFIX = ['地区', '自治州', '盟', '市', '县'];
+const DIST_SUFFIX = ['自治县', '自治旗', '林区', '特区', '市', '县', '区', '旗'];
+const normProv = (n: string) => stripSuffix(n, PROV_SUFFIX);
+const normCity = (n: string) => stripSuffix(n, CITY_SUFFIX);
+const normDist = (n: string) => stripSuffix(n, DIST_SUFFIX);
+
+// 全量查询：省/市/区三级（精确或去后缀匹配，任一缺失自动回退上一级坐标）
 export function resolveLocation(province: string, city: string, district: string): GeoSelection | null {
-  const p = REGIONS.find(r => r.name === province);
-  if (!p) return null;
-  const c = p.cities.find(c2 => c2.name === city);
-  if (!c) return null;
-  const d = c.districts?.find(d2 => d2.name === district);
+  const provKey = REGION_FULL[province] ? province : Object.keys(REGION_FULL).find(k => normProv(k) === normProv(province));
+  if (!provKey) return null;
+  const p = REGION_FULL[provKey];
+  const cityKey = p.cities[city] ? city : Object.keys(p.cities).find(k => normCity(k) === normCity(city));
+  if (!cityKey) return { province: provKey, city: '', district: '', lng: p.lng, lat: p.lat };
+  const c = p.cities[cityKey];
+  const distKey = c.districts[district] ? district : Object.keys(c.districts).find(k => normDist(k) === normDist(district));
   return {
-    province: p.name,
-    city: c.name,
-    district: d ? d.name : '城区',
-    lng: d && d.lng !== undefined ? d.lng : c.lng,
-    lat: d && d.lat !== undefined ? d.lat : c.lat,
+    province: provKey,
+    city: cityKey,
+    district: distKey || '城区',
+    lng: distKey ? c.districts[distKey][0] : c.lng,
+    lat: distKey ? c.districts[distKey][1] : c.lat,
   };
+}
+
+// 全量列表 API（LocationPicker 用）
+export function allProvinces(): string[] { return Object.keys(REGION_FULL); }
+export function citiesOf(province: string): { name: string; lng: number; lat: number }[] {
+  const provKey = REGION_FULL[province] ? province : Object.keys(REGION_FULL).find(k => normProv(k) === normProv(province));
+  const p = provKey ? REGION_FULL[provKey] : null;
+  return p ? Object.keys(p.cities).map(name => ({ name, lng: p.cities[name].lng, lat: p.cities[name].lat })) : [];
+}
+export function districtsOf(province: string, city: string): { name: string }[] {
+  const provKey = REGION_FULL[province] ? province : Object.keys(REGION_FULL).find(k => normProv(k) === normProv(province));
+  const p = provKey ? REGION_FULL[provKey] : null;
+  const cityKey = p && (p.cities[city] ? city : Object.keys(p.cities).find(k => normCity(k) === normCity(city)));
+  const c = cityKey ? p!.cities[cityKey] : null;
+  return c ? Object.keys(c.districts).map(name => ({ name })) : [];
 }
 // ============ 扩充城市（第二批，补全主要地级市） ============
 const EXTRA_CITIES: Record<string, { name: string; lng: number; lat: number }[]> = {

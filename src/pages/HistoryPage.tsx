@@ -38,6 +38,17 @@ export default function HistoryPage() {
         <div className="module-title-row">
           <h2 className="module-title"><span className="cn">{art?.name || '占问'}</span>{formatTime(rec.createdAt)}</h2>
         </div>
+        {(rec.profile || rec.question) && (
+          <div className="result-card" style={{ marginTop: '1rem' }}>
+            {rec.question && <p className="result-text"><strong>所问：</strong>{rec.question}</p>}
+            {rec.profile && (
+              <p className="result-text tiny" style={{ marginTop: '.4rem' }}>
+                <strong>档案：</strong>{(rec.profile as any).gender || ''}{(rec.profile as any).birthDate ? ' · ' + (rec.profile as any).birthDate : ''}{(rec.profile as any).birthTime ? ' ' + (rec.profile as any).birthTime : ''}
+                {(() => { const l = (rec.profile as any).location; return l ? ' · ' + ((l as any).province || '') + ((l as any).city || '') + ((l as any).district || '') + '（' + (l as any).lng?.toFixed?.(2) + ',' + (l as any).lat?.toFixed?.(2) + '）' : ''; })()}
+              </p>
+            )}
+          </div>
+        )}
         <div className="mt-4">
           {pair?.Result ? <pair.Result data={rec.result} /> : <p className="result-text">此术结果暂无法回看。</p>}
         </div>
@@ -50,7 +61,9 @@ export default function HistoryPage() {
   }
 
   const records = useMemo(() => getRecords(), [tick, artFilter, search]);
+  const [profileFilter, setProfileFilter] = useState('all');
   const filtered = records.filter(r => {
+    if (profileFilter !== 'all' && (r.profileId || 'main') !== profileFilter) return false;
     if (artFilter !== 'all' && r.artId !== artFilter) return false;
     if (search) {
       const art = artById(r.artId);

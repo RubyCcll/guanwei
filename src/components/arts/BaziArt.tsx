@@ -14,7 +14,7 @@ import TimeShichenInput from '@/components/TimeShichenInput';
 import { ResultCard } from '@/components/ResultCard';
 
 
-interface PanelProps { onDivine: (inputs: unknown, profile?: UserProfile, question?: string) => void; }
+interface PanelProps { onDivine: (inputs: unknown, profile?: UserProfile, question?: string, profileId?: string) => void; }
 
 export function BaziPanel({ onDivine }: PanelProps) {
   const user = currentUser();
@@ -24,6 +24,7 @@ export function BaziPanel({ onDivine }: PanelProps) {
   const [gender, setGender] = useState<'男' | '女'>(p?.gender || '男');
   const [loc, setLoc] = useState<GeoLocation | null>(p?.location || null);
   const [question, setQuestion] = useState('');
+  const [profileSrc, setProfileSrc] = useState<{ id: string; name: string } | null>(null);
 
   const filled = p && date === p.birthDate && birthTime === p.birthTime && gender === p.gender && JSON.stringify(loc) === JSON.stringify(p.location);
   const go = () => {
@@ -33,13 +34,14 @@ export function BaziPanel({ onDivine }: PanelProps) {
     onDivine(
       { y, m, d, hourIndex: hourIdx, time: birthTime, gender, location: loc ?? undefined },
       { birthDate: date, birthTime, birthHourIndex: hourIdx, gender, location: loc },
-      question.trim()
+      question.trim(),
+      profileSrc?.id || 'main'
     );
   };
 
   return (
     <>
-      <ProfilePicker onPick={p => { setDate(p.birthDate); setBirthTime(p.birthTime || '12:00'); setGender(p.gender); setLoc(p.location); }} />
+      <ProfilePicker onPick={(p, src) => { setDate(p.birthDate); setBirthTime(p.birthTime || '12:00'); setGender(p.gender); setLoc(p.location); if (src) setProfileSrc(src); }} />
       {user && filled && <p className="hint" style={{ color: 'var(--celadon-deep)', marginTop: 'var(--sp-2)' }}>已依主档案预填（可改，改后以所书为准）</p>}
       <div className="field"><label htmlFor="bz-date">出生日期（公历 / 农历）</label>
         <DateInput id="bz-date" value={date} onChange={setDate} /></div>

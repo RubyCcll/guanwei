@@ -7,6 +7,10 @@ export interface DivinationRecord {
   createdAt: number;
   result: unknown;
   location?: { lng: number; lat: number; province?: string; city?: string; district?: string };
+  profileId?: string;   // 档案标识（main / 示例档案 id）
+  profile?: { birthDate?: string; birthTime?: string; gender?: string; location?: unknown } | null;
+  inputs?: unknown;
+  question?: string;
 }
 
 const MAX = 200;

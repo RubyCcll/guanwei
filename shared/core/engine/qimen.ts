@@ -41,7 +41,7 @@ export function qimenCalc(input: QimenInput): QimenResult {
   const zfPalace = Number(Object.keys(yiAt).find(p => yiAt[Number(p)] === xunShou) || 1);
   const zfStar = QM_STARS[zfPalace - 1];
   const zsMen = QM_MEN[zfPalace - 1];
-  /* 八门：从值使宫起按宫序顺布；九星按洛书固定 */
+  /* 八门：从值符宫起按宫序顺布；九星按洛书固定 */
   const menOrder = ['休', '生', '伤', '杜', '景', '死', '惊', '开'];
   const starOrder = ['天蓬', '天任', '天冲', '天辅', '天英', '天芮', '天柱', '天心'];
   LUOSHU.forEach((p, i) => {
@@ -50,5 +50,29 @@ export function qimenCalc(input: QimenInput): QimenResult {
     pan[p].men = menOrder[mIdx];
   });
   pan[5] = { yi: '中', star: '天禽', men: '' };
-  return { yin, ju, jqName, dayGZ, hourGZ, xunShou, xunshouName: xunshouMap[xunShou] || '', zfStar, zsMen, zfPalace, pan };
+
+  /* ── 补齐层：值使落宫 + 天盘奇仪（暗干）+ 八神 ── */
+  // 值使门随时干落宫：时干在地盘所在宫
+  const zsPalace = Number(Object.keys(yiAt).find(p => yiAt[Number(p)] === hourGZ[0]) || zfPalace);
+  // 天盘奇仪（暗干）：从值符宫（值符随时干）起，阳遁顺布、阴遁逆布（洛书序）
+  const tianYi: Record<number, string> = {};
+  const qiyiFromXun = qiyiOrder.slice(qiyiOrder.indexOf(xunShou)); // 旬首起
+  const seq = [...qiyiFromXun, ...qiyiOrder.slice(0, qiyiOrder.indexOf(xunShou))]; // 六仪三奇环序
+  const zsIdx = LUOSHU.indexOf(zsPalace);
+  LUOSHU.forEach((p, i) => {
+    const step = yin ? mod(zsIdx - i, 9) : mod(zsIdx + i, 9);
+    tianYi[p] = seq[step];
+  });
+  tianYi[5] = '';
+  // 八神：值符 螣蛇 太阴 六合 白虎 玄武 九地 九天；从值符宫起，阳顺阴逆布八宫（中宫不入）
+  const shenSeq = ['值符', '螣蛇', '太阴', '六合', '白虎', '玄武', '九地', '九天'];
+  const shen: Record<number, string> = {};
+  const shenPalaces = LUOSHU.filter(p => p !== 5);
+  const zfIdx = shenPalaces.indexOf(zfPalace);
+  shenPalaces.forEach((p, i) => {
+    const step = yin ? mod(zfIdx - i, 8) : mod(zfIdx + i, 8);
+    shen[p] = shenSeq[step];
+  });
+  shen[5] = '';
+  return { yin, ju, jqName, dayGZ, hourGZ, xunShou, xunshouName: xunshouMap[xunShou] || '', zfStar, zsMen, zfPalace, pan, zsPalace, tianYi, shen };
 }
