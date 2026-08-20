@@ -158,36 +158,46 @@ export async function aiInterpretStream(
   onError?: (code: string, message: string) => void,
 ): Promise<void> {
   let timeoutTimer: ReturnType<typeof setInterval> | null = null;
+  // 终态防重：error/done 只生效第一次，防止「超时/错误后流才结束」时兜底回调把错误状态覆盖成 done、再把原始文字当结果展示
+  let settled = false;
+  const controller = new AbortController();
+  const fail = (code: string, message: string) => {
+    if (settled) return;
+    settled = true;
+    onError?.(code, message);
+  };
   try {
     const res = await fetch(API_BASE + '/ai/interpret/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
+      signal: controller.signal,
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      onError?.(err.error || 'AI_HTTP_' + res.status, err.message || 'AI 解读暂未应机');
+      fail(err.error || 'AI_HTTP_' + res.status, err.message || 'AI 解读暂未应机');
       return;
     }
     const reader = res.body?.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    let lastDataAt = Date.now();
+    let firstByteAt = 0;
     if (!reader) {
-      onError?.('NO_STREAM', '无法读取响应');
+      fail('NO_STREAM', '无法读取响应');
       return;
     }
-    // 60s 无数据 → 视为超时（DeepSeek 长报告生成较慢，放宽到 90s）
+    // 超时从「收到首个字节」起算（两步管线 Step1 为非流式，首字节前可能等待 30-120 秒，不能误判超时）
     timeoutTimer = setInterval(() => {
-      if (Date.now() - lastDataAt > 90000) {
+      if (firstByteAt && Date.now() - firstByteAt > 180000) {
         clearInterval(timeoutTimer);
-        onError?.('STREAM_TIMEOUT', 'AI 生成逾时，请重试');
+        controller.abort();
+        fail('STREAM_TIMEOUT', 'AI 生成逾时，请重试');
       }
     }, 5000);
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      lastDataAt = Date.now();
+      if (!firstByteAt) firstByteAt = Date.now();
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n\n');
       buffer = lines.pop() || '';
@@ -197,18 +207,26 @@ export async function aiInterpretStream(
         try {
           const data = JSON.parse(payload);
           if (data.type === 'char') onEvent(data.char);
-          else if (data.type === 'done') onDone(data.sections || [], data.full || '', data.report, data.truncated === true, data.quality === 'poor' ? 'poor' : 'ok');
-          else if (data.type === 'error') onError?.(data.code, data.message);
+          else if (data.type === 'done') {
+            if (settled) continue;
+            settled = true;
+            onDone(data.sections || [], data.full || '', data.report, data.truncated === true, data.quality === 'poor' ? 'poor' : 'ok');
+          }
+          else if (data.type === 'error') fail(data.code, data.message);
         } catch { /* 忽略 */ }
       }
     }
     if (timeoutTimer) clearInterval(timeoutTimer);
-    // 若未收到 done 事件，也视为结束（useAIInterpret 以 flag 防重）
-    onDone([], '', undefined, false, 'ok');
+    // 流正常结束但未收到 done 事件 → 视为结束（useAIInterpret 以 flag 防重）
+    if (!settled) {
+      settled = true;
+      onDone([], '', undefined, false, 'ok');
+    }
   } catch (e: any) {
     if (timeoutTimer) clearInterval(timeoutTimer);
+    if (e?.name === 'AbortError') return; // 主动超时中止，错误已由 fail 上报
     console.error('[观微 AI] 流式调用异常:', e);
-    onError?.('NETWORK', e?.message || '网络异常');
+    fail('NETWORK', e?.message || '网络异常');
   }
 }
 

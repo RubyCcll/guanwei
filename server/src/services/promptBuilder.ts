@@ -211,6 +211,10 @@ export function buildStep2Messages(
     '',
     '【格式规范 · 重要】所有正文均为纯文本，禁止使用Markdown 符号（#、*、-、> 等），列表项用「1. 2. 3.」或分号分隔；引经据典附出处（书名·篇名）。',
     '',
+    '【必需字段 · 硬性要求】输出必须包含以下所有字段，缺一不可：' + (isMingpan
+      ? 'character.coreConflict、character.emotion、family.background、family.parents、family.imprint、mind.action、mind.pattern、mind.growth、lifeStages（4 段）、career.summary、love.summary、wealth.summary、health.summary、advice（4-6 条）、conclusion'
+      : 'rawReading.summary（含具体象意数据）、situation（含当事人真实处境与心理状态）、trend（近/中/远期三段）、timing（具体时机方位宜忌）、advice（4-6 条含依据）、conclusion') + '。若 Schema 模板中某字段缺失，也须按此清单补足输出。',
+    '',
     '【报告 Schema 模板（字段名与结构不可更改）】',
     schemaTemplate,
     '',
