@@ -67,6 +67,8 @@ export default function ModulePage() {
   const profileIdRef = useRef('main');
   const [fit, setFit] = useState<{ suitable: boolean | 'partial'; reason: string; suggestion: string } | null>(null);
   const divineWithProfile = async (inputs: unknown, profile?: UserProfile, question?: string, profileId?: string) => {
+    // 新起占：重置 AI 解读状态，避免内容区残留上一档案的报告（含在途流式结果作废）
+    ai.reset();
     if (profile) profileRef.current = profile;
     inputsRef.current = inputs;
     profileIdRef.current = profileId || 'main';
