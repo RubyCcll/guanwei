@@ -9,7 +9,7 @@ export function qimenCalc(input: QimenInput): QimenResult {
   const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
   const h = d.getHours();
   /* 日干支 */
-  const dIdx = mod(daysSince(y, m, day) + 16, 60);
+  const dIdx = mod(daysSince(y, m, day) + 55, 60);
   const dayGZ = GAN[dIdx % 10] + ZHI[dIdx % 12];
   /* 时干支 */
   const hourIndex = Math.floor(((h + 1) % 24) / 2);
