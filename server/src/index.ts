@@ -22,6 +22,7 @@ import tarotRouter from './routes/tarot.js';
 import aiRouter from './routes/ai.js';
 import usersRouter from './routes/users.js';
 import divineRouter from './routes/divine.js';
+import hourRouter from './routes/hour.js';
 
 const app = express();
 const PORT = process.env.PORT || 3018;
@@ -55,6 +56,7 @@ app.use('/api/tarot', tarotRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/divine', divineRouter);
+app.use('/api', hourRouter);
 
 app.listen(PORT, () => {
   console.log(`

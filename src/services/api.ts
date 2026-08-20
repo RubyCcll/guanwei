@@ -311,3 +311,32 @@ export async function aiProviderStatus(): Promise<{ providers: { id: string; lab
   const res = await fetch(API_BASE + '/ai/providers');
   return res.ok ? res.json() : { providers: [], active: null };
 }
+
+// ===== 时辰反推（时辰未知时依关键事件推断最吻合时辰） =====
+export interface HourInferHit { year: number; text: string; reason: string }
+export interface HourInferCandidate { hourIndex: number; hourGZ: string; shichen: string; score: number; hits: HourInferHit[] }
+export interface HourInferResult {
+  best: HourInferCandidate;
+  candidates: HourInferCandidate[];
+  chart: { yearGZ: string; monthGZ: string; dayGZ: string };
+  note: string;
+}
+
+export async function apiHourInfer(params: {
+  y: number; m: number; d: number;
+  gender: '男' | '女';
+  location?: { lng: number; lat: number; province?: string; city?: string; district?: string } | null;
+  events: { year: number; text: string }[];
+}): Promise<HourInferResult> {
+  const res = await fetch(API_BASE + '/hour-infer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    let msg = '推演未应机';
+    try { const e = await res.json(); msg = e.message || e.error || msg; } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}

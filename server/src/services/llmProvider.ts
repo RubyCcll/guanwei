@@ -58,7 +58,8 @@ async function callOpenAI(cfg: ProviderConfig, messages: ChatMessage[], stream: 
       model: process.env[cfg.modelEnv || ''] || cfg.defaultModel,
       messages,
       stream,
-      temperature: 0.8,
+      // 温度：偏低以保证解读稳定自洽（同一盘面多次解读不互相矛盾、不编造盘面事实）；留有余地避免呆板
+      temperature: Number(process.env.LLM_TEMPERATURE || 0.35),
       // 输出上限：长报告（原始解读+性格+阶段+三域+建议）约需 3-6K tokens
       max_tokens: Number(process.env.LLM_MAX_TOKENS || 8192),
       // 关闭思考模式：pro 模型默认思考，reasoning_content 会占满输出预算导致正文截断（finish_reason: length）

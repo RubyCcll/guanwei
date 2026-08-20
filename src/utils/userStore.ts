@@ -6,8 +6,11 @@ export interface UserProfile {
   birthDate: string;          // YYYY-MM-DD（公历）
   birthTime: string;          // 精确出生时刻 HH:MM（东玄匹配时辰，星盘直接用）
   birthHourIndex: number;     // 0-11 时辰序（兼容旧数据；新数据由 birthTime 派生）
+  birthTimeUnknown?: boolean; // 时辰未知（true 时不排时柱，AI 解读仅依年月日三柱）
   gender: '男' | '女';
   location: GeoLocation | null;
+  /** 命主已知人生经历（用于 AI 解读校准：报告须呼应该年份事件，不得与其矛盾） */
+  lifeEvents?: { year: number; text: string }[];
 }
 
 export interface NamedProfile {
