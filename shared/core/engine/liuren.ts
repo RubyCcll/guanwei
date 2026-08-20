@@ -10,7 +10,7 @@ export function liurenCalc(dt: string | Date): LiurenResult {
   const h = d.getHours();
   const hourIndex = Math.floor(((h + 1) % 24) / 2); // 0=子
   /* 日干支 */
-  const dIdx = mod(daysSince(y, m, day) + 16, 60);
+  const dIdx = mod(daysSince(y, m, day) + 55, 60);
   const dayGZ = GAN[dIdx % 10] + ZHI[dIdx % 12];
   const dgIdx = GAN.indexOf(dayGZ[0] as any);
   const hgIdx = mod((dgIdx % 5) * 2 + hourIndex, 10);
