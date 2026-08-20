@@ -1,0 +1,27 @@
+name: 功能建议
+description: 新术数 / 新功能 / 体验改进
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你的想法
+      description: 想加什么功能或改进？为什么需要？
+    validations:
+      required: true
+  - type: textarea
+    id: usage
+    attributes:
+      label: 使用场景
+      description: 什么场景下会用到？
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 涉及范围
+      options:
+        - label: 新术数（排盘引擎）
+        - label: AI 解读（提示词 / 报告结构）
+        - label: 界面体验
+        - label: 部署 / 运维
+        - label: 文档

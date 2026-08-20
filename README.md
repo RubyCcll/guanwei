@@ -49,6 +49,12 @@ AI 层 DeepSeek（兼容 Gemini/Groq/Qwen/自定义 OpenAI 端点）
 ③ 历史：GET /api/divine?username= → 档案管理页列表/详情/删除
 ```
 
+## 🌐 在线演示
+
+[GitHub Pages 演示站](https://rubyccll.github.io/guanwei/) —— 仅前端 UI 预览（首页/九术说明/古籍/学馆）。
+
+> ⚠️ 演示站为纯静态托管，**不含后端服务**：排盘、AI 解读、登录等依赖后端的能力在演示站不可用（会提示"请先入馆/推演未应机"）。完整功能请本地运行（见下）。
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -103,9 +109,23 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 - 所有密钥仅存于本地 `server/.env`（已 gitignore），仓库只提供 `.env.example` 模板
 - AI 报告质量门槛：结构评分不达标不入库，自动留档供改进提示词
 
+## 🗺️ 迭代计划
+
+本项目长期维护、持续迭代，计划方向（随版本推进更新）：
+
+- **排盘精度**：Placidus 宫位制、外行星、更多星盘细节；六爻六亲世应、大六壬九宗门等进阶推演
+- **AI 解读**：报告结构继续打磨（新增维度/更细章节）；提示词与质量评分持续调优（`ai_fail_logs` 留档驱动）
+- **商业化**：套餐/配额/计费（数据表已预留 plan_tier / quota / billing 字段）
+- **体验**：更多 UI 打磨、移动端适配、性能优化
+
+### 如何参与
+- 🐛 遇到问题 → 提 [Bug 报告](https://github.com/RubyCcll/guanwei/issues/new?template=bug_report.yml)
+- 💡 有想法 → 提 [功能建议](https://github.com/RubyCcll/guanwei/issues/new?template=feature_request.yml)
+- 📦 发版节奏：功能累积后打 tag 发 Release，v1.0.0 起遵循语义化版本
+
 ## 📄 License
 [MIT](LICENSE)
 
 ---
 
-**观微** · 以术问道，观微知著。
+**观微** · 以术问道，观微知著。本仓库将持续迭代，欢迎 Star 与 Issue。
