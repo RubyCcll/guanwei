@@ -14,14 +14,40 @@ import { XLR } from '../shared/core/data/xiaoliuren';
 import { ARTS } from '../src/data/arts';
 import { trueSolarTime } from '../shared/core/engine/trueSolarTime';
 import { getJieQiTableExact, almanacOf } from '../shared/core/engine/calendar';
+import { Solar } from 'lunar-typescript';
 
 describe('== 1. 四柱八字 ==', () => {
-  it('1990-06-15 午时：庚午/壬午/壬申/丙午', () => {
+  it('1990-06-15 午时：庚午/壬午/辛亥/甲午（日柱以 lunar-typescript 权威历元为准）', () => {
     const r = baziCalc({ y: 1990, m: 6, d: 15, hourIndex: 6, gender: '男' });
     expect(r.yearGZ).toBe('庚午');
     expect(r.monthGZ).toBe('壬午');
-    expect(r.dayGZ).toBe('壬申');
-    expect(r.hourGZ).toBe('丙午');
+    expect(r.dayGZ).toBe('辛亥');
+    expect(r.hourGZ).toBe('甲午');
+  });
+  it('日柱历元对照 lunar-typescript（10 个跨年代日期，防历元回归）', () => {
+    // 动态对照：观微 JD 法日柱必须与 lunar-typescript（权威历元）一致
+    const cases: [number, number, number][] = [
+      [1949, 10, 1], [1966, 5, 16], [1974, 4, 28], [1984, 2, 2], [1988, 6, 5],
+      [1996, 12, 24], [2000, 1, 1], [2008, 8, 8], [2020, 1, 25], [2024, 2, 10],
+    ];
+    const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+    const mod = (a: number, n: number) => ((a % n) + n) % n;
+    for (const [y, m, d] of cases) {
+      const r = baziCalc({ y, m, d, hourIndex: 0, gender: '男' });
+      const lunar = Solar.fromYmd(y, m, d).getLunar().getDayInGanZhi();
+      expect(r.dayGZ).toBe(lunar);
+      // 时柱交叉：日干驱动的五鼠遁也应与 lunar 一致（取子时）
+      const lunarTime = Solar.fromYmdHms(y, m, d, 0, 30, 0).getLunar().getTimeInGanZhi();
+      expect(r.hourGZ).toBe(lunarTime);
+    }
+  });
+  it('1996-12-24 07:38（锦州北镇）：丙子/庚子/乙未/庚辰（历元回归：曾误为丙辰日）', () => {
+    const r = baziCalc({ y: 1996, m: 12, d: 24, hourIndex: 4, gender: '男' });
+    expect(r.yearGZ).toBe('丙子');
+    expect(r.monthGZ).toBe('庚子');
+    expect(r.dayGZ).toBe('乙未');
+    expect(r.hourGZ).toBe('庚辰');
   });
   it('2024-02-05 立春后：甲辰/丙寅', () => {
     const r = baziCalc({ y: 2024, m: 2, d: 5, hourIndex: 0, gender: '男' });

@@ -28,8 +28,8 @@ describe('七东玄结果渲染', () => {
     const t = container.textContent || '';
     expect(t).toContain('庚午');
     expect(t).toContain('壬午');
-    expect(t).toContain('壬申');
-    expect(t).toContain('丙午');
+    expect(t).toContain('辛亥');
+    expect(t).toContain('甲午');
     expect(t).toContain('五行流转');
     expect(t).toContain('十神六亲');
   });
