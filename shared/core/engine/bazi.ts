@@ -234,6 +234,20 @@ export function baziCalc(input: BaziInput): BaziResult {
     if (zhiSet.has(sanheKey.jiang)) shensha.push({ name: '将星', zhi: sanheKey.jiang, type: '平' });
   }
 
+  // ─── 12.5 月令取格（八格：月支本气十神定格局，透干者加力）───
+  const monthBenQi = (CANGGAN[monthGZ[1]] || [])[0];   // 月支本气
+  const monthBenQiShishen = monthBenQi ? shishen(dayGan, monthBenQi.gan) : '比肩';
+  const benQiIndex = gzList.findIndex(gz => gz[0] === monthBenQi?.gan); // 本气是否透干
+  const benQiTou = benQiIndex >= 0;
+  const gejuName = ['比肩', '劫财'].includes(monthBenQiShishen)
+    ? (monthBenQiShishen === '比肩' ? '建禄格（月令比肩，不作八格，以身强论）' : '羊刃格（月令劫财，旺极须制）')
+    : monthBenQiShishen + '格';
+  const geju = {
+    name: gejuName,
+    gan: monthBenQi?.gan || '',
+    shishen: monthBenQiShishen,
+    basis: '月支' + monthGZ[1] + '本气' + (monthBenQi?.gan || '') + '（' + monthBenQiShishen + '）' + (benQiTou ? '，透干于' + ['年干', '月干', '日干', '时干'][benQiIndex] + '，格气有力' : '，未透干，格气内藏') + '；' + tiaohou,
+  };
   // ─── 13. 胎元 / 命宫 / 身宫 ───
   const taiyuan = GAN[mod(mgIdx2 + 1, 10)] + ZHI[mod(mzIdx2 + 3, 12)];
   const mingIdx = mod((mb) - correctedHourIndex, 12); // 寅起正月顺数生月，再逆数生时（mb=月支序0寅）
@@ -261,6 +275,7 @@ export function baziCalc(input: BaziInput): BaziResult {
     taiyuan,
     minggong,
     shengong,
+    geju,
   };
 }
 

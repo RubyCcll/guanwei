@@ -37,7 +37,6 @@ export function getDb(): DatabaseSync {
       billing_meta  TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_div_user_time ON divinations(username, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_div_user_profile ON divinations(username, profile_id, created_at DESC);
 
     CREATE TABLE IF NOT EXISTS ai_fail_logs (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,10 +48,13 @@ export function getDb(): DatabaseSync {
       created_at  INTEGER NOT NULL
     );
   `);
-  // 老库迁移：补 profile_id 列（2026-08-20 档案隔离）
+  // 老库迁移：补 profile_id 列（2026-08-20 档案隔离）——必须在引用该列的索引之前
   try {
     db.exec("ALTER TABLE divinations ADD COLUMN profile_id TEXT NOT NULL DEFAULT 'main'");
-  } catch { /* 列已存在 */ }
+  } catch (e: any) {
+    if (!/duplicate column/i.test(e.message || '')) console.error('[divineStore] 迁移 profile_id 失败:', e.message);
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_div_user_profile ON divinations(username, profile_id, created_at DESC)');
   return db;
 }
 

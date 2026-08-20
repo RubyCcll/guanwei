@@ -53,6 +53,7 @@ export interface BaziResult {
   taiyuan: string;   // 胎元
   minggong: string;  // 命宫
   shengong: string;  // 身宫
+  geju: { name: string; gan: string; shishen: string; basis: string };  // 月令取格
 }
 
 // 紫微输入输出
@@ -157,6 +158,8 @@ export interface LiurenResult {
   isDay: boolean;                // 昼占/夜占
   tianJiang: Record<number, string>;  // 十二天将布宫（地盘支 → 天将）
   chuanJiang: { chuan: string; jiang: string }[];  // 三传所乘天将
+  keti: string;     // 课体（伏吟/反吟/常课）
+  ketiNote: string; // 课体断语
 }
 
 // 小六壬输出

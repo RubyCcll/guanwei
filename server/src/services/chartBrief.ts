@@ -33,6 +33,7 @@ function baziBrief(r: BaziResult): string {
   if (r.dayun?.length) L.push('【大运】' + r.qiYun.detail + '；' + r.dayun.map(d => d.gz + '（' + d.startAge + '岁，' + d.startYear + '-' + d.endYear + '，' + d.ganShishen + '）').join('、') + '。');
   L.push('【流年】' + r.liunian.year + '年 ' + r.liunian.gz + '（' + r.liunian.ganShishen + '，支藏' + r.liunian.zhiShishen + '）。');
   if (r.shensha?.length) L.push('【神煞】' + r.shensha.map(s => s.name + s.zhi + '(' + s.type + ')').join('、') + '。');
+  L.push('【格局】' + r.geju.name + '——' + r.geju.basis + '。');
   L.push('【胎元命身】胎元' + r.taiyuan + '，命宫' + r.minggong + '，身宫' + r.shengong + '。');
   return L.join('\n');
 }
@@ -90,6 +91,7 @@ function liurenBrief(r: LiurenResult): string {
   if (r.tianJiang) {
     const ZHI2 = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
     L.push('【十二天将布宫】' + Object.entries(r.tianJiang).map(([k, v]) => v + ZHI2[+k]).join('、') + '。');
+  L.push('【课体】' + (r.keti || '常课') + '——' + (r.ketiNote || '') );
   }
   return L.join('\n');
 }

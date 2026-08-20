@@ -40,18 +40,17 @@ const MINGPAN_SAMPLE = {
   suitability: { suitable: true, note: '适问性说明 2-3 句', suggestion: '换问建议或无' },
 };
 const ZHANWEN_SAMPLE = {
-  title: '如：出行吉凶占断报告',
-  overview: '核心论断 3-4 句（120 字以上），直接回答所问之事的大势，必须引用卦/课/牌的具体象意（卦名/掌诀/牌名/天将/门星等）。',
-  rawReading: { summary: '把起卦/起课/抽牌原始结果翻译成通俗语言（150 字以上）：卦名/掌诀/牌义、盘面关键要素（体用旺衰/三传天将/纳甲世应/牌位正逆）各意味着什么。', keyPoints: ['关键象意 1（含具体盘面数据）', '关键象意 2', '关键象意 3'] },
-  situation: '当下局势：所问之事目前处于什么状态（150 字以上，结合体用/用神/牌位/课传等具体要素）',
-  trend: '发展趋势：近、中、远期各如何演变（各 80 字以上，结合变卦/三传/牌阵位置/旺衰变化）',
-  timing: '时机宜忌：何时宜动、何时宜守，方位/方法上有何宜忌',
-  advice: '具体建议（4-6 条，分号分隔，每条含象意依据与可执行动作）',
-  conclusion: '结语（温润收束）',
+  title: '报告标题，100 字内',
+  overview: '核心论断 3-4 句（120 字以上），直接回答所问之事的大势，必须引用卦/课/牌的具体象意（卦名/掌诀/牌名/天将/门星等）',
+  rawReading: { summary: '盘面象意白话解释（150 字以上）：卦名/掌诀/牌义、关键要素（体用旺衰/三传天将/纳甲世应/牌位正逆）各意味着什么', keyPoints: ['关键象意 1（含具体盘面数据）', '关键象意 2', '关键象意 3'] },
+  situation: '当下局势（180 字以上）：所问之事现状 + 当事人在此局中的真实处境与心理状态（如：表面平静实则进退两难），结合体用/用神/牌位/课传等具体要素',
+  trend: '发展趋势：近/中/远期各 80 字以上，结合变卦/三传/牌阵位置/旺衰变化，写明各阶段的转折点与关键信号',
+  timing: '时机宜忌：何时宜动、何时宜守（结合旺衰/门星/天将吉凶/课体），方位/方法上有何宜忌，给具体建议',
+  advice: '具体建议 4-6 条，分号分隔，每条含象意依据与可执行动作',
+  conclusion: '结语，80 字以上，温润收束给力量',
   disclaimer: '免责声明',
-  suitability: { suitable: true, note: '此问与本法相契与否的说明（2-3 句，依下方注入的适配性分析）', suggestion: '如需更换问题方向，给出建议（无则空）' },
+  suitability: { suitable: true, note: '适问性说明 2-3 句', suggestion: '换问建议或无' },
 };
-
 const MINGPAN_TEMPLATE = JSON.stringify(MINGPAN_SAMPLE, null, 2);
 const ZHANWEN_TEMPLATE = JSON.stringify(ZHANWEN_SAMPLE, null, 2);
 const MINGPAN_ARTS = ['bazi', 'ziwei', 'astrology'];
@@ -96,7 +95,9 @@ export function buildReportMessages(
     '【人生轨迹】不得默认「人人工作/结婚/生子」的常规模板：命局允许非常规轨迹（长期不工作、独身、非传统亲密关系、多次转行等），要分析这些轨迹的盘面机制并给建设性建议，不得评判。',
     '【敏感维度】涉及性取向、性别气质、亲密关系选择等：以尊重、接纳、不作判断的方式温和描述，从盘面阴阳结构/桃花/夫妻宫等给出气质性线索即可，不贴标签、不病理化、不引导。',
     '',
-    '【必需字段 · 硬性要求】输出必须包含以下所有字段，缺一不可：character.coreConflict、character.emotion、family.background、family.parents、family.imprint、mind.action、mind.pattern、mind.growth、love.summary（含亲密模式与亲密取向的气质性描述）。若 Schema 模板中某字段缺失，也须按此清单补足输出。',
+    '【必需字段 · 硬性要求】输出必须包含以下所有字段，缺一不可：' + (isMingpan
+      ? 'character.coreConflict、character.emotion、family.background、family.parents、family.imprint、mind.action、mind.pattern、mind.growth、love.summary（含亲密模式与亲密取向的气质性描述）'
+      : 'rawReading.summary（含具体象意数据）、situation（含当事人真实处境与心理状态）、trend（近/中/远期三段）、timing（具体时机方位宜忌）、advice（4-6 条含依据）') + '。若 Schema 模板中某字段缺失，也须按此清单补足输出。',
     '【现代语境】不得使用「配偶宫主配偶」「第三者介入」「克妻克夫」「刑夫克子」等旧式偏见措辞；亲密关系一律以现代、尊重、非预设异性恋婚姻的语境描述。',
     '',
     '【六亲星位（子平惯例，八字适用）】男命：偏财为父、正印为母、正财为妻、官杀为子女；女命：正财为父、偏印为母、正官为夫、食伤为子女。分析父母/伴侣时按此映射取星位，星位不显可结合宫位（年柱为祖上父母、月柱为父母兄弟）灵活推断，并注明依据。',

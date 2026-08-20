@@ -1,5 +1,5 @@
 // 出生地点选择器：省 → 市 → 区 三级级联 + 经纬度/真太阳时预览
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { allProvinces, citiesOf, districtsOf, resolveLocation, type GeoSelection } from '@core/data/region';
 import SongSearchSelect from '@/components/SongSearchSelect';
 import { trueSolarTime } from '@core/engine/trueSolarTime';
@@ -21,6 +21,22 @@ export default function LocationPicker({ value, onChange, previewHourIndex }: Pr
   const [manual, setManual] = useState(false);
   const [lngTxt, setLngTxt] = useState('');
   const [latTxt, setLatTxt] = useState('');
+
+  // 外部 value 变化同步（档案切换/回显）：有行政区划则回显省市区；无省名（手动定位来源）则回显手动坐标
+  useEffect(() => {
+    if (!value) return;
+    if (value.province && value.district !== '手动定位') {
+      setProvince(value.province);
+      setCity(value.city || '');
+      setDistrict(value.district || '');
+    } else if (value.lng !== undefined && value.lat !== undefined) {
+      setManual(true);
+      setLngTxt(String(value.lng));
+      setLatTxt(String(value.lat));
+      if (value.province) setProvince(value.province);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value?.province, value?.city, value?.district, value?.lng, value?.lat]);
 
   // 显示名归一化（档案里可能是无后缀名，如「广东」→「广东省」）
   const provNames = allProvinces();
