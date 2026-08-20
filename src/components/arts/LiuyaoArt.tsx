@@ -53,6 +53,29 @@ export function LiuyaoResult({ data }: { data: LiuyaoResult }) {
           })}
         </div>
       </ResultCard>
+
+      {r.najia && (
+        <ResultCard title={"纳甲装卦 · " + r.najia.gong + "宫（" + r.najia.dayGZ + "日 · " + r.najia.monthZhi + "月建）"}>
+          <div style={{ maxWidth: 420, margin: '0 auto' }}>
+            {r.najia.lines.map((l, i) => (
+              <div className="yao-row" key={i} style={{ fontSize: '.88rem' }}>
+                <span className="yao-label">{['初', '二', '三', '四', '五', '上'][i]}爻{l.isShi ? ' 世' : l.isYing ? ' 应' : ''}</span>
+                <span className="yao-glyph" style={{ width: '2.6rem', textAlign: 'center' }}>
+                  <strong>{l.gz}</strong>
+                </span>
+                <span className="yao-move">
+                  <span className="tag-cool">{l.liuqin}</span> {l.shen}{l.kong ? ' · 旬空' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="tiny muted" style={{ marginTop: '.6rem' }}>
+            世爻为占事之我，应爻为对方之事：世爻{r.najia.shiLiQin}。月破地支：{r.najia.yuePo.join('、')}；旬空：{r.najia.xunKong.join('、')}。
+            六亲以{r.najia.gong}宫五行为体——取用神之法：问财取妻财、问官取官鬼、问父母长辈取父母、问子女小辈取子孙、问同侪取兄弟。
+          </p>
+        </ResultCard>
+      )}
+
       <div className="result-grid">
         <div className="result-cell">
           <div className="k">本卦</div>

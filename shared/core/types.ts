@@ -41,6 +41,18 @@ export interface BaziResult {
   nayin: string;
   correctedHourIndex: number;
   trueSolar?: TrueSolarTime;
+  // ─── 补齐层（2026-08-20 排盘要点调研）───
+  canggan: { zhi: string; gans: { gan: string; wx: string; shishen: string; qi: '本气' | '中气' | '余气' }[] }[];  // 四支藏干 + 十神
+  wxWeighted: Record<string, number>;          // 含藏干权重的五行分
+  strengthDetail: { score: number; ling: number; gen: number; shi: number; reasons: string[] };  // 旺衰拆解
+  yongshen: { wx: string; shishen: string; xi: string[]; ji: string[]; tiaohou: string; reason: string };  // 用神/喜忌
+  dayun: { gz: string; ganShishen: string; zhiShishen: string; startAge: number; startYear: number; endYear: number; forward: boolean }[];  // 大运
+  qiYun: { startAge: number; startMonth: number; detail: string };  // 起运
+  liunian: { year: number; gz: string; ganShishen: string; zhiShishen: string };  // 流年（当前年）
+  shensha: { name: string; zhi: string; type: '吉' | '平' | '凶' }[];  // 神煞
+  taiyuan: string;   // 胎元
+  minggong: string;  // 命宫
+  shengong: string;  // 身宫
 }
 
 // 紫微输入输出
@@ -67,6 +79,13 @@ export interface ZiweiResult {
   liunianStars?: string[];
   startAge?: number;
   forward?: boolean;
+  // ─── 补齐层（2026-08-20 排盘要点调研）───
+  shen: number;                          // 身宫地支位 0=寅
+  fuStars: Record<string, number>;       // 辅星位置（0=寅起）
+  sihua: { lu: string; quan: string; ke: string; ji: string };   // 生年四化星名
+  sihuaPos: { lu?: number; quan?: number; ke?: number; ji?: number };  // 四化落宫位
+  brightness: Record<string, string>;    // 十四主星亮度（'庙'|'旺'|'得'|'利'|'平'|'陷'）
+  geju: { key: string; name: string; ji: '吉' | '凶' | '平'; desc: string; why: string }[];  // 格局
 }
 
 // 奇门输入输出
@@ -103,6 +122,16 @@ export interface LiuyaoResult {
   yao: number[];
   names: { v: number; nm: string; backs: number }[];
   benGua: GuaEntry; bianGua: GuaEntry; dongYao: number[];
+  // ─── 补齐层（2026-08-20 纳甲筮法）───
+  najia?: {
+    gong: string;               // 卦宫
+    lines: { gz: string; ganWx: string; zhiWx: string; liuqin: string; shen: string; isShi: boolean; isYing: boolean; kong: boolean }[];  // 初→上
+    shiPos: number; yingPos: number;
+    dayGZ: string; monthZhi: string;    // 起卦日干支/月支
+    yuePo: string[];                    // 月破地支
+    xunKong: string[];                  // 旬空地支
+    shiLiQin: string;                   // 世爻六亲（用神参考）
+  };
 }
 
 // 大六壬输出
@@ -129,6 +158,17 @@ export interface AstrologyResult {
   aspects: [string, string, string, string][];
   mc?: number;         // 中天黄经
   epsilon?: number;    // 黄赤交角（度）
+  // ─── 补齐层（2026-08-20 星盘细化）───
+  houseSystem: 'whole-sign';      // 当前宫位制：整宫制（以上升点为 1 宫头，每宫 30°）
+  houses: { num: number; cusp: number; sign: string; ruler: string; rulerLng: number }[];  // 十二宫
+  planetDetails: {
+    cn: string; sym: string; color: string;
+    lng: number; sign: string; degree: number;   // 黄经/星座/宫内经度
+    house: number;                                // 落宫 1-12
+    retrograde: boolean;                          // 逆行
+    dignity: { status: '庙' | '旺' | '陷' | '弱' | ''; note: string };  // 古典庙旺
+  }[];
+  ascSign: string; sunSign: string; moonSign: string;  // 上升/太阳/月亮星座
 }
 
 // 塔罗输出

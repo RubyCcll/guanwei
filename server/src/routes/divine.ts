@@ -71,7 +71,8 @@ router.post('/', (req, res) => {
         break;
       }
       case 'liuyao': {
-        resultRaw = liuyaoCalc();
+        const now = new Date();
+        resultRaw = liuyaoCalc(undefined, { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() });
         break;
       }
       case 'liuren': {
