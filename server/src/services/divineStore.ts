@@ -21,6 +21,7 @@ export function getDb(): DatabaseSync {
       art_id        TEXT NOT NULL,
       kind          TEXT NOT NULL,
       question      TEXT,
+      profile_id    TEXT NOT NULL DEFAULT 'main',
       profile_json  TEXT,
       params_json   TEXT,
       result_raw_json TEXT NOT NULL,
@@ -36,6 +37,7 @@ export function getDb(): DatabaseSync {
       billing_meta  TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_div_user_time ON divinations(username, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_div_user_profile ON divinations(username, profile_id, created_at DESC);
 
     CREATE TABLE IF NOT EXISTS ai_fail_logs (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +49,10 @@ export function getDb(): DatabaseSync {
       created_at  INTEGER NOT NULL
     );
   `);
+  // 老库迁移：补 profile_id 列（2026-08-20 档案隔离）
+  try {
+    db.exec("ALTER TABLE divinations ADD COLUMN profile_id TEXT NOT NULL DEFAULT 'main'");
+  } catch { /* 列已存在 */ }
   return db;
 }
 
@@ -71,6 +77,7 @@ export interface CreateDivinationArgs {
   artId: string;
   kind: 'mingpan' | 'zhanwen';
   question?: string;
+  profileId?: string;   // 档案标识：'main' 主档案 / 示例档案 id
   profile?: unknown;
   params?: unknown;
   resultRaw: unknown;
@@ -102,10 +109,11 @@ export function createDivination(args: CreateDivinationArgs): DivineRecord {
   const id = 'd_' + now + '_' + Math.random().toString(36).slice(2, 7);
   const display = args.display !== undefined ? args.display : args.resultRaw;
   d.prepare(`INSERT INTO divinations
-    (id, username, art_id, kind, question, profile_json, params_json, result_raw_json, display_json, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'divined', ?, ?)`).run(
+    (id, username, art_id, kind, question, profile_id, profile_json, params_json, result_raw_json, display_json, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'divined', ?, ?)`).run(
     id, args.username, args.artId, args.kind,
     args.question || null,
+    args.profileId || 'main',
     args.profile ? JSON.stringify(args.profile) : null,
     args.params ? JSON.stringify(args.params) : null,
     JSON.stringify(args.resultRaw),
@@ -147,13 +155,15 @@ export function markAiFailed(id: string | null, artId: string, kind: string, rea
 }
 
 // 占卜历史分页（时间倒序，摘要字段）
-export function listDivinations(username: string, page = 1, pageSize = 20): { list: { divineId: string; artId: string; question: string | null; createdAt: number; hasReport: boolean; status: string }[]; total: number } {
+export function listDivinations(username: string, page = 1, pageSize = 20, profileId?: string): { list: { divineId: string; artId: string; question: string | null; createdAt: number; hasReport: boolean; status: string; profileId: string }[]; total: number } {
   const d = getDb();
   const pageN = Math.max(1, page);
   const size = Math.min(50, Math.max(1, pageSize));
-  const totalRow = d.prepare('SELECT COUNT(*) AS c FROM divinations WHERE username = ?').get(username) as any;
-  const rows = d.prepare('SELECT id, art_id, question, created_at, report_json, status FROM divinations WHERE username = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
-    .all(username, size, (pageN - 1) * size) as any[];
+  const where = profileId ? 'WHERE username = ? AND profile_id = ?' : 'WHERE username = ?';
+  const params = profileId ? [username, profileId] : [username];
+  const totalRow = d.prepare('SELECT COUNT(*) AS c FROM divinations ' + where).get(...params) as any;
+  const rows = d.prepare('SELECT id, art_id, question, created_at, report_json, status, profile_id FROM divinations ' + where + ' ORDER BY created_at DESC LIMIT ? OFFSET ?')
+    .all(...params, size, (pageN - 1) * size) as any[];
   return {
     list: rows.map(r => ({
       divineId: r.id,
@@ -162,6 +172,7 @@ export function listDivinations(username: string, page = 1, pageSize = 20): { li
       createdAt: r.created_at,
       hasReport: !!r.report_json,
       status: r.status,
+      profileId: r.profile_id || 'main',
     })),
     total: totalRow.c,
   };
