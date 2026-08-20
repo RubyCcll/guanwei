@@ -15,6 +15,9 @@ import { currentUser } from '@/utils/userStore';
 import LocationPicker from '@/components/LocationPicker';
 import SongSelect from '@/components/SongSelect';
 import { ResultCard } from '@/components/ResultCard';
+import { isChinaDSTDate } from '@/utils/dst';
+import { ziweiTone } from '@/utils/panTone';
+import LifeEventsInput, { type LifeEvent } from '@/components/LifeEventsInput';
 
 const DIZHI = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
 const mod = (a: number, n: number) => ((a % n) + n) % n;
@@ -35,10 +38,13 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
   const p = currentUser()?.profile;
   const [date, setDate] = useState(p?.birthDate || '1990-06-15');
   const [birthTime, setBirthTime] = useState(p?.birthTime || '00:00');
+  const [hourUnknown, setHourUnknown] = useState(p?.birthTimeUnknown || false);
   const [gender, setGender] = useState<'男' | '女'>(p?.gender || '男');
   const [loc, setLoc] = useState<GeoLocation | null>(p?.location || null);
   const [question, setQuestion] = useState('');
   const [profileSrc, setProfileSrc] = useState<{ id: string; name: string } | null>(null);
+  const [lifeEvents, setLifeEvents] = useState<LifeEvent[]>(p?.lifeEvents || []);
+  const dst = isChinaDSTDate(date);
 
   const go = () => {
     const [yy, mm, dd] = date.split('-').map(Number);
@@ -53,10 +59,11 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
       gz = lunar.getYearInGanZhi();
       birthYear = lunar.getYear();
     } catch { /* 非法日期回退默认 */ }
-    const hourIdx = timeToHourIndex(birthTime);
-    const profile: UserProfile = { birthDate: date, birthTime, birthHourIndex: hourIdx, gender, location: loc };
+    // 时辰未知：紫微以午时示例排盘（仅命局五行参考），档案标记未知供 AI 解读约束
+    const hourIdx = hourUnknown ? 6 : timeToHourIndex(birthTime);
+    const profile: UserProfile = { birthDate: date, birthTime: hourUnknown ? '' : birthTime, birthHourIndex: hourIdx, birthTimeUnknown: hourUnknown || undefined, gender, location: loc, lifeEvents: lifeEvents.length ? lifeEvents : undefined };
     onDivine(
-      { ganzhi: gz, month: lm, day: ld, hour: hourIdx, time: birthTime, location: loc ?? undefined, gender, birthYear: yy, solarDate: [yy, mm, dd] },
+      { ganzhi: gz, month: lm, day: ld, hour: hourIdx, time: hourUnknown ? undefined : birthTime, location: loc ?? undefined, gender, birthYear: yy, solarDate: [yy, mm, dd] },
       profile,
       question.trim(),
       profileSrc?.id || 'main'
@@ -65,26 +72,36 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
 
   return (
     <>
-      <ProfilePicker onPick={(p, src) => { setDate(p.birthDate); setBirthTime(p.birthTime || '00:00'); setGender(p.gender); setLoc(p.location); if (src) setProfileSrc(src); }} />
+      <ProfilePicker onPick={(p, src) => { setDate(p.birthDate); setBirthTime(p.birthTime || '00:00'); setHourUnknown(!!p.birthTimeUnknown); setGender(p.gender); setLoc(p.location); if (src) setProfileSrc(src); }} />
       <div className="field"><label htmlFor="zw-date">出生日期（公历 / 农历，紫微依农历排盘）</label>
         <DateInput id="zw-date" value={date} onChange={setDate} />
       </div>
+      {dst && <p className="tag-hot" style={{ marginTop: '.3rem' }}>⚠ 该日期处于中国夏令时期间（1986-1991 年 4-9 月，钟表拨快 1 小时）——请按出生时钟表时间填写，排盘会自动回拨校正。</p>}
 
       <div className="field"><label htmlFor="zw-gender">性别（定大限顺逆）</label>
         <SongSelect id="zw-gender" value={gender} options={[{ value: '男', label: '男' }, { value: '女', label: '女' }]} onChange={v => setGender(v as '男' | '女')} />
       </div>
       <div className="field"><label htmlFor="zw-time">出生时刻</label>
-        <TimeShichenInput id="zw-time" value={birthTime} onChange={setBirthTime} />
+        {hourUnknown
+          ? <p className="hint" style={{ padding: '.45rem 0' }}>时辰未录——紫微暂以午时示例排盘（仅观命局五行），AI 解读不涉命宫/身宫/大限细节。</p>
+          : <TimeShichenInput id="zw-time" value={birthTime} onChange={setBirthTime} />}
+      </div>
+      <div className="field">
+        <label style={{ display: 'flex', alignItems: 'center', gap: '.45rem', cursor: 'pointer', fontSize: '.9rem', fontWeight: 400 }}>
+          <input type="checkbox" checked={hourUnknown} onChange={e => setHourUnknown(e.target.checked)} />
+          时辰未知（未录）
+        </label>
       </div>
       <div className="field">
         <label>出生地点（时辰经度校正）</label>
-        <LocationPicker value={loc} onChange={setLoc} previewHourIndex={timeToHourIndex(birthTime)} />
+        <LocationPicker value={loc} onChange={setLoc} previewHourIndex={hourUnknown ? 6 : timeToHourIndex(birthTime)} />
       </div>
             <div className="field"><label htmlFor="q-input">所问之事（可选）</label>
         <input className="input-line" id="q-input" placeholder="可书所问，AI 报告将由此而发…" maxLength={60} value={question} onChange={e => setQuestion(e.target.value)} />
       </div>
+      <LifeEventsInput value={lifeEvents} onChange={setLifeEvents} />
 <button className="btn-divine" onClick={go}>布 盘<span className="small">安命宫 · 定紫微 · 布主星</span></button>
-      <p className="hint" style={{ marginTop: '.8rem' }}>演示级简盘：十四主星入十二宫，辅曜从略。</p>
+      <p className="hint" style={{ marginTop: '.8rem' }}>演示级简盘：十四主星入十二宫，辅曜从略。时辰未录时以午时示例布盘，命宫/身宫仅供参考。</p>
     </>
   );
 }
@@ -160,12 +177,7 @@ export function ZiweiResult({ data }: { data: ZiweiResult }) {
         </div>
       </div>
       <ResultCard title="命宫参详">
-        <p>命宫安于 <strong>{DIZHI[r.ming]}</strong>，为一生行运之枢。
-        {(() => {
-          const stars = Object.keys(r.zwStars).filter(s => r.zwStars[s] === r.ming);
-          if (stars.length === 0) return '此宫主星未临，气机较静，宜守成内养。';
-          return `命宫主星为 ${stars.join('、')}，${stars.map(s => ZW_STAR_MEAN[s].slice(0, 14)).join('；')}。`;
-        })()}</p>
+        <p>{ziweiTone(r).mingNote}</p>
         <p className="tiny muted">简盘仅列十四主星，辅曜从略；此参详为现代语言之概览。</p>
       </ResultCard>
       <ResultCard title="命盘基础">

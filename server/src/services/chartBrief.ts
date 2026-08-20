@@ -43,6 +43,24 @@ function ziweiBrief(r: ZiweiResult): string {
   L.push('【生年四化】' + r.sihua.lu + '化禄、' + r.sihua.quan + '化权、' + r.sihua.ke + '化科、' + r.sihua.ji + '化忌。');
   L.push('【十四主星落宫】' + Object.entries(r.zwStars).map(([s, p]) => s + DIZHI[p] + (r.brightness[s] || '')).join('、') + '。');
   if (Object.keys(r.fuStars).length) L.push('【辅星】' + Object.entries(r.fuStars).map(([s, p]) => s + DIZHI[p]).join('、') + '。');
+  // ─── 十二宫完整清单（命宫起逆时针）：宫名+地支+主星+辅星+四化 ───
+  // 消除 AI 自行推算宫位的需求（推算即出错源），解读须逐字引用此清单
+  const PALACE_NAMES = ['命宫', '兄弟宫', '夫妻宫', '子女宫', '财帛宫', '疾厄宫', '迁移宫', '交友宫', '官禄宫', '田宅宫', '福德宫', '父母宫'];
+  const SIHUA_KEY: Record<string, string> = { lu: '化禄', quan: '化权', ke: '化科', ji: '化忌' };
+  const palaceLines: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    const zhiIdx = r.palaces?.[i] ?? mod2(r.ming - i, 12);
+    const stars = Object.entries(r.zwStars).filter(([, p]) => p === zhiIdx).map(([s]) => s);
+    const fus = Object.entries(r.fuStars || {}).filter(([, p]) => p === zhiIdx).map(([s]) => s);
+    const sh = Object.entries(r.sihuaPos || {}).filter(([, p]) => p === zhiIdx).map(([k]) => SIHUA_KEY[k]).join('、');
+    const parts: string[] = [];
+    parts.push(DIZHI[zhiIdx]);
+    parts.push(stars.length ? stars.join('、') : '无主星');
+    if (fus.length) parts.push('辅' + fus.join('、'));
+    if (sh) parts.push(sh);
+    palaceLines.push(PALACE_NAMES[i] + parts.join('｜'));
+  }
+  L.push('【十二宫事实（解读六亲/宫位必须逐字引用，不得推算或编造）】' + palaceLines.join('；') + '。');
   if (r.geju?.length) L.push('【格局】' + r.geju.map(g => g.name + '(' + g.ji + ')').join('、') + '。');
   if (r.dayun?.length) L.push('【大限】当前第' + ((r.curDayunIdx ?? 0) + 1) + '大限（' + r.dayun[r.curDayunIdx ?? 0].start + '-' + r.dayun[r.curDayunIdx ?? 0].end + '岁，行至' + DIZHI[r.dayun[r.curDayunIdx ?? 0].palaceIdx] + '宫）。');
   L.push('【流年】' + (r.nominalAge ?? '') + '虚岁流年命宫落' + (r.liunianPalaceName || '') + '（' + DIZHI[r.liunianIdx ?? 0] + '），主星' + (r.liunianStars?.join('、') || '未临') + '。');

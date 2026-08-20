@@ -2,12 +2,13 @@
 import type { ChatMessage } from './llmProvider';
 import { agentOf } from './skills';
 import { chartBrief } from './chartBrief';
+import { sixRelativesFacts } from './sixRelatives';
 
 // ===== 报告 Schema 模板（命盘类：八字/紫微/星盘） =====
 const MINGPAN_SAMPLE = {
   title: '报告标题，120 字内',
   overview: '人物画像核心论断，150 字以上，引用盘面具体数据',
-  rawReading: { summary: '盘面事实白话解释，180 字以上', keyPoints: ['关键盘面事实1', '关键盘面事实2', '关键盘面事实3'] },
+  rawReading: { summary: '盘面最关键事实的白话概括，100-150 字，只讲最要紧的 3-5 点，不逐项罗列', keyPoints: ['最关键盘面事实1（一句话白话）', '关键盘面事实2', '关键盘面事实3'] },
   character: {
     summary: '人格画像总述，180 字以上：气质底色+内在动力+核心矛盾，落到生活画面',
     traits: [{ name: '气质特质', desc: '盘面依据+现实表现，3-4 句' }],
@@ -42,7 +43,7 @@ const MINGPAN_SAMPLE = {
 const ZHANWEN_SAMPLE = {
   title: '报告标题，100 字内',
   overview: '核心论断 3-4 句（120 字以上），直接回答所问之事的大势，必须引用卦/课/牌的具体象意（卦名/掌诀/牌名/天将/门星等）',
-  rawReading: { summary: '盘面象意白话解释（150 字以上）：卦名/掌诀/牌义、关键要素（体用旺衰/三传天将/纳甲世应/牌位正逆）各意味着什么', keyPoints: ['关键象意 1（含具体盘面数据）', '关键象意 2', '关键象意 3'] },
+  rawReading: { summary: '盘面象意白话概括（100-150 字）：卦名/掌诀/牌义等最要紧的 3-5 点，不逐项罗列', keyPoints: ['关键象意 1（含具体盘面数据）', '关键象意 2', '关键象意 3'] },
   situation: '当下局势（180 字以上）：所问之事现状 + 当事人在此局中的真实处境与心理状态（如：表面平静实则进退两难），结合体用/用神/牌位/课传等具体要素',
   trend: '发展趋势：近/中/远期各 80 字以上，结合变卦/三传/牌阵位置/旺衰变化，写明各阶段的转折点与关键信号',
   timing: '时机宜忌：何时宜动、何时宜守（结合旺衰/门星/天将吉凶/课体），方位/方法上有何宜忌，给具体建议',
@@ -59,12 +60,33 @@ const MINGPAN_ARTS = ['bazi', 'ziwei', 'astrology'];
 function profileText(profile?: unknown): string {
   if (!profile) return '（未提供出生档案）';
   const p = profile as any;
+  const hourKnown = !(p.birthTimeUnknown === true || p.birthHourIndex === undefined || p.birthHourIndex === null || p.birthHourIndex < 0);
   return [
     '出生日期（公历）：' + (p.birthDate || '未录'),
-    '时辰：' + (p.birthHourIndex !== undefined ? p.birthHourIndex + 1 + ' 时' : '未录'),
+    '时辰：' + (hourKnown ? (p.birthHourIndex + 1) + ' 时' : '未知（未录）'),
     '性别：' + (p.gender || '未录'),
     '出生地：' + (p.location ? (p.location.province || '') + (p.location.city || '') + (p.location.district || '') : '未录'),
   ].join('；');
+}
+
+// 时辰未知 → 解读约束（禁止编造时柱/子女宫/晚年等时辰依赖信息）
+function hourUnknownNote(profile?: unknown): string {
+  const p = (profile || {}) as any;
+  const unknown = p.birthTimeUnknown === true || p.birthHourIndex === undefined || p.birthHourIndex === null || p.birthHourIndex < 0;
+  if (!unknown) return '';
+  return '【时辰未知 · 最高约束】命主出生时辰未知，命盘未排时柱。严禁编造、推断或默认时柱（出生时刻、时柱干支、时支藏干），严禁据此断言子女宫、子女缘分、晚年运、暮年际遇等依赖时辰的信息；所有论断只能基于年/月/日三柱与命局整体展开。凡涉及子女、暮年等维度，必须明确写「因时辰未知，此维度从略」，不得自行假设一个时辰来圆说。';
+}
+
+// 命主已知人生经历 → 解读校准注入（报告须呼应该年份事件、不得与其矛盾）
+function lifeEventsNote(profile?: unknown): string {
+  const evs: { year: number; text: string }[] = (profile as any)?.lifeEvents;
+  if (!Array.isArray(evs) || evs.length === 0) return '';
+  const clean = evs
+    .filter(e => e && Number.isFinite(e.year) && e.year >= 1900 && e.year <= 2100 && e.text)
+    .sort((a, b) => a.year - b.year)
+    .map(e => e.year + ' 年：' + String(e.text).slice(0, 50));
+  if (clean.length === 0) return '';
+  return '【命主已知人生经历 · 解读校准】以下为命主本人确认的人生事件，解读必须与此相符：\n' + clean.join('\n') + '\n要求：① 凡解读涉及这些年份（或与之相邻的大运流年）时，必须呼应对应事件（如该年患病手术，则论健康/流年时须呼应）；② 严禁写出与已知经历相矛盾的内容（如已知 2024 年重大健康事件，就不得断言该年平安无事）；③ 已知经历未覆盖的年份正常论命，不得为了呼应而编造具体事件细节。';
 }
 
 // Skills 编排版：9 术 agent + 档案 + 排盘结果 → 结构化解读报告
@@ -80,6 +102,7 @@ export function buildReportMessages(
   const skillLines = agent.skills.map((s, i) => i + 1 + '. 【' + s.name + '】' + s.instruction).join('\n');
   const isMingpan = MINGPAN_ARTS.includes(artId);
   const schemaTemplate = isMingpan ? MINGPAN_TEMPLATE : ZHANWEN_TEMPLATE;
+  const relativesFacts = sixRelativesFacts(artId, resultRaw, (profile as any)?.gender);
   const sectionRules = isMingpan
     ? 'character.traits 至少 3 条并给出盘中依据；lifeStages 分 4 段并结合年/月/日/时柱或大限；career（学业与事业皆须解读）/love/wealth/health 每项含 summary 与 advice；advice 3-5 条。'
     : 'situation/trend/timing 各 2-4 句；trend 须分近/中/远期；advice 3-5 条。';
@@ -88,7 +111,10 @@ export function buildReportMessages(
     '',
     '【输出要求 · 最高优先】必须只输出一个合法的 json 对象（按下方 Schema，字段名不可更改，不要输出 json 以外的任何文字、注释或 Markdown 代码块）。',
     '',
-    '【篇幅与细节 · 重要】报告必须充实详尽：每个字段按 Schema 标注的字数下限写作，总字数 2500 字以上；每一段论断都必须引用盘面中的具体数据（干支/星曜/宫位/卦名/天将/牌名等），禁止空泛套话；同一论断需给出「盘面依据 → 命理逻辑 → 现实投射」三层展开。',
+    '【篇幅与细节 · 重要】报告充实详尽，总字数 2500 字以上，但充实靠「新信息」而非「重复旧话」：每个区块至少要给出一个前面未出现过的角度或数据点；论断须引用盘面中的具体数据（干支/星曜/宫位/卦名/天将/牌名等），禁止空泛套话，但同一数据只在首次出现的区块完整展开（盘面依据 → 命理逻辑 → 现实投射），后续区块点题引用即可（如「如前所析，命宫借星……」，一句话带过，不得重述全段）。',
+    '【去重与分工 · 重要】全篇是一份报告，不是各区块的独立作文，严禁把同一段内容换着说法再写一遍。区块分工：总览（overview）只给 3-4 句核心论断，不罗列盘面数据；原始解读（rawReading）是全篇唯一「完整翻译盘面」的地方，只做白话复述不评价；性格/事业/爱情/财富/健康等各区块只写自己领域独有的内容，引用相关盘面数据时用简略表述；人生阶段（lifeStages）按时间线推进，与性格/事业区块内容不重叠。整篇应层层递进、信息增量递减。',
+    '【字数预算 · 总量控制】全篇 2000-2500 字即可，参考预算：总览 120-180、原始解读 100-150、性格 200-280、原生家庭 200-280、心智模式 200-280、人生阶段 300-400、事业 150-220、爱情 150-220、财富 100-160、健康 100-150、建议 100-150、结语 60-100。预算为参考上限：某区块无新内容可低于预算，但不得为凑字数重复前文。',
+    '【宁短勿凑 · 重要】若某区块相对前文没有新信息可写，写短（3-4 句）甚至从略，绝不为了凑字数重复前文；字数下限是「可写内容充足时的下限」，不是「凑字任务」。',
     '【用词规范】术语使用要准确（十神/旺衰/庙陷/四化/格局/六亲/世应/四课三传/天将/体用/旺相休囚死等），对普通用户要用白话解释（术语后括注通俗解释）；语气温润克制，不作绝对化断言，不制造恐惧。',
     '',
     '【具体化 · 最重要】禁止空泛套话：每一段都要把盘面数据翻译成「这个人在真实生活中会怎样」——具体到场景、行为、感受（如：不是写「印重身弱主依赖」，而是写「他想法很多、临事却总在准备阶段反复，别人催他他更想逃，事情常常开了头就慢慢无声无息」）。宁可具体到让命主一眼认出自己，也不要安全但无用的泛泛之谈。',
@@ -104,12 +130,19 @@ export function buildReportMessages(
     '',
     '【格式规范 · 重要】所有正文均为纯文本，禁止使用任何 Markdown 标记（不要用 **、*、#、>、- 、1. 等符号排版；不要输出代码块）。内容直接以自然段落呈现。',
     '',
-    '【盘面事实一致性 · 最高约束】解读中出现的所有盘面事实（如上升星座、太阳/月亮/行星落座与宫位、相位、四柱干支、十神、命宫/身宫、十四主星落宫、大限流年、卦名爻象等）必须与【排盘结果】中给出的数据完全一致，逐字引用，不得更改、不得编造、不得自行推算补全。若【排盘结果】未提供某项，则不得在解读中虚构该项（如未提供上升星座就不得写上升为何座）。rawReading 必须把排盘结果的每一项关键数据原样复述并翻译成人话。',
+    '【盘面事实一致性 · 最高约束】解读中出现的所有盘面事实（如上升星座、太阳/月亮/行星落座与宫位、相位、四柱干支、十神、命宫/身宫、十四主星落宫、大限流年、卦名爻象等）必须与【排盘结果】中给出的数据完全一致，逐字引用，不得更改、不得编造、不得自行推算补全。若【排盘结果】未提供某项，则不得在解读中虚构该项（如未提供上升星座就不得写上升为何座）。rawReading 只需概括最关键 3-5 条盘面事实并翻译成人话，不必逐项罗列。',
+    '【论断锚定 · 最重要】每个核心论断（性格底色、父母关系、感情模式、事业方向、健康倾向）都必须能回溯到具体盘面数据，给出「数据 → 推论」的推导链，不得无依据自由发挥。特别地：',
+    '1. 六亲论断（父母/子女/配偶）必须基于父母宫与六亲星位（八字看年柱/月柱与六亲十神，紫微看父母宫/兄弟宫等）的客观状态（主星、旺衰、四化、十神），并注明依据；',
+    '2. 禁止使用「严格/宽松/慈爱/冷漠/严厉/溺爱」等主观程度词，除非能从盘面推出并注明依据（例：正官坐月柱主规矩约束，可写「家教较严」并注明正官依据；父母宫化忌可写「关系有隔阂」；若盘面无明确指向，写「盘面未明示」，绝不编造程度）；',
+    '3. 全篇论断须自洽：性格/家庭/事业/感情各区块相互呼应，不得前后矛盾（同一维度两次出现必须口径一致）。',
+    relativesFacts,
+    '',
+    hourUnknownNote(profile),
     '',
     '【Skills 编排 · 请依序调用以下技能，逐章成文】',
     skillLines,
     '',
-    '【写作次序】先做原始解读（rawReading：把排盘/起卦结果翻译成人话并列出关键点），再依据 Skills 编排逐章深度分析' + (isMingpan ? '（性格/人生阶段/学业事业/爱情/财富/健康）' : '（现状/趋势/时机）') + '。',
+    '【写作次序】先做原始解读（rawReading：概括最关键盘面事实并翻译成人话），再依据 Skills 编排逐章深度分析' + (isMingpan ? '（性格/人生阶段/学业事业/爱情/财富/健康）' : '（现状/趋势/时机）') + '。',
     fit ? '【问题适配性分析】此问经适配判定为：' + (fit.suitable === true ? '相契' : fit.suitable === 'partial' ? '部分相契' : '不甚相契') + '。' + fit.reason + (fit.suggestion ? '建议：' + fit.suggestion : '') + '请将此分析如实写入报告的 suitability 字段（suitable 用 ' + (fit.suitable === true ? 'true' : fit.suitable === 'partial' ? 'partial' : 'false') + '），并在解读行文中温和呼应。' : '',
     '',
     '【语言规范 · 三层】',
@@ -129,6 +162,8 @@ export function buildReportMessages(
     '',
     '【盘面事实（以下为不可更改的排盘结果，解读必须逐字引用、不得编造）】',
     chartBrief(artId, resultRaw),
+    '',
+    lifeEventsNote(profile),
     '',
     semantic ? '【问题语义分析】' + JSON.stringify(semantic, null, 1) : '',
     '',
@@ -163,6 +198,7 @@ export function buildStep1Messages(
     '',
     '【任务】你是解读管线的第一步：只做「盘面解析」——把排盘结果整理成结构化的事实清单，供第二步深度分析引用。',
     '【要求】只陈述盘面事实与通行命理含义，不做人生论断、不给建议；每条事实必须来自下方盘面数据，不得编造；术语后括注白话。',
+    hourUnknownNote(profile),
     '【输出】只输出一个合法 json 对象（按下方 Schema，字段名不可更改）：',
     STEP1_TEMPLATE,
   ].filter(Boolean).join('\n');
@@ -195,6 +231,7 @@ export function buildStep2Messages(
   const skillLines = agent.skills.map((s, i) => i + 1 + '. 【' + s.name + '】' + s.instruction).join('\n');
   const isMingpan = MINGPAN_ARTS.includes(artId);
   const schemaTemplate = isMingpan ? MINGPAN_TEMPLATE : ZHANWEN_TEMPLATE;
+  const relativesFacts = sixRelativesFacts(artId, resultRaw, (profile as any)?.gender);
   const sectionRules = isMingpan
     ? 'character.traits 至少 3 条并给出盘中依据；lifeStages 分 4 段并结合年/月/日/时柱或大限；career（学业与事业皆须解读）/love/wealth/health 每项含 summary 与 advice；advice 4-6 条。'
     : 'situation/trend/timing 各 150 字以上；trend 须分近/中/远期；advice 4-6 条。';
@@ -203,9 +240,19 @@ export function buildStep2Messages(
     '',
     '【任务】你是解读管线的第二步：在「盘面解析」基础上进行深度解读，输出完整报告。',
     '【输出要求 · 最高优先】必须只输出一个合法的 json 对象（按下方 Schema，字段名不可更改，不要输出 json 以外的任何文字、注释或 Markdown 代码块）。',
+    hourUnknownNote(profile),
     '',
-    '【篇幅与细节 · 重要】报告必须充实详尽：每个字段按 Schema 标注的字数下限写作，总字数 2500 字以上；每一段论断都必须引用盘面解析与盘面事实中的具体数据，禁止空泛套话；同一论断需给出「盘面依据 → 命理逻辑 → 现实投射」三层展开。',
+    '【篇幅与细节 · 重要】报告充实详尽，总字数 2500 字以上，但充实靠「新信息」而非「重复旧话」：每个区块至少要给出一个前面未出现过的角度或数据点；论断须引用盘面解析与盘面事实中的具体数据，禁止空泛套话，但同一数据只在首次出现的区块完整展开（盘面依据 → 命理逻辑 → 现实投射），后续区块点题引用即可（如「如前所析，命宫借星……」，一句话带过，不得重述全段）。',
+    '【去重与分工 · 重要】全篇是一份报告，不是各区块的独立作文，严禁把同一段内容换着说法再写一遍。区块分工：总览（overview）只给 3-4 句核心论断，不罗列盘面数据；原始解读（rawReading）是全篇唯一「完整翻译盘面」的地方，只做白话复述不评价；性格/事业/爱情/财富/健康等各区块只写自己领域独有的内容，引用相关盘面数据时用简略表述；人生阶段（lifeStages）按时间线推进，与性格/事业区块内容不重叠。整篇应层层递进、信息增量递减。',
+    '【字数预算 · 总量控制】全篇 2000-2500 字即可，参考预算：总览 120-180、原始解读 100-150、性格 200-280、原生家庭 200-280、心智模式 200-280、人生阶段 300-400、事业 150-220、爱情 150-220、财富 100-160、健康 100-150、建议 100-150、结语 60-100。预算为参考上限：某区块无新内容可低于预算，但不得为凑字数重复前文。',
+    '【宁短勿凑 · 重要】若某区块相对前文没有新信息可写，写短（3-4 句）甚至从略，绝不为了凑字数重复前文；字数下限是「可写内容充足时的下限」，不是「凑字任务」。',
     '【用词规范】术语使用要准确（十神/旺衰/庙陷/四化/格局/六亲/世应/四课三传/天将/体用/旺相休囚死等），对普通用户要用白话解释（术语后括注通俗解释）；语气温润克制，不作绝对化断言，不制造恐惧。',
+    '【论断锚定 · 最重要】每个核心论断（性格底色、父母关系、感情模式、事业方向、健康倾向）都必须能回溯到具体盘面数据，给出「数据 → 推论」的推导链，不得无依据自由发挥。特别地：',
+    '1. 六亲论断（父母/子女/配偶）必须基于父母宫与六亲星位（八字看年柱/月柱与六亲十神，紫微看父母宫/兄弟宫等）的客观状态（主星、旺衰、四化、十神），并注明依据；',
+    '2. 禁止使用「严格/宽松/慈爱/冷漠/严厉/溺爱」等主观程度词，除非能从盘面推出并注明依据（例：正官坐月柱主规矩约束，可写「家教较严」并注明正官依据；父母宫化忌可写「关系有隔阂」；若盘面无明确指向，写「盘面未明示」，绝不编造程度）；',
+    '3. 全篇论断须自洽：性格/家庭/事业/感情各区块相互呼应，不得前后矛盾（同一维度两次出现必须口径一致）。',
+    relativesFacts,
+    '',
     '【技能编排】依序运用以下技能完成报告（每一步的结论都要落进对应章节）：',
     skillLines,
     '',
@@ -225,11 +272,13 @@ export function buildStep2Messages(
     '',
     question ? '【所问之事】' + question : '【所问之事】（未书，心念已至）',
     '',
-    '【盘面解析（第一步结果，可引用）】',
+    '【盘面解析（第一步结果 · 唯一事实源，所有解读结论必须能在此找到依据，不得另立新的事实）】',
     step1Text,
     '',
     '【盘面事实（原始排盘，引用须一致）】',
     chartBrief(artId, resultRaw),
+    '',
+    lifeEventsNote(profile),
     '',
     semantic ? '【问题语义分析】' + JSON.stringify(semantic, null, 1) : '',
     '',
