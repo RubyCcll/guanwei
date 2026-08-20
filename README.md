@@ -115,7 +115,6 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 
 - **排盘精度**：Placidus 宫位制、外行星、更多星盘细节；六爻六亲世应、大六壬九宗门等进阶推演
 - **AI 解读**：报告结构继续打磨（新增维度/更细章节）；提示词与质量评分持续调优（`ai_fail_logs` 留档驱动）
-- **商业化**：套餐/配额/计费（数据表已预留 plan_tier / quota / billing 字段）
 - **体验**：更多 UI 打磨、移动端适配、性能优化
 
 ### 如何参与
