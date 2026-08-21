@@ -17,6 +17,7 @@ import SiteFooter from '@/components/SiteFooter';
 import HomePage from '@/pages/HomePage';
 import AboutPage from '@/pages/AboutPage';
 import ModulePage from '@/pages/ModulePage';
+import DemoPage from '@/pages/DemoPage';
 import ClassicsPage from '@/pages/ClassicsPage';
 import AcademyPage from '@/pages/AcademyPage';
 import HistoryPage from '@/pages/HistoryPage';
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/history/:id" element={<HistoryPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/spread-editor" element={<SpreadEditorPage />} />
+          <Route path="/demo" element={<DemoPage />} />
           <Route path="/art/:artId" element={<ModulePage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>

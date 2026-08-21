@@ -25,3 +25,14 @@ body:
         - label: 界面体验
         - label: 部署 / 运维
         - label: 文档
+
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: 实现难度预估
+      options:
+        - 低（UI/文案/示例数据）
+        - 中（接口/组件）
+        - 高（排盘引擎/AI 管线）
+    validations:
+      required: false
