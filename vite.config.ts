@@ -19,12 +19,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    react({
-      babel: {
-        plugins: [
-        ],
-      },
-    }),
+    react(),
     tsconfigPaths()
   ],
 })
