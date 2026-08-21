@@ -1,0 +1,31 @@
+# 打 tag（v*.*.*）时自动生成 Release Notes 并校验构建
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install & Build & Test
+        run: |
+          npm ci
+          cd server && npm ci && cd ..
+          npm test
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: false
