@@ -2,6 +2,17 @@
 
 感谢你对观微（Guanwei）的兴趣！无论是提 Issue、改文档、修 bug 还是加功能，都欢迎。
 
+## 🚩 我想做什么 → 推荐起点
+
+| 我想…… | 推荐起点 |
+|---|---|
+| 修一个 bug / 跑通流程 | `tests/core.test.ts`（引擎测试）→ `tests/smoke.test.tsx`（页面冒烟） |
+| 调 AI 解读效果 | `server/src/services/promptBuilder.ts` + `tests/hour-infer.test.ts`（提示词约束断言） |
+| 排盘算法 | `shared/core/engine/bazi.ts`（八字，最完整示例）→ `tests/arts-accuracy.test.ts` |
+| 前端界面 | `src/components/arts/BaziArt.tsx`（面板+结果组件范式）→ `src/index.css`（设计变量） |
+| 时辰反推 | `server/src/services/hourInference.ts` + `tests/regression-real-case.test.ts` |
+| 找简单任务 | 仓库 Issues 中标注 `good first issue` 的条目 |
+
 ## 目录
 
 - [开发环境](#开发环境)

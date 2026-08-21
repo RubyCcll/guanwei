@@ -1,6 +1,11 @@
 # 观微 · 以术问道
 
 <p align="center">
+  <b>Open-source Chinese metaphysics: nine arts of divination with AI interpretation.</b><br>
+  <i>简体中文</i> · <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <img src="docs/assets/guanwei-banner.png" alt="观微 Guanwei · 以术问道，观微知著" width="720">
 </p>
 
@@ -75,11 +80,18 @@ AI 层：多 LLM 适配（兼容 OpenAI 兼容端点与 Google 格式，服务�
 ③ 历史：GET /api/divine?username= → 档案管理页列表/详情/删除
 ```
 
-## 🌐 在线演示
+## ▶️ 立即体验（无需配置 · 无需 API Key）
 
-[GitHub Pages 演示站](https://rubyccll.github.io/guanwei/) —— 仅前端 UI 预览（首页/九术说明/古籍/学馆）。
+<p align="center">
+  <a href="https://rubyccll.github.io/guanwei/#/demo"><img src="docs/assets/demo.gif" alt="演示：排盘 → AI 报告" width="700"></a><br>
+  <a href="https://rubyccll.github.io/guanwei/#/demo"><b>▶ 打开交互演示</b></a> —— 排盘由本地引擎计算，AI 报告为内置示例，不调用任何后端服务
+</p>
 
-> ⚠️ 演示站为纯静态托管，**不含后端服务**：排盘、AI 解读、登录等依赖后端的能力在演示站不可用。完整功能请本地运行（见下）。
+> 另有 [GitHub Pages 静态演示站](https://rubyccll.github.io/guanwei/)（首页/九术说明/古籍/学馆）。完整功能（真实排盘 + 实时 AI 解读）请本地运行（见下）。
+
+### 📄 示例输出
+
+- [示例 AI 报告 PDF](docs/assets/sample-report.pdf)（虚构档案，真实管线生成）
 
 ## 🚀 快速开始
 
@@ -153,7 +165,8 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 
 - 🐛 遇到问题 → 提 [Bug 报告](https://github.com/RubyCcll/guanwei/issues/new?template=bug_report.yml)
 - 💡 有想法 → 提 [功能建议](https://github.com/RubyCcll/guanwei/issues/new?template=feature_request.yml)
-- 🧑‍💻 想写代码 → 见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 🧑‍💻 想写代码 → 见 [CONTRIBUTING.md](CONTRIBUTING.md)（含「我想做什么 → 推荐起点」导航）
+- 🌱 新手友好 → [good first issue](https://github.com/RubyCcll/guanwei/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 - ⭐ 觉得不错 → 点个 Star，就是最大的支持
 - 📦 发版节奏：功能累积后打 tag 发 Release，v1.0.0 起遵循语义化版本
 

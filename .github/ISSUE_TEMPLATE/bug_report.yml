@@ -18,6 +18,17 @@ body:
       description: 发生了什么？与预期有何不同？
     validations:
       required: true
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: 难度等级 / 帮助程度
+      description: 便于维护者标注 good first issue（新贡献者可从低难度入手）
+      options:
+        - 低（容易复现，适合新手）
+        - 中
+        - 高（需要排盘算法经验）
+    validations:
+      required: false
   - type: textarea
     id: repro
     attributes:
