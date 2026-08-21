@@ -1,5 +1,5 @@
 {
-  "name": "workspace",
+  "name": "guanwei",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -46,5 +46,6 @@
     "vite": "^6.3.5",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.1.10"
-  }
+  },
+  "description": "观微 Guanwei · 九术排盘与 AI 深度解读（八字/紫微/星盘/奇门/六爻/六壬/梅花/小六壬/塔罗）"
 }
