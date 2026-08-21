@@ -43,7 +43,7 @@ npm run dev                 # 前端 :5173
 ## 提 PR
 
 1. Fork 仓库，从 `main` 切分支（`fix/xxx` 或 `feat/xxx`）
-2. 小步提交，提交信息用中文描述（参考 `git log` 风格）
+2. 小步提交，提交信息保持简洁：`type: 一句话`（type ∈ feat / fix / docs / chore / test / refactor），只描述代码变更本身。
 3. 每个 PR 至少覆盖：
    - 相关测试（新增功能必须有测试）
    - 排盘/引擎改动必须通过 `tests/core.test.ts` 等引擎测试
