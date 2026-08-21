@@ -6,6 +6,9 @@
 
 > 占问所得，仅供修身养性、怡情遣兴之用，不构成任何决策依据。
 
+<img width="2790" height="1722" alt="image" src="https://github.com/user-attachments/assets/a19338ca-7752-46e4-afdb-b9a3d89fac70" />
+
+
 ## ✨ 功能
 
 ### 九术排盘（前端展示 + 后端计算入库）
@@ -17,6 +20,9 @@
 - 出生时间支持 **公历/农历双历**、精确到时刻（东玄据此推时辰，星盘直接用时刻）
 - 地点精确到 **省市区县 → 经纬度**（真太阳时校正）
 - 起占结果由后端计算并**持久化入库**（SQLite），六爻摇卦、塔罗抽牌等交互结果同样后端定稿
+
+<img width="2802" height="1732" alt="image" src="https://github.com/user-attachments/assets/cc4baab8-cb1a-478e-b2be-2e961a858694" />
+
 
 ### AI 深度解读
 - 9 个 Agent × Skills 编排（如紫微：命盘结构 → 星曜落宫 → 十二宫 → 大限流年 → 人生阶段）
@@ -120,6 +126,7 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 - ✅ **评测闭环**：接入 MingLi-Bench（160 题）建立 AI 解读评测基线，评测驱动 prompt 迭代（server/scripts/eval/）
 - ✅**排盘精度**：紫微小星补全、八字月令取格；Placidus 宫位制、外行星；六爻六亲世应、大六壬九宗门等进阶推演
 - ✅**AI 解读**：断语库 reviewed 后注入引证闭环；报告结构继续打磨；提示词与质量评分持续调优（评测 + `ai_fail_logs` 双驱动）
+
 计划方向：
 - **开放分发**：MCP Server / Agent Skill / REST API（复用 shared/core 单一算法副本）
 - **体验**：更多 UI 打磨、移动端适配、性能优化
