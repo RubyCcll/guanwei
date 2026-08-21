@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/RubyCcll/guanwei/actions/workflows/ci.yml"><img src="https://github.com/RubyCcll/guanwei/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <a href="https://rubyccll.github.io/guanwei/"><img src="https://img.shields.io/badge/demo-GitHub_Pages-4a5442" alt="GitHub Pages"></a>
+  <a href="https://github.com/RubyCcll/guanwei/releases"><img src="https://img.shields.io/github/v/release/RubyCcll/guanwei" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-9c4a2f" alt="MIT License"></a>
   <a href="https://github.com/RubyCcll/guanwei"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript"></a>
   <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-180%2B-brightgreen" alt="Tests"></a>
