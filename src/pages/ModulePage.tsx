@@ -54,6 +54,23 @@ const PANEL_META: Record<string, { panelTitle: string; btn: string; btnSmall: st
   tarot:      { panelTitle: '问镜', btn: '洗 牌 抽 牌', btnSmall: '静心默问 · 凭心取牌' },
 };
 
+// AI 错误码 → 用户可行动的引导文案（与后端 mapLlmError 呼应；null = 无专门引导）
+function aiErrorHint(code: string): string | null {
+  switch (code) {
+    case 'AI_HTTP_401': return '💡 多半是 API Key 无效或过期：检查服务端 .env 中 Key 是否正确（可运行 guanwei doctor 自检）。';
+    case 'AI_HTTP_403': return '💡 API Key 无权限访问该模型：请检查服务商账号权限，或换用其他服务商 Key。';
+    case 'AI_HTTP_404': return '💡 模型名有误：请检查服务端 .env 中 LLM_*_MODEL 配置与所选服务商是否匹配。';
+    case 'AI_HTTP_429': return '💡 请求过频或额度不足：稍等片刻再试；若常触发，可检查服务商账户余额。';
+    case 'AI_HTTP_500':
+    case 'AI_HTTP_502':
+    case 'AI_HTTP_503':
+    case 'AI_HTTP_504': return '💡 AI 服务商暂时不可用：过一会儿再试即可，无需改动配置。';
+    case 'STREAM_TIMEOUT': return '💡 生成超时：网络波动或服务繁忙，请重试。';
+    case 'NETWORK': return '💡 网络连接异常：请检查本机网络，或确认服务仍在运行（guanwei status）。';
+    default: return null;
+  }
+}
+
 export default function ModulePage() {
   const { artId } = useParams<{ artId: string }>();
   const art = artId ? artById(artId) : undefined;
@@ -289,6 +306,8 @@ export default function ModulePage() {
                           <li>配置后重启服务即可；也可运行 <code style={{ background: 'rgba(0,0,0,.06)', padding: '0 .3rem' }}>guanwei doctor</code> 检查配置</li>
                         </ol>
                       </div>
+                    ) : aiErrorHint(ai.errorCode) ? (
+                      <p className="tiny muted" style={{ marginTop: '.4rem' }}>{aiErrorHint(ai.errorCode)}</p>
                     ) : (
                       <p className="tiny muted">古法规则解读为备，可先依上列排盘自行观照；若为 AI 服务异常，可于服务端检查 LLM 配置后重试。</p>
                     )}
