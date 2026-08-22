@@ -1,10 +1,13 @@
-# 观微后端：Express + tsx（shared/core 引擎以仓库根为构建上下文）
+# 观微后端：Express + tsx（shared/core 引擎依赖根目录的 lunar-typescript/astronomy-engine）
 FROM node:22-alpine
 WORKDIR /app
-# 先装 server 依赖（利用层缓存）
+# 1. 根运行时依赖（shared 引擎引用）
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-fund --no-audit
+# 2. server 依赖（含 tsx 启动器）
 COPY server/package.json server/package-lock.json ./server/
 RUN cd server && npm ci --no-fund --no-audit
-# 拷贝仓库（含 shared/ 引擎）
+# 3. 源码（.dockerignore 排除 node_modules/.env 等）
 COPY . .
 WORKDIR /app/server
 EXPOSE 3018
