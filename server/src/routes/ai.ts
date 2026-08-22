@@ -63,6 +63,12 @@ router.post('/interpret', async (req, res) => {
     if (e.message === 'AI_UNCONFIGURED') {
       return res.status(503).json({ error: 'AI_UNCONFIGURED', message: '未配置 AI 服务，请设置 LLM_PROVIDER 与对应 Key' });
     }
+    // 透传服务商 HTTP 错误码（401 Key 无效 / 404 模型不存在 / 429 额度限流 / 5xx 故障等），前端给专门引导
+    const mapped = mapLlmError(e);
+    if (mapped) {
+      console.error('[ai/interpret]', e.message);
+      return res.status(502).json({ error: mapped.code, message: mapped.message });
+    }
     console.error('[ai/interpret]', e);
     res.status(502).json({ error: 'AI_FAILED', message: 'AI 解读暂未应机' });
   }
@@ -138,6 +144,18 @@ router.post('/interpret/stream', async (req, res) => {
         res.end();
       } else {
         res.status(503).json({ error: 'AI_UNCONFIGURED' });
+      }
+      return;
+    }
+    // 透传服务商 HTTP 错误码，前端给专门引导
+    const mapped = mapLlmError(e);
+    if (mapped) {
+      console.error('[ai/stream]', e.message);
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ type: 'error', code: mapped.code, message: mapped.message })}\n\n`);
+        res.end();
+      } else {
+        res.status(502).json({ error: mapped.code, message: mapped.message });
       }
       return;
     }
@@ -371,6 +389,25 @@ export function parseSections(text: string): { title: string; content: string }[
   } catch { /* 非 JSON，走散文兜底 */ }
   // 兜底：整段为一节
   return [{ title: 'AI 参详', content: cleaned || 'AI 未返回内容' }];
+}
+
+// LLM 服务商 HTTP 错误 → 用户可行动的引导码（AI_HTTP_401 等透传给前端）
+export function mapLlmError(e: any): { code: string; message: string } | null {
+  const m = /^AI_HTTP_(\d{3})$/.exec(String(e?.message || ''));
+  if (!m) return null;
+  const status = Number(m[1]);
+  switch (status) {
+    case 401: return { code: 'AI_HTTP_401', message: 'API Key 无效或已过期——请检查 server/.env 中的 Key 是否正确（guanwei doctor 可自检）' };
+    case 403: return { code: 'AI_HTTP_403', message: 'API Key 无权限访问该模型——请检查账号权限或更换模型' };
+    case 404: return { code: 'AI_HTTP_404', message: '模型不存在或模型名有误——请检查 .env 中 LLM_*_MODEL 配置' };
+    case 402:
+    case 429: return { code: 'AI_HTTP_429', message: '请求过于频繁或额度不足——请稍后重试，或检查服务商账户余额' };
+    case 500:
+    case 502:
+    case 503:
+    case 504: return { code: 'AI_HTTP_' + status, message: 'AI 服务商暂时不可用——请稍后重试' };
+    default: return { code: 'AI_HTTP_' + status, message: 'AI 服务响应异常（HTTP ' + status + '）——请稍后重试' };
+  }
 }
 
 export default router;

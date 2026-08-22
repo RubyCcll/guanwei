@@ -56,4 +56,5 @@ docs/xiaohongshu-*.md
 docs/assets/architecture.*
 docs/manual-*.md
 docs/ROADMAP.md
+docs/RELEASE-SOP.md
 .npm-cache
