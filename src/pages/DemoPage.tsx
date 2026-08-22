@@ -101,8 +101,8 @@ export default function DemoPage() {
         <div className="wrap">
           <div className="mh-row">
             <Link className="back-link" to="/">‹ 返册页</Link>
-            <h2 className="module-title"><span className="cn">体验演示</span><span className="mh-sub">无需后端 · 无需 API Key</span></h2>
-            <p className="mh-kicker">内置示例排盘与 AI 报告，一键完整体验「排盘 → 解读 → 报告」全流程</p>
+            <h2 className="module-title"><span className="cn">体验演示</span><span className="mh-sub">无需注册 · 无需配置 · 点开即玩</span></h2>
+            <p className="mh-kicker">九种术数直接体验，八字附完整 AI 解读示例</p>
           </div>
         </div>
       </section>
@@ -110,8 +110,9 @@ export default function DemoPage() {
       <div className="wrap" style={{ marginTop: 'var(--sp-4)' }}>
         {phase === 'idle' && (
           <div className="result-card" style={{ padding: 'var(--sp-5)' }}>
-            <p style={{ fontSize: '1.05rem', marginBottom: 'var(--sp-2)' }}>此页不调用任何后端服务——<strong>九术排盘由本地引擎在浏览器计算</strong>，八字附带一份内置示例 AI 报告。</p>
-            <p className="tiny muted" style={{ marginBottom: 'var(--sp-3)' }}>演示档案（虚构）：1988-06-15 · 北京 · 女（八字/紫微/星盘使用）；其余术数按当前时刻起例</p>
+            <p style={{ fontSize: '1.05rem', marginBottom: 'var(--sp-2)' }}>选一种术数，点一下就能看到排盘结果；八字还会附带一份完整的 AI 解读示例。</p>
+            <p className="tiny muted" style={{ marginBottom: 'var(--sp-2)' }}>示例档案：1988年6月15日 · 北京 · 女；其余术数按当前时刻起例</p>
+            <p className="tiny muted" style={{ marginBottom: 'var(--sp-3)' }}>三步即玩：① 选术数 → ② 点「开始体验」→ ③ 看结果</p>
             <div className="art-picker" style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem', marginBottom: 'var(--sp-4)' }}>
               {ARTS.map(a => (
                 <button key={a.id} onClick={() => setArtId(a.id)}
@@ -121,7 +122,7 @@ export default function DemoPage() {
                 </button>
               ))}
             </div>
-            <button className="btn-seal" style={{ fontSize: '1rem', padding: '.7rem 2.2rem' }} onClick={start}>排 盘 演 示</button>
+            <button className="btn-seal" style={{ fontSize: '1rem', padding: '.7rem 2.2rem' }} onClick={start}>开 始 体 验</button>
           </div>
         )}
 
@@ -144,8 +145,8 @@ export default function DemoPage() {
               )}
               <div className="btn-row mt-3 no-print">
                 <button className="btn-seal btn-ghost" style={{ fontSize: '.9rem', padding: '.5rem 1.4rem' }} onClick={reset}>重 新 演 示</button>
-                <button className="btn-seal btn-ghost" style={{ fontSize: '.9rem', padding: '.5rem 1.4rem' }} onClick={() => setShowRaw(v => !v)}>{showRaw ? '隐 藏' : '查 看'}示例数据源</button>
-                <Link className="btn-seal btn-ghost" style={{ fontSize: '.9rem', padding: '.5rem 1.4rem', textDecoration: 'none' }} to="/auth">用 真 实 档 案 体 验 →</Link>
+                <button className="btn-seal btn-ghost" style={{ fontSize: '.9rem', padding: '.5rem 1.4rem' }} onClick={() => setShowRaw(v => !v)}>{showRaw ? '隐 藏' : '查 看'}数据（开发者）</button>
+                <Link className="btn-seal btn-ghost" style={{ fontSize: '.9rem', padding: '.5rem 1.4rem', textDecoration: 'none' }} to="/auth">体验完整功能（存档 / AI 实时解读）→</Link>
               </div>
               {showRaw && report && (
                 <pre style={{ fontSize: '.68rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all', background: 'rgba(251,249,243,.6)', border: '1px solid var(--line-soft)', borderRadius: 'var(--r-sm)', padding: 'var(--sp-3)', marginTop: 'var(--sp-3)' }}>{JSON.stringify(report, null, 1).slice(0, 4000)}</pre>
