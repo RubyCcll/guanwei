@@ -5,8 +5,9 @@
 .env
 .env.*
 server/.env
-server/src/data
-server/data
+server/src/data/guanwei.db
+server/src/data/db.json
+server/data/db.json
 node_modules
 **/node_modules
 dist
