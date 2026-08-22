@@ -12,6 +12,7 @@ coverage/
 !.env.development.example
 server/.env
 server/.env.*
+!server/.env.example
 
 # ===== 运行时数据（用户数据/占卜历史） =====
 server/data/
@@ -54,3 +55,4 @@ docs/juejin-*.md
 docs/xiaohongshu-*.md
 docs/assets/architecture.*
 docs/manual-*.md
+docs/ROADMAP.md

@@ -3,7 +3,8 @@
 name: guanwei
 services:
   backend:
-    build:
+    image: ghcr.io/rubyccll/guanwei-backend:latest
+    build:            # 本地构建备用：docker compose build --no-cache
       context: .
       dockerfile: Dockerfile.server
     env_file:
@@ -15,6 +16,7 @@ services:
     restart: unless-stopped
 
   web:
+    image: ghcr.io/rubyccll/guanwei-web:latest
     build:
       context: .
       dockerfile: Dockerfile.web

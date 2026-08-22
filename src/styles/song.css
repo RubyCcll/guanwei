@@ -1055,6 +1055,7 @@ select.input-line{appearance:none;background-image:linear-gradient(45deg,transpa
 .mh-row .module-title .cn{font-size:clamp(1.5rem,3vw,2.2rem);display:inline}
 .mh-row .mh-sub{font-family:var(--font-kai);font-size:var(--fs-sm);color:var(--ink-faint);letter-spacing:.25em;white-space:nowrap}
 .mh-row .mh-kicker{margin-left:auto;font-size:var(--fs-xs);letter-spacing:.3em;color:var(--ink-faint);white-space:nowrap}
+@media (max-width:640px){.mh-row .mh-kicker{white-space:normal;letter-spacing:.15em;line-height:1.6;max-width:16em;text-align:right}}
 .mh-intro{margin-top:.4rem;max-width:72ch}
 .mh-intro summary{
   cursor:pointer;font-size:var(--fs-xs);letter-spacing:.25em;color:var(--celadon-deep);

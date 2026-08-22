@@ -1,0 +1,21 @@
+# 构建上下文排除（安全与体积）
+.git
+.gitignore
+**/.env
+.env
+.env.*
+server/.env
+server/src/data
+server/data
+node_modules
+**/node_modules
+dist
+docs
+tests
+*.md
+*.zip
+.trae
+divination-app
+Dockerfile*
+docker-compose.yml
+.github
