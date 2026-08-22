@@ -124,6 +124,20 @@ AI 层：多 LLM 适配（兼容 OpenAI 兼容端点与 Google 格式，服务�
 
 脚本自动：安装依赖 → 写入 `server/.env`（Key 仅存本地）→ 启动前后端。打开 http://localhost:5173 → 缘起页注册 → 九术页起占 → 召 AI 成报告。
 
+### 🖥️ 观微 CLI（启动 / 更新 / 版本检查一条命令）
+
+```bash
+npm link        # 全局安装 guanwei 命令（或直接 ./scripts/guanwei）
+
+guanwei setup --key sk-xxx    # 配置 API Key（交互式：guanwei setup）
+guanwei start                 # 启动（--docker 用容器）
+guanwei update                # 更新到最新版（git 增量合并，.env 等本地配置不覆盖）
+guanwei check / status        # 版本检查 / 状态
+guanwei stop                  # 停止（docker 模式）
+```
+
+> `guanwei update` 采用 **git 增量合并**：只拉取远程变更、保留本地所有配置（`.env` 等已 gitignore 文件不受影响）；检测到本地未提交修改会先提示并自动 stash 保护，更新完成后恢复。
+
 ### 测试
 ```bash
 npm test                 # 180+ 项测试（核心引擎/渲染/交互/存储/流程/提示词）
