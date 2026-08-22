@@ -73,7 +73,17 @@ AI:       multi-LLM adapter (OpenAI-compatible & Google formats; DeepSeek / Gemi
 
 ## 🚀 Quick Start (one-liners)
 
-### ⚡ Easiest: Docker one-liner (for everyone)
+### ⚡ Recommended: npm one-liner (fast, seconds)
+
+```bash
+npm i -g guanwei
+guanwei setup --key YOUR_API_KEY
+guanwei start
+```
+
+Open http://localhost:5173 . Upgrade: `guanwei update`. Stop: `guanwei stop`.
+
+### ⚡ Docker one-liner (no Node needed, easiest)
 
 ```bash
 docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=YOUR_API_KEY ghcr.io/rubyccll/guanwei:latest
@@ -81,7 +91,7 @@ docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=YOUR_API_KEY ghcr.io
 
 Open http://localhost:5173 . Stop: `docker stop guanwei`. Other providers: `-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=...` (deepseek / gemini / groq / qwen / custom).
 
-### ⚡ One-line installer (local development)
+### ⚡ Source installer (fallback)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RubyCcll/guanwei/main/scripts/install.sh | bash
@@ -93,7 +103,7 @@ guanwei start
 
 **One step: configure your API key** (DeepSeek / Gemini / Groq / Qwen / custom endpoint).
 
-#### Option 3: GitHub Codespaces (zero local setup)
+#### Option 4: GitHub Codespaces (zero local setup)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/RubyCcll/guanwei)
 
@@ -103,7 +113,7 @@ Click the button → dependencies are installed automatically → run:
 ./scripts/setup.sh --key YOUR_API_KEY
 ```
 
-#### Option 4: Docker Compose
+#### Option 5: Docker Compose
 
 Prebuilt images are published to GitHub Container Registry (amd64 + arm64):
 
@@ -116,7 +126,7 @@ Open http://localhost:5173 . Stop with `docker compose down`.
 
 Images: `ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`; override ports with `WEB_PORT=5180 API_PORT=3020 docker compose up -d` if needed.
 
-#### Option 5: Local Node.js (≥ 22)
+#### Option 6: Local Node.js (≥ 22)
 
 ```bash
 ./scripts/setup.sh --key YOUR_API_KEY   # interactive mode: run ./scripts/setup.sh

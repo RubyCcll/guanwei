@@ -1,209 +1,244 @@
 #!/usr/bin/env bash
 # ============================================================
-# 观微 Guanwei CLI
+# 观微 Guanwei CLI（支持：npm 全局安装 / npm link / 本地源码）
 #
 # 用法：
-#   guanwei setup [--key xxx] [--provider xxx] [--docker]  配置 API Key（首次）
-#   guanwei start [--docker]                                启动服务
-#   guanwei update [--docker]                               更新到最新版（git 增量合并，不覆盖本地配置）
-#   guanwei check                                           检查是否有新版本
-#   guanwei doctor                                           环境自检（Node/Docker/配置/端口/依赖）
-#   guanwei status                                          当前版本与远端版本
-#   guanwei stop                                            停止服务（docker 模式）
-#   guanwei --help                                          帮助
-#
-# 全局安装：npm link（或直接 ./scripts/guanwei <cmd>）
+#   guanwei setup [--key xxx] [--provider xxx]     配置 API Key（存 ~/.guanwei/.env，更新不丢）
+#   guanwei start [--dev] [--port 5173]            启动并自动打开浏览器
+#   guanwei update                                 更新到最新版（全局：npm 升级；本地：git 增量合并）
+#   guanwei check / status                         版本检查 / 状态
+#   guanwei doctor                                 环境自检
+#   guanwei stop                                   停止服务
+#   guanwei web                                    仅打开浏览器
+#   guanwei --help                                 帮助
 # ============================================================
 set -uo pipefail
-cd "$(dirname "$0")/.."
-ROOT="$(pwd)"
 
-VERSION=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
-HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "?")
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+# ── 定位项目根（支持 npm link / npm 全局安装的符号链接）──
+SCRIPT_PATH=$(node -e "process.stdout.write(require('fs').realpathSync(process.argv[1]))" "$0" 2>/dev/null || echo "$0")
+ROOT=$(cd "$(dirname "${SCRIPT_PATH}")/.." && pwd)
+GUANWEI_HOME="${GUANWEI_HOME:-${HOME}/.guanwei}"
+ENV_FILE="${GUANWEI_HOME}/.env"
+VERSION=$(node -e "console.log(require('${ROOT}/package.json').version)" 2>/dev/null || echo "?")
+HEAD=$(git -C "${ROOT}" rev-parse --short HEAD 2>/dev/null || echo "pkg")
+if [[ -d "${ROOT}/.git" ]]; then MODE="local"; else MODE="global"; fi
 
-# ---------- 远端最新信息 ----------
 remote_head() { git ls-remote origin -h refs/heads/main 2>/dev/null | cut -f1; }
 latest_tag()  { git ls-remote --tags origin 'refs/tags/v*' 2>/dev/null | sed 's|.*refs/tags/||' | sort -V | tail -1; }
 
-# ---------- 子命令 ----------
-cmd_doctor() {
-  local ok=1
-  echo "🩺 观微环境自检"
-  echo "──────────────────────────────"
-  # Node
-  if command -v node >/dev/null 2>&1; then
-    local nv; nv=$(node -v 2>/dev/null | sed 's/v//')
-    if [[ "$(printf '%s
-' "$nv" 22 | sort -V | head -1)" == "22" ]]; then
-      echo "✅ Node.js ${nv}（≥22 可用内置 SQLite）"
-    else
-      echo "⚠️  Node.js ${nv}——建议 ≥22（旧版本需手动装 SQLite 依赖）"
-    fi
-  else
-    echo "❌ 未检测到 Node.js——可用 Docker 方式：guanwei start --docker"
-    ok=0
-  fi
-  # 配置
-  if [[ -s server/.env ]]; then
-    if grep -qE "sk-你的|sk-test|your-" server/.env 2>/dev/null; then
-      echo "❌ server/.env 存在但疑似占位/测试密钥——请运行：guanwei setup"
-      ok=0
-    else
-      local prov; prov=$(grep "^LLM_PROVIDER=" server/.env | cut -d= -f2)
-      echo "✅ 已配置（LLM_PROVIDER=${prov:-?}）"
-    fi
-  else
-    echo "❌ 未配置——运行：guanwei setup --key 你的APIKey"
-    ok=0
-  fi
-  # 依赖
-  if [[ -d node_modules ]] && [[ -d server/node_modules ]]; then
-    echo "✅ 依赖已安装"
-  else
-    echo "⚠️  依赖未安装（guanwei start 会自动安装）"
-  fi
-  # 端口
-  if lsof -nP -iTCP:3018 -sTCP:LISTEN >/dev/null 2>&1; then
-    echo "✅ 后端端口 3018 已被服务占用（运行中）"
-  else
-    echo "ℹ️  后端端口 3018 空闲（未启动）"
-  fi
-  if lsof -nP -iTCP:5173 -sTCP:LISTEN >/dev/null 2>&1; then
-    echo "⚠️  前端端口 5173 被其他进程占用（可能是别的项目）"
-  fi
-  # Docker（--docker 模式）
-  if [[ "${1:-}" == "--docker" ]]; then
-    if ! command -v docker >/dev/null 2>&1; then
-      echo "❌ 未检测到 Docker——请安装 Docker Desktop https://www.docker.com/"
-      ok=0
-    else
-      echo "✅ Docker 可用"
-      local st; st=$(docker ps --filter "name=guanwei" --format "{{.Names}}" 2>/dev/null)
-      [[ -n "$st" ]] && echo "ℹ️  容器运行中：$(echo "$st" | tr '\n' ' ')"
-    fi
-  fi
-  # CLI 可用性
-  if command -v guanwei >/dev/null 2>&1 && [[ "$(command -v guanwei)" != *"scripts/guanwei"* ]]; then
-    echo "✅ 全局 guanwei 命令可用（$(command -v guanwei)）"
-  else
-    echo "ℹ️  全局 guanwei 命令未安装——在项目根目录执行 npm link 后任意目录可用（或直接 ./scripts/guanwei）"
-  fi
-  # 版本
-  cmd_check
-  echo "──────────────────────────────"
-  [[ $ok -eq 1 ]] && echo "🎉 自检通过" || echo "🛠️  按提示修复后重试：guanwei doctor"
-}
-
 cmd_help() {
-  sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,19p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 cmd_check() {
-  local remote remoteTag
-  remote=$(remote_head)
-  remoteTag=$(latest_tag)
-  if [[ -z "${remote}" ]]; then echo "⚠️  无法连接 GitHub（离线或网络问题）"; return 0; fi
-  if [[ "${HEAD}" == "${remote:0:7}" ]]; then
-    echo "✅ 已是最新版本（${VERSION} · ${HEAD}）"
+  if [[ "${MODE}" == "global" ]]; then
+    local latest
+    latest=$(npm view guanwei version 2>/dev/null || echo "?")
+    if [[ "${latest}" == "${VERSION}" || "${latest}" == "?" ]]; then
+      echo "✅ 已是最新版本（${VERSION}）"
+    else
+      echo "📦 有新版本：本地 ${VERSION} → npm ${latest}；运行：guanwei update"
+    fi
   else
-    echo "📦 有新版本可用：本地 ${VERSION} · ${HEAD} → 远端 ${remoteTag} · ${remote:0:7}"
-    echo "   运行：guanwei update 更新"
+    local remote remoteTag
+    remote=$(remote_head)
+    remoteTag=$(latest_tag)
+    if [[ -z "${remote}" ]]; then echo "⚠️  无法连接 GitHub"; return 0; fi
+    if [[ "${HEAD}" == "${remote:0:7}" ]]; then
+      echo "✅ 已是最新版本（${VERSION} · ${HEAD}）"
+    else
+      echo "📦 有新版本：本地 ${VERSION} · ${HEAD} → 远端 ${remoteTag} · ${remote:0:7}；运行：guanwei update"
+    fi
   fi
 }
 
 cmd_status() {
   echo "观微 Guanwei"
-  echo "  本地版本 : ${VERSION}"
-  echo "  本地提交 : ${HEAD} (${BRANCH})"
-  echo "  API Key  : $([[ -s server/.env ]] && echo "已配置" || echo "未配置（运行 guanwei setup）")"
-  echo "  Docker   : $(docker-compose ps --services 2>/dev/null | tr '\n' ' ' | sed 's/ *$//' || echo "未运行")"
+  echo "  版本     : ${VERSION}（${MODE} 模式）"
+  [[ "${MODE}" == "local" ]] && echo "  提交     : ${HEAD}"
+  echo "  项目目录 : ${ROOT}"
+  echo "  配置     : $([ -f "${ENV_FILE}" ] && echo "已配置（${ENV_FILE}）" || echo "未配置（运行 guanwei setup）")"
+  local be_pid fe_pid
+  be_pid=$(lsof -nP -iTCP:3018 -sTCP:LISTEN -t 2>/dev/null | head -1)
+  fe_pid=$(lsof -nP -iTCP:${WEB_PORT:-5173} -sTCP:LISTEN -t 2>/dev/null | head -1)
+  echo "  服务状态 : 后端 $([ -n "${be_pid}" ] && echo '运行中' || echo '未运行') · 前端 $([ -n "${fe_pid}" ] && echo '运行中' || echo '未运行')"
   cmd_check
 }
 
 cmd_setup() {
-  if [[ ! -x scripts/setup.sh ]]; then chmod +x scripts/setup.sh; fi
-  exec ./scripts/setup.sh "$@"
+  local PROVIDER="" KEY="" CHOICE
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --provider) PROVIDER="$2"; shift 2 ;;
+      --key) KEY="$2"; shift 2 ;;
+      *) echo "未知参数: $1"; exit 1 ;;
+    esac
+  done
+  mkdir -p "${GUANWEI_HOME}"
+  if [[ -z "${PROVIDER}" ]]; then
+    if [[ -n "${KEY}" ]]; then PROVIDER=deepseek; else
+      echo "选择 AI 服务商："
+      echo "  1) DeepSeek（推荐）  2) Gemini  3) Groq  4) 通义千问  5) 自定义端点"
+      read -rp "编号 [1]: " CHOICE
+      case "${CHOICE:-1}" in
+        1) PROVIDER=deepseek;; 2) PROVIDER=gemini;; 3) PROVIDER=groq;;
+        4) PROVIDER=qwen;; 5) PROVIDER=custom;; *) echo "无效"; exit 1;;
+      esac
+    fi
+  fi
+  if [[ -z "${KEY}" ]]; then
+    read -rsp "请输入 ${PROVIDER} API Key（不回显）: " KEY; echo
+  fi
+  [[ -z "${KEY}" ]] && { echo "错误：Key 不能为空"; exit 1; }
+  {
+    echo "# 由 guanwei setup 生成（$(date '+%Y-%m-%d %H:%M')）"
+    echo "LLM_PROVIDER=${PROVIDER}"
+    case "${PROVIDER}" in
+      deepseek) echo "LLM_DEEPSEEK_KEY=${KEY}"; echo "LLM_DEEPSEEK_MODEL=deepseek-chat";;
+      gemini)   echo "LLM_GEMINI_KEY=${KEY}";;
+      groq)     echo "LLM_GROQ_KEY=${KEY}";;
+      qwen)     echo "LLM_QWEN_KEY=${KEY}";;
+      custom)
+        echo "LLM_CUSTOM_KEY=${KEY}"
+        read -rp "端点 URL [https://your-endpoint/v1/chat/completions]: " EP
+        echo "LLM_CUSTOM_ENDPOINT=${EP:-https://your-endpoint/v1/chat/completions}";;
+    esac
+  } > "${ENV_FILE}"
+  chmod 600 "${ENV_FILE}"
+  echo "✅ 配置已保存：${ENV_FILE}（仅本机可读）"
 }
 
 cmd_start() {
-  if [[ ! -s server/.env ]]; then
-    echo "⚠️  尚未配置 API Key，先运行：guanwei setup"; exit 1
+  local DEV="" web_port="${WEB_PORT:-5173}" api_port="${API_PORT:-3018}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dev) DEV="1"; shift ;;
+      --port) web_port="$2"; shift 2 ;;
+      --api) api_port="$2"; shift 2 ;;
+      *) echo "未知参数: $1"; exit 1 ;;
+    esac
+  done
+  if [[ ! -f "${ENV_FILE}" ]]; then
+    echo "⚠️  尚未配置，先运行：guanwei setup --key 你的APIKey"; exit 1
   fi
-  if [[ "${1:-}" == "--docker" ]]; then
-    local compose
-    if docker compose version >/dev/null 2>&1; then compose="docker compose"; else compose="docker-compose"; fi
-    ${compose} up -d
-    echo "✅ 已启动：前端 http://localhost:5173 · 后端 http://localhost:3018"
-    echo "   停止：guanwei stop"
+  set -a; source "${ENV_FILE}"; set +a
+  export PORT="${api_port}"   # 后端实际监听端口
+
+  local mode_label="生产"
+  [[ -n "${DEV}" ]] && mode_label="开发"
+  echo "🚀 启动观微（${mode_label}模式）"
+  echo "   前端 : http://localhost:${web_port}   后端 : http://localhost:${api_port}"
+
+  if [[ -n "${DEV}" ]]; then
+    (cd "${ROOT}/server" && "${ROOT}/node_modules/.bin/tsx" watch src/index.ts >/dev/null 2>&1) &
+    (cd "${ROOT}" && "${ROOT}/node_modules/.bin/vite" --port "${web_port}" >/dev/null 2>&1) &
   else
-    echo "📦 检查依赖..."
-    [[ -d node_modules ]] || npm install --no-fund --no-audit
-    [[ -d server/node_modules ]] || (cd server && npm install --no-fund --no-audit)
-    echo "🚀 启动（Ctrl+C 停止）..."
-    (cd server && npm run dev) &
-    npm run dev
+    (cd "${ROOT}/server" && "${ROOT}/node_modules/.bin/tsx" src/index.ts >/dev/null 2>&1) &
+    (cd "${ROOT}" && "${ROOT}/node_modules/.bin/vite" preview --port "${web_port}" --strictPort --host 127.0.0.1 >/dev/null 2>&1) &
   fi
+
+  for i in $(seq 1 30); do
+    curl -sf "http://127.0.0.1:${api_port}/api/health" >/dev/null 2>&1 && break
+    sleep 1
+  done
+  sleep 2
+  if curl -sf -o /dev/null "http://127.0.0.1:${web_port}/" 2>/dev/null; then
+    echo "✅ 已就绪，正在打开浏览器..."
+    cmd_web "${web_port}" || true
+  else
+    echo "⚠️  前端暂未就绪，稍后访问 http://localhost:${web_port}"
+  fi
+  echo "   Ctrl+C 停止"
+  wait
 }
 
-cmd_stop() {
-  local compose
-  if docker compose version >/dev/null 2>&1; then compose="docker compose"; else compose="docker-compose"; fi
-  ${compose} down 2>/dev/null && echo "✅ Docker 服务已停止" || echo "⚠️  Docker 服务未在运行"
+cmd_web() {
+  local port="${1:-${WEB_PORT:-5173}}"
+  local url="http://localhost:${port}"
+  case "$(uname -s)" in
+    Darwin) open "${url}" ;;
+    Linux)  xdg-open "${url}" 2>/dev/null || echo "请打开浏览器访问: ${url}" ;;
+    MINGW*|MSYS*|CYGWIN*) start "${url}" ;;
+    *) echo "请打开浏览器访问: ${url}" ;;
+  esac
 }
 
 cmd_update() {
-  echo "🔍 检查远端更新..."
-  git fetch origin 2>&1 | tail -1
-  local remote remoteTag
-  remote=$(remote_head)
-  remoteTag=$(latest_tag)
-  if [[ -z "${remote}" ]]; then echo "⚠️  无法连接 GitHub"; exit 1; fi
-  if [[ "${HEAD}" == "${remote:0:7}" ]]; then
-    echo "✅ 已是最新版本（${VERSION} · ${HEAD}）"
-    return 0
-  fi
-
-  # 保护本地未提交改动（不覆盖）：gitignore 之外的文件有改动则提示
-  local dirty
-  dirty=$(git status --porcelain --untracked-files=no 2>/dev/null | grep -v '^??' | head -5)
-  if [[ -n "${dirty}" ]]; then
-    echo "⚠️  检测到本地未提交修改（不会覆盖）："
-    echo "${dirty}" | sed 's/^/    /'
-    read -rp "  继续更新？[y/N] " ans
-    [[ "${ans,,}" == "y" ]] || { echo "已取消"; exit 1; }
-    git stash push -m "guanwei-update-auto" >/dev/null 2>&1 && STASHED=1
-  fi
-
-  echo "📦 增量更新（git 合并，.env 等本地配置不受影响）..."
-  git merge --ff-only origin/main 2>&1 | tail -2 || { git pull --rebase origin main 2>&1 | tail -3; }
-
-  if [[ "${1:-}" == "--docker" ]]; then
-    local compose
-    if docker compose version >/dev/null 2>&1; then compose="docker compose"; else compose="docker-compose"; fi
-    echo "🐳 重新构建镜像..."
-    ${compose} up -d --build
+  if [[ "${MODE}" == "global" ]]; then
+    echo "📦 全局安装模式——通过 npm 升级..."
+    npm i -g guanwei@latest 2>&1 | tail -2
+    echo "✅ 升级完成，重启生效：guanwei start"
   else
-    echo "📦 增量安装依赖..."
-    npm install --no-fund --no-audit 2>&1 | tail -1
-    (cd server && npm install --no-fund --no-audit 2>&1 | tail -1)
+    echo "🔍 检查远端更新..."
+    git -C "${ROOT}" fetch origin 2>&1 | tail -1
+    local remote; remote=$(remote_head)
+    if [[ -z "${remote}" ]]; then echo "⚠️  无法连接 GitHub"; exit 1; fi
+    if [[ "${HEAD}" == "${remote:0:7}" ]]; then echo "✅ 已是最新"; return 0; fi
+    local dirty
+    dirty=$(git -C "${ROOT}" status --porcelain --untracked-files=no 2>/dev/null | grep -v '^??' | head -5)
+    if [[ -n "${dirty}" ]]; then
+      echo "⚠️  本地未提交修改（不会覆盖）："; echo "${dirty}" | sed 's/^/    /'
+      read -rp "  继续？[y/N] " ans
+      [[ "${ans,,}" == "y" ]] || { echo "已取消"; exit 1; }
+      git -C "${ROOT}" stash push -m "guanwei-update-auto" >/dev/null 2>&1 && STASHED=1
+    fi
+    echo "📦 增量更新..."
+    git -C "${ROOT}" merge --ff-only origin/main 2>&1 | tail -2 || git -C "${ROOT}" pull --rebase origin main 2>&1 | tail -2
+    echo "📦 安装依赖..."
+    (cd "${ROOT}" && npm install --no-fund --no-audit 2>&1 | tail -1)
+    (cd "${ROOT}/server" && npm install --no-fund --no-audit 2>&1 | tail -1)
+    [[ -n "${STASHED:-}" ]] && git -C "${ROOT}" stash pop >/dev/null 2>&1 && echo "✅ 本地修改已恢复"
+    echo "✅ 更新完成：$(node -e "console.log(require('${ROOT}/package.json').version)") · $(git -C "${ROOT}" rev-parse --short HEAD)"
   fi
-
-  if [[ -n "${STASHED:-}" ]]; then git stash pop >/dev/null 2>&1 && echo "✅ 本地修改已恢复"; fi
-
-  echo "✅ 更新完成：$(node -e "console.log(require('./package.json').version)" 2>/dev/null) · $(git rev-parse --short HEAD)"
-  echo "   重启生效：guanwei start${1:+ $1}"
 }
 
-# ---------- 入口 ----------
+cmd_doctor() {
+  local ok=1
+  echo "🩺 观微环境自检（${MODE} 模式）"
+  echo "──────────────────────────────"
+  if command -v node >/dev/null 2>&1; then
+    echo "✅ Node.js $(node -v | sed 's/v//')"
+  else
+    echo "❌ 未检测到 Node.js"; ok=0
+  fi
+  if [[ -s "${ENV_FILE}" ]]; then
+    if grep -qE "sk-你的|sk-test|your-" "${ENV_FILE}" 2>/dev/null; then
+      echo "❌ 配置含占位/测试密钥——重新运行 guanwei setup"; ok=0
+    else
+      echo "✅ 已配置（LLM_PROVIDER=$(grep '^LLM_PROVIDER=' "${ENV_FILE}" | cut -d= -f2)）"
+    fi
+  else
+    echo "❌ 未配置——运行 guanwei setup --key 你的APIKey"; ok=0
+  fi
+  echo "✅ 项目目录: ${ROOT}"
+  local be fe
+  be=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:3018/api/health 2>/dev/null || echo 0)
+  fe=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "http://localhost:${WEB_PORT:-5173}/" 2>/dev/null || echo 0)
+  [[ "${be}" == "200" ]] && echo "✅ 后端 3018 运行中" || echo "ℹ️  后端 3018 未运行"
+  [[ "${fe}" == "200" ]] && echo "✅ 前端 ${WEB_PORT:-5173} 运行中" || echo "ℹ️  前端 ${WEB_PORT:-5173} 未运行"
+  cmd_check
+  echo "──────────────────────────────"
+  [[ ${ok} -eq 1 ]] && echo "🎉 自检通过" || echo "🛠️  按提示修复后重试：guanwei doctor"
+}
+
+cmd_stop() {
+  for port in 3018 ${WEB_PORT:-5173}; do
+    local pid
+    pid=$(lsof -nP -iTCP:${port} -sTCP:LISTEN -t 2>/dev/null | head -1)
+    [[ -n "${pid}" ]] && kill "${pid}" 2>/dev/null && echo "已停止端口 ${port}（pid ${pid}）"
+  done
+  echo "✅ 停止命令已执行"
+}
+
 CMD="${1:-help}"
 case "${CMD}" in
   setup)  shift; cmd_setup "$@" ;;
-  doctor) shift; cmd_doctor "$@" ;;
   start)  shift; cmd_start "$@" ;;
-  update) shift; cmd_update "$@" ;;
+  web)    shift; cmd_web "$@" ;;
+  update) cmd_update ;;
   check)  cmd_check ;;
   status) cmd_status ;;
+  doctor) cmd_doctor ;;
   stop)   cmd_stop ;;
   help|-h|--help) cmd_help ;;
   *) echo "未知命令: ${CMD}"; cmd_help; exit 1 ;;
