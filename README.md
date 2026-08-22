@@ -126,7 +126,9 @@ AI 层：多 LLM 适配（OpenAI 兼容 / Google 格式，DeepSeek / Gemini / Gr
 ### 🖥️ 观微 CLI（启动 / 更新 / 自检一条命令）
 
 ```bash
-npm link        # 全局安装 guanwei 命令（或直接 ./scripts/guanwei）
+# ① 在【项目根目录】执行一次（全局安装 guanwei 命令，之后任意目录可用）：
+npm link
+# ② 不想全局安装？直接使用：./scripts/guanwei <命令>
 
 guanwei setup --key sk-xxx   # 配置 API Key（交互式：guanwei setup）
 guanwei start                # 启动（--docker 用容器）

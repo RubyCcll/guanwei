@@ -83,6 +83,12 @@ cmd_doctor() {
       [[ -n "$st" ]] && echo "ℹ️  容器运行中：$(echo "$st" | tr '\n' ' ')"
     fi
   fi
+  # CLI 可用性
+  if command -v guanwei >/dev/null 2>&1 && [[ "$(command -v guanwei)" != *"scripts/guanwei"* ]]; then
+    echo "✅ 全局 guanwei 命令可用（$(command -v guanwei)）"
+  else
+    echo "ℹ️  全局 guanwei 命令未安装——在项目根目录执行 npm link 后任意目录可用（或直接 ./scripts/guanwei）"
+  fi
   # 版本
   cmd_check
   echo "──────────────────────────────"

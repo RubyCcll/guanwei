@@ -6,6 +6,7 @@
 #   ./scripts/setup.sh --key sk-xxx             # 非交互（默认 DeepSeek）
 #   ./scripts/setup.sh --provider gemini --key xxxx
 #   ./scripts/setup.sh --key sk-xxx --docker    # 用 Docker 启动（无需本机 Node）
+#   ./scripts/setup.sh --link                    # 额外：全局安装 guanwei 命令（之后任意目录可用）
 # ============================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -14,11 +15,13 @@ PROVIDER=""
 KEY=""
 MODE="local"   # local | docker
 
+LINK=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --provider) PROVIDER="$2"; shift 2 ;;
     --key)      KEY="$2"; shift 2 ;;
     --docker)   MODE="docker"; shift ;;
+    --link)     LINK="1"; shift ;;
     -h|--help)
       sed -n '1,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "未知参数: $1（--provider / --key / --docker / --help）"; exit 1 ;;
@@ -81,6 +84,13 @@ echo "✅ server/.env 已生成（API Key 仅存本地，已 gitignore）"
 if [[ ! -f .env.development ]] && [[ -f .env.development.example ]]; then
   cp .env.development.example .env.development
   echo "✅ .env.development 已就绪"
+fi
+
+# ---------- 3.5 可选：全局安装 guanwei 命令 ----------
+if [[ -n "$LINK" ]]; then
+  echo "🔗 全局安装 guanwei 命令（npm link，之后任意目录可用）..."
+  npm link 2>&1 | tail -1
+  echo "   现在可以直接运行：guanwei status"
 fi
 
 # ---------- 4. 安装依赖并启动 ----------
