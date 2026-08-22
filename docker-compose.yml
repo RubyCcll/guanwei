@@ -9,7 +9,7 @@ services:
     env_file:
       - server/.env
     ports:
-      - "3018:3018"
+      - "${API_PORT:-3018}:3018"
     volumes:
       - guanwei-data:/app/server/src/data
     restart: unless-stopped
@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile.web
     ports:
-      - "5173:80"
+      - "${WEB_PORT:-5173}:80"
     depends_on:
       - backend
     restart: unless-stopped

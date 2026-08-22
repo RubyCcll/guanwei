@@ -9,6 +9,7 @@ export function useAIInterpret() {
   const [text, setText] = useState('');
   const [sections, setSections] = useState<AIInterpretSection[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [report, setReport] = useState<AIReport | null>(null);
   const [truncated, setTruncated] = useState(false);
   const [quality, setQuality] = useState<'ok' | 'poor'>('ok');
@@ -28,6 +29,7 @@ export function useAIInterpret() {
     setTruncated(false);
     setQuality('ok');
     setErrorMsg('');
+    setErrorCode('');
     await aiInterpretStream(
       params,
       (char) => { if (reqIdRef.current === myId) setText(prev => prev + char); },
@@ -49,6 +51,7 @@ export function useAIInterpret() {
         // 出错即锁定终态：流结束后若再触发兜底 onDone，也不得覆盖错误状态（否则会误把流式累积的原始文字当结果展示）
         doneRef.current = true;
         setErrorMsg(message || code);
+        setErrorCode(code);
         setStatus('error');
       },
     );
@@ -63,10 +66,11 @@ export function useAIInterpret() {
     setText('');
     setSections([]);
     setErrorMsg('');
+    setErrorCode('');
     setReport(null);
     setTruncated(false);
     setQuality('ok');
   }, []);
 
-  return { status, text, sections, report, truncated, quality, errorMsg, interpret, reset };
+  return { status, text, sections, report, truncated, quality, errorMsg, errorCode, interpret, reset };
 }

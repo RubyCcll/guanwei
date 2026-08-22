@@ -46,8 +46,12 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
   const [lifeEvents, setLifeEvents] = useState<LifeEvent[]>(p?.lifeEvents || []);
   const dst = isChinaDSTDate(date);
 
+  const [formMsg, setFormMsg] = useState('');
   const go = () => {
     const [yy, mm, dd] = date.split('-').map(Number);
+    if (!yy || !mm || !dd) { setFormMsg('⚠ 请先填写有效的出生日期'); return; }
+    if (new Date(yy, mm - 1, dd).getMonth() !== mm - 1) { setFormMsg('⚠ 出生日期不合法，请检查'); return; }
+    setFormMsg('');
     // 公历 → 农历（万年历），紫微依农历排盘
     let lm = 1, ld = 1, gz = '甲子', birthYear = yy;
     try {
@@ -92,9 +96,11 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
           时辰未知（未录）
         </label>
       </div>
+      {formMsg && <p className="tag-hot" style={{ marginTop: '.3rem' }}>{formMsg}</p>}
       <div className="field">
         <label>出生地点（时辰经度校正）</label>
         <LocationPicker value={loc} onChange={setLoc} previewHourIndex={hourUnknown ? 6 : timeToHourIndex(birthTime)} />
+        {!loc && <p className="hint" style={{ marginTop: '.3rem' }}>未选地点：将按北京时间直接排盘（不做真太阳时校正）</p>}
       </div>
             <div className="field"><label htmlFor="q-input">所问之事（可选）</label>
         <input className="input-line" id="q-input" placeholder="可书所问，AI 报告将由此而发…" maxLength={60} value={question} onChange={e => setQuestion(e.target.value)} />
