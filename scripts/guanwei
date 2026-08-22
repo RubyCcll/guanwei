@@ -7,6 +7,7 @@
 #   guanwei start [--docker]                                启动服务
 #   guanwei update [--docker]                               更新到最新版（git 增量合并，不覆盖本地配置）
 #   guanwei check                                           检查是否有新版本
+#   guanwei doctor                                           环境自检（Node/Docker/配置/端口/依赖）
 #   guanwei status                                          当前版本与远端版本
 #   guanwei stop                                            停止服务（docker 模式）
 #   guanwei --help                                          帮助
@@ -26,6 +27,68 @@ remote_head() { git ls-remote origin -h refs/heads/main 2>/dev/null | cut -f1; }
 latest_tag()  { git ls-remote --tags origin 'refs/tags/v*' 2>/dev/null | sed 's|.*refs/tags/||' | sort -V | tail -1; }
 
 # ---------- 子命令 ----------
+cmd_doctor() {
+  local ok=1
+  echo "🩺 观微环境自检"
+  echo "──────────────────────────────"
+  # Node
+  if command -v node >/dev/null 2>&1; then
+    local nv; nv=$(node -v 2>/dev/null | sed 's/v//')
+    if [[ "$(printf '%s
+' "$nv" 22 | sort -V | head -1)" == "22" ]]; then
+      echo "✅ Node.js ${nv}（≥22 可用内置 SQLite）"
+    else
+      echo "⚠️  Node.js ${nv}——建议 ≥22（旧版本需手动装 SQLite 依赖）"
+    fi
+  else
+    echo "❌ 未检测到 Node.js——可用 Docker 方式：guanwei start --docker"
+    ok=0
+  fi
+  # 配置
+  if [[ -s server/.env ]]; then
+    if grep -qE "sk-你的|sk-test|your-" server/.env 2>/dev/null; then
+      echo "❌ server/.env 存在但疑似占位/测试密钥——请运行：guanwei setup"
+      ok=0
+    else
+      local prov; prov=$(grep "^LLM_PROVIDER=" server/.env | cut -d= -f2)
+      echo "✅ 已配置（LLM_PROVIDER=${prov:-?}）"
+    fi
+  else
+    echo "❌ 未配置——运行：guanwei setup --key 你的APIKey"
+    ok=0
+  fi
+  # 依赖
+  if [[ -d node_modules ]] && [[ -d server/node_modules ]]; then
+    echo "✅ 依赖已安装"
+  else
+    echo "⚠️  依赖未安装（guanwei start 会自动安装）"
+  fi
+  # 端口
+  if lsof -nP -iTCP:3018 -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "✅ 后端端口 3018 已被服务占用（运行中）"
+  else
+    echo "ℹ️  后端端口 3018 空闲（未启动）"
+  fi
+  if lsof -nP -iTCP:5173 -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "⚠️  前端端口 5173 被其他进程占用（可能是别的项目）"
+  fi
+  # Docker（--docker 模式）
+  if [[ "${1:-}" == "--docker" ]]; then
+    if ! command -v docker >/dev/null 2>&1; then
+      echo "❌ 未检测到 Docker——请安装 Docker Desktop https://www.docker.com/"
+      ok=0
+    else
+      echo "✅ Docker 可用"
+      local st; st=$(docker ps --filter "name=guanwei" --format "{{.Names}}" 2>/dev/null)
+      [[ -n "$st" ]] && echo "ℹ️  容器运行中：$(echo "$st" | tr '\n' ' ')"
+    fi
+  fi
+  # 版本
+  cmd_check
+  echo "──────────────────────────────"
+  [[ $ok -eq 1 ]] && echo "🎉 自检通过" || echo "🛠️  按提示修复后重试：guanwei doctor"
+}
+
 cmd_help() {
   sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
 }
@@ -130,6 +193,7 @@ cmd_update() {
 CMD="${1:-help}"
 case "${CMD}" in
   setup)  shift; cmd_setup "$@" ;;
+  doctor) shift; cmd_doctor "$@" ;;
   start)  shift; cmd_start "$@" ;;
   update) shift; cmd_update "$@" ;;
   check)  cmd_check ;;

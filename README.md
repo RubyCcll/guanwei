@@ -138,6 +138,18 @@ guanwei stop                  # 停止（docker 模式）
 
 > `guanwei update` 采用 **git 增量合并**：只拉取远程变更、保留本地所有配置（`.env` 等已 gitignore 文件不受影响）；检测到本地未提交修改会先提示并自动 stash 保护，更新完成后恢复。
 
+### 🔑 获取 API Key（5 家服务商任选）
+
+| 服务商 | 官方入口 | 说明 |
+|---|---|---|
+| **DeepSeek**（推荐） | https://platform.deepseek.com | 性价比最高，中文好 |
+| Groq | https://console.groq.com | 有免费额度 |
+| Gemini | https://aistudio.google.com/apikey | 有免费额度 |
+| 通义千问 | https://dashscope.console.aliyun.com/ | 国内直连 |
+| 自定义端点 | 任意 OpenAI 兼容接口 | `--provider custom` |
+
+注册后在对应平台创建 Key → 运行 `./scripts/setup.sh --key 你的Key`（Windows 用 `scripts/setup.bat --key 你的Key`）即完成配置。
+
 ### 测试
 ```bash
 npm test                 # 180+ 项测试（核心引擎/渲染/交互/存储/流程/提示词）
