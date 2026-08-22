@@ -1,0 +1,18 @@
+// 观微 · GitHub Codespaces 开发环境（一键打开即用）
+// 打开后终端执行：./scripts/setup.sh --key 你的APIKey
+{
+  "name": "guanwei-dev",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "postCreateCommand": "npm install --no-fund --no-audit && cd server && npm install --no-fund --no-audit && cd .. && (cp -n server/.env.example server/.env || true) && (cp -n .env.development.example .env.development || true)",
+  "forwardPorts": [3018, 5173],
+  "portsAttributes": {
+    "3018": { "label": "观微后端 API", "onAutoForward": "notify" },
+    "5173": { "label": "观微前端", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+      "settings": { "terminal.integrated.defaultProfile.linux": "bash" }
+    }
+  }
+}
