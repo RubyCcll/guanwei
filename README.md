@@ -86,7 +86,25 @@ AI 层：多 LLM 适配（OpenAI 兼容 / Google 格式，DeepSeek / Gemini / Gr
 ③ 历史：GET /api/divine?username= → 档案管理页列表/详情/删除
 ```
 
-## 🚀 快速开始（三选一，1 分钟跑起来）
+## 🚀 快速开始（一行命令）
+
+### ⚡ 最简方式一：Docker 一行启动（推荐给所有人）
+
+```bash
+docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=你的APIKey ghcr.io/rubyccll/guanwei:latest
+```
+
+打开 http://localhost:5173 即用。停止：`docker stop guanwei`。其他服务商：`-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=你的Key`（deepseek / gemini / groq / qwen / custom 均可）。
+
+### ⚡ 最简方式二：curl 一键安装（本地开发）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/RubyCcll/guanwei/main/scripts/install.sh | bash
+guanwei setup --key 你的APIKey
+guanwei start
+```
+
+### 详细方式（Codespaces / Docker Compose / 本地 Node）
 
 **只需一步：配置你的 API Key**（[5 家服务商任选](#-获取-api-key5-家服务商任选)，DeepSeek 性价比最高）。
 

@@ -71,7 +71,25 @@ Shared:   shared/core/engine/* — single source of truth for all chart algorith
 AI:       multi-LLM adapter (OpenAI-compatible & Google formats; DeepSeek / Gemini / Groq / Qwen / custom)
 ```
 
-## 🚀 Quick Start (pick one — under a minute)
+## 🚀 Quick Start (one-liners)
+
+### ⚡ Easiest: Docker one-liner (for everyone)
+
+```bash
+docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=YOUR_API_KEY ghcr.io/rubyccll/guanwei:latest
+```
+
+Open http://localhost:5173 . Stop: `docker stop guanwei`. Other providers: `-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=...` (deepseek / gemini / groq / qwen / custom).
+
+### ⚡ One-line installer (local development)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/RubyCcll/guanwei/main/scripts/install.sh | bash
+guanwei setup --key YOUR_API_KEY
+guanwei start
+```
+
+### Detailed options (Codespaces / Docker Compose / local Node)
 
 **One step: configure your API key** (DeepSeek / Gemini / Groq / Qwen / custom endpoint).
 
