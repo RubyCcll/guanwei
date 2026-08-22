@@ -88,7 +88,7 @@ AI 层：多 LLM 适配（OpenAI 兼容 / Google 格式，DeepSeek / Gemini / Gr
 
 ## 🚀 快速开始（一行命令）
 
-### ⚡ 最简方式一：Docker 一行启动（推荐给所有人）
+### ⚡ 方式一：Docker 一行启动（给所有人，最简）
 
 ```bash
 docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=你的APIKey ghcr.io/rubyccll/guanwei:latest
@@ -96,7 +96,7 @@ docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=你的APIKey ghcr.io
 
 打开 http://localhost:5173 即用。停止：`docker stop guanwei`。其他服务商：`-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=你的Key`（deepseek / gemini / groq / qwen / custom 均可）。
 
-### ⚡ 最简方式二：curl 一键安装（本地开发）
+### ⚡ 方式二：curl 一键安装（本地开发）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RubyCcll/guanwei/main/scripts/install.sh | bash
@@ -104,11 +104,11 @@ guanwei setup --key 你的APIKey
 guanwei start
 ```
 
-### 详细方式（Codespaces / Docker Compose / 本地 Node）
+### 详细方式（Codespaces / Compose / 本地 Node）
 
 **只需一步：配置你的 API Key**（[5 家服务商任选](#-获取-api-key5-家服务商任选)，DeepSeek 性价比最高）。
 
-### 方式一：GitHub Codespaces（零本地安装，云端一键）
+#### 方式三：GitHub Codespaces（零本地安装，云端一键）
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/RubyCcll/guanwei)
 
@@ -118,7 +118,7 @@ guanwei start
 ./scripts/setup.sh --key 你的APIKey
 ```
 
-### 方式二：Docker（无需 Node 环境，免构建）
+#### 方式四：Docker Compose（多容器）
 
 预构建镜像已发布到 GitHub Container Registry（amd64 + arm64 双平台）：
 
@@ -133,7 +133,7 @@ guanwei start
 
 镜像：`ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`；端口冲突时 `WEB_PORT=5180 API_PORT=3020 docker compose up -d` 覆盖。也可直接 `docker pull ghcr.io/rubyccll/guanwei-guanwei-web:latest`。
 
-### 方式三：本地 Node.js（≥ 22）
+#### 方式五：本地 Node.js（≥ 22）
 
 ```bash
 ./scripts/setup.sh --key 你的APIKey   # 交互式可直接运行 ./scripts/setup.sh
