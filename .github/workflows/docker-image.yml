@@ -1,4 +1,4 @@
-# 构建并推送 Docker 镜像到 GitHub Container Registry（GHCR）
+# 构建并推送 Docker 镜像到 GitHub Container Registry（GHCR），并自动设为公开
 # 触发：推送 v* tag（Release 版）与 main（latest）
 # 使用：docker pull ghcr.io/rubyccll/guanwei-web:latest
 name: docker-image
@@ -60,3 +60,17 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Ensure package is public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          base="guanwei-${{ matrix.image }}"
+          ok=""
+          for n in "$base" "${{ github.repository_owner }}-$base"; do
+            if gh api "user/packages/container/$n" >/dev/null 2>&1; then
+              gh api --method POST "user/packages/container/$n/visibility" -f visibility=public >/dev/null 2>&1 && { echo "public: $n"; ok=1; break; }
+            fi
+          done
+          [ -n "$ok" ] || echo "manual-set-needed: $base"
