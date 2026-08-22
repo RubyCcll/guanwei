@@ -1,0 +1,27 @@
+# 观微一体镜像：前端(nginx) + 后端(Express) 单容器
+# 一行运行：
+#   docker run -d --name guanwei -p 5173:80 \
+#     -e LLM_DEEPSEEK_KEY=sk-你的Key \
+#     ghcr.io/rubyccll/guanwei:latest
+# 其他服务商：-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=xxx
+# ─── 阶段 1：构建 ───
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-fund --no-audit
+COPY server/package.json server/package-lock.json ./server/
+RUN cd server && npm ci --no-fund --no-audit
+COPY . .
+RUN npm run build
+
+# ─── 阶段 2：运行时（node + nginx）───
+FROM node:22-alpine
+RUN apk add --no-cache nginx
+WORKDIR /app
+COPY --from=build /app ./
+# 精简：运行时只需 server 依赖与根运行时依赖（保留完整，简单可靠）
+COPY deploy/nginx-single.conf /etc/nginx/http.d/default.conf
+COPY deploy/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+EXPOSE 80
+ENTRYPOINT ["/entrypoint.sh"]
