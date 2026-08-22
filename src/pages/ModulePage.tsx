@@ -280,7 +280,18 @@ export default function ModulePage() {
                 {ai.status === 'error' && (
                   <div className="ai-error">
                     <p className="tag-hot"><strong>AI 未应机</strong>：{ai.errorMsg || 'AI 解读暂未应机，请稍后再试。'}</p>
-                    <p className="tiny muted">古法规则解读为备，可先依上列排盘自行观照；若为 AI 服务异常，可于服务端检查 LLM 配置后重试。</p>
+                    {ai.errorCode === 'AI_UNCONFIGURED' ? (
+                      <div className="ai-config-hint" style={{ marginTop: '.5rem', padding: '.6rem .8rem', border: '1px dashed var(--cinnabar)', borderRadius: 'var(--r-sm)' }}>
+                        <p className="tiny"><strong>尚未配置 AI 服务的 API Key</strong>——配置后即可生成 AI 报告：</p>
+                        <ol className="tiny muted" style={{ margin: '.4rem 0 0 1.2rem', lineHeight: 1.8 }}>
+                          <li>终端进入项目目录，运行 <code style={{ background: 'rgba(0,0,0,.06)', padding: '0 .3rem' }}>./scripts/setup.sh --key 你的APIKey</code>（Windows：<code style={{ background: 'rgba(0,0,0,.06)', padding: '0 .3rem' }}>scripts\setup.bat --key 你的APIKey</code>）</li>
+                          <li>Key 申请入口与详细步骤见 <a href="https://github.com/RubyCcll/guanwei#%F0%9F%94%91-%E8%8E%B7%E5%8F%96-api-key" target="_blank" rel="noreferrer">README · 获取 API Key</a>（DeepSeek 等 5 家任选）</li>
+                          <li>配置后重启服务即可；也可运行 <code style={{ background: 'rgba(0,0,0,.06)', padding: '0 .3rem' }}>guanwei doctor</code> 检查配置</li>
+                        </ol>
+                      </div>
+                    ) : (
+                      <p className="tiny muted">古法规则解读为备，可先依上列排盘自行观照；若为 AI 服务异常，可于服务端检查 LLM 配置后重试。</p>
+                    )}
                     <div className="btn-row" style={{ marginTop: 'var(--sp-2)' }}>
                       <button className="btn-seal" style={{ fontSize: '.82rem', padding: '.4rem 1.1rem' }} onClick={() => ai.interpret({ artId: art.id, resultRaw: result, question: questionRef.current || undefined, profile: profileRef.current || undefined, reportMode: true, fit: fit || undefined })}>重 试</button>
                       <button className="btn-seal btn-ghost" style={{ fontSize: '.82rem', padding: '.4rem 1.1rem' }} onClick={ai.reset}>收 起</button>

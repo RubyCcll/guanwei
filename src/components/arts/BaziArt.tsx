@@ -40,9 +40,12 @@ export function BaziPanel({ onDivine }: PanelProps) {
   const dst = isChinaDSTDate(date);
 
   const filled = p && date === p.birthDate && birthTime === p.birthTime && gender === p.gender && JSON.stringify(loc) === JSON.stringify(p.location) && !hourUnknown;
+  const [formMsg, setFormMsg] = useState('');
   const go = () => {
     const [y, m, d] = date.split('-').map(Number);
-    if (!y || !m || !d) return;
+    if (!y || !m || !d) { setFormMsg('⚠ 请先填写有效的出生日期'); return; }
+    if (new Date(y, m - 1, d).getMonth() !== m - 1) { setFormMsg('⚠ 出生日期不合法，请检查'); return; }
+    setFormMsg('');
     const hourIdx = hourUnknown ? -1 : timeToHourIndex(birthTime);
     onDivine(
       hourUnknown
@@ -138,9 +141,11 @@ export function BaziPanel({ onDivine }: PanelProps) {
           )}
         </div>
       )}
+      {formMsg && <p className="tag-hot" style={{ marginTop: '.3rem' }}>{formMsg}</p>}
       <div className="field">
         <label>出生地点（真太阳时校正）</label>
         <LocationPicker value={loc} onChange={setLoc} previewHourIndex={hourUnknown ? -1 : timeToHourIndex(birthTime)} />
+        {!loc && <p className="hint" style={{ marginTop: '.3rem' }}>未选地点：将按北京时间直接排盘（不做真太阳时校正，时辰边界可能偏差约 15-80 分钟）</p>}
       </div>
       <div className="field"><label htmlFor="q-input">所问之事（可选）</label>
         <input className="input-line" id="q-input" placeholder="可书所问，AI 报告将由此而发…" maxLength={60} value={question} onChange={e => setQuestion(e.target.value)} />
