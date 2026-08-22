@@ -109,12 +109,16 @@ AI 层：多 LLM 适配（兼容 OpenAI 兼容端点与 Google 格式，服务�
 
 ### 方式二：Docker（无需 Node 环境）
 
+预构建镜像已发布到 GitHub Container Registry（amd64 + arm64 双平台），**免本地构建**：
+
 ```bash
-./scripts/setup.sh --docker --key 你的APIKey   # 自动配置 + 构建 + 启动
+./scripts/setup.sh --docker --key 你的APIKey   # 自动配置 + 拉取镜像 + 启动
 # 或手动：cp server/.env.example server/.env（填入 Key）→ docker compose up -d
 ```
 
 打开 http://localhost:5173 。停止：`docker compose down`。
+
+镜像：`ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`（端口冲突时用 `WEB_PORT=5180 API_PORT=3020 docker compose up -d` 覆盖）。
 
 ### 方式三：本地 Node.js（≥ 22）
 
