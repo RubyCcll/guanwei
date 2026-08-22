@@ -61,20 +61,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Ensure package is public
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          base="guanwei-${{ matrix.image }}"
-          for n in "$base" "${{ github.repository_owner }}-$base"; do
-            echo "trying package: $n"
-            if gh api "user/packages/container/$n" >/dev/null 2>&1; then
-              echo "found package: $n"
-              gh api --method POST "user/packages/container/$n/visibility" -f visibility=public
-              echo "public OK: $n"
-              exit 0
-            fi
-            echo "not found: $n"
-          done
-          echo "ERROR: package not found by either name"
-          exit 1
+      # 注：包可见性无法由 GITHUB_TOKEN 修改（GitHub 平台限制），
+      # 首次发布后需手动在 Profile → Packages → 包设置 → Change visibility 设为 Public
