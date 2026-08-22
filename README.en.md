@@ -89,11 +89,11 @@ guanwei setup --key YOUR_API_KEY
 guanwei start
 ```
 
-### Detailed options (Codespaces / Docker Compose / local Node)
+### Detailed options (Codespaces / Compose / local Node)
 
 **One step: configure your API key** (DeepSeek / Gemini / Groq / Qwen / custom endpoint).
 
-### Option 1: GitHub Codespaces (zero local setup)
+#### Option 3: GitHub Codespaces (zero local setup)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/RubyCcll/guanwei)
 
@@ -103,7 +103,7 @@ Click the button → dependencies are installed automatically → run:
 ./scripts/setup.sh --key YOUR_API_KEY
 ```
 
-### Option 2: Docker (no Node.js needed, no local build)
+#### Option 4: Docker Compose
 
 Prebuilt images are published to GitHub Container Registry (amd64 + arm64):
 
@@ -116,7 +116,7 @@ Open http://localhost:5173 . Stop with `docker compose down`.
 
 Images: `ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`; override ports with `WEB_PORT=5180 API_PORT=3020 docker compose up -d` if needed.
 
-### Option 3: Local Node.js (≥ 22)
+#### Option 5: Local Node.js (≥ 22)
 
 ```bash
 ./scripts/setup.sh --key YOUR_API_KEY   # interactive mode: run ./scripts/setup.sh
