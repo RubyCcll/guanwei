@@ -10,6 +10,7 @@
   <a href="https://github.com/RubyCcll/guanwei/releases"><img src="https://img.shields.io/github/v/release/RubyCcll/guanwei" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-9c4a2f" alt="MIT License"></a>
   <a href="https://github.com/RubyCcll/guanwei"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript"></a>
+  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-181-brightgreen" alt="Tests"></a>
 </p>
 
 <p align="center">
@@ -20,11 +21,11 @@ An open-source Chinese metaphysics application covering **nine arts of divinatio
 
 > All readings are for reflection and entertainment only; never a basis for real decisions.
 
-## ▶️ Try It Now (No API Key Needed)
+## ▶️ Try It Now (No Sign-up · No API Key)
 
 <p align="center">
-  <a href="https://rubyccll.github.io/guanwei/#/demo"><img src="docs/assets/demo.gif" alt="Demo: chart → AI report" width="700"></a>
-  <br><a href="https://rubyccll.github.io/guanwei/#/demo"><b>▶ Open the Interactive Demo</b></a> — chart computed locally, AI report from a built-in sample. No backend, no API key.
+  <a href="https://rubyccll.github.io/guanwei/#/demo"><img src="docs/assets/demo.gif" alt="Demo: nine-arts charts → AI report" width="700"></a>
+  <br><a href="https://rubyccll.github.io/guanwei/#/demo"><b>▶ Open the Interactive Demo</b></a> — <b>all nine arts computed locally in your browser</b> (zero backend), Bazi includes a full sample AI report.
 </p>
 
 ## Screenshots
@@ -36,15 +37,16 @@ An open-source Chinese metaphysics application covering **nine arts of divinatio
 
 ## ✨ Features
 
-### Nine Arts of Divination (frontend display + backend computation)
+### Nine Arts of Divination (deterministic calendar computation, single shared engine)
 | Category | Arts |
 |---|---|
 | Natal charts | Bazi (Ziping), Ziwei Doushu, Classical astrology (VSOP87 ecliptic) |
 | Divination | Qimen Dunjia, Meihua, Liuyao, Da Liu Ren, Xiaoliuren, Tarot |
 
 - **Gregorian/Lunar dual-calendar** birth input, precise to the minute (east-Asian arts use the two-hour shichen, astrology uses exact time)
-- Location down to **province/city/district → longitude/latitude** (true solar time correction, including 1986–1991 China DST rollback)
+- Location down to **province/city/district → longitude/latitude** (true solar time correction, including 1986–1991 China DST rollback); falls back to Beijing time with a clear notice when location is omitted
 - **Unknown birth hour support**: charts without the hour pillar, plus **hour inference from life events** (year × hour-pillar interaction scoring)
+- **Dynamic chart narration**: personalized summaries generated from the actual chart (day master × season × strength × ten gods × five-element balance × luck cycles)
 - Results computed by the backend and **persisted to SQLite**
 
 ### AI Deep Interpretation
@@ -66,52 +68,103 @@ An open-source Chinese metaphysics application covering **nine arts of divinatio
 Frontend: React 18 + TypeScript + Vite + Tailwind (Song-dynasty aesthetics)
 Backend:  Express + tsx (SSE streaming + SQLite)
 Shared:   shared/core/engine/* — single source of truth for all chart algorithms
-AI:       multi-LLM adapter (OpenAI-compatible & Google formats, configured via server/.env)
+AI:       multi-LLM adapter (OpenAI-compatible & Google formats; DeepSeek / Gemini / Groq / Qwen / custom)
 ```
 
-## 🚀 Quick Start
+## 🚀 Quick Start (pick one — under a minute)
 
-### Requirements
-- Node.js ≥ 22 (uses built-in node:sqlite)
-- One LLM API key (OpenAI-compatible or Google format, see server/.env.example)
+**One step: configure your API key** (DeepSeek / Gemini / Groq / Qwen / custom endpoint).
+
+### Option 1: GitHub Codespaces (zero local setup)
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/RubyCcll/guanwei)
+
+Click the button → dependencies are installed automatically → run:
 
 ```bash
-# 1. Install dependencies
-npm install                 # frontend
-cd server && npm install && cd ..
-
-# 2. Configure backend
-cp server/.env.example server/.env   # add your LLM key
-
-# 3. Start backend (port 3018)
-cd server && npm run dev
-
-# 4. Start frontend (default port 5173, another terminal)
-npm run dev
+./scripts/setup.sh --key YOUR_API_KEY
 ```
 
-Open http://localhost:5173 → register → cast a chart → summon the AI report.
+### Option 2: Docker (no Node.js needed, no local build)
+
+Prebuilt images are published to GitHub Container Registry (amd64 + arm64):
+
+```bash
+./scripts/setup.sh --docker --key YOUR_API_KEY
+# or manually: cp server/.env.example server/.env → docker compose up -d
+```
+
+Open http://localhost:5173 . Stop with `docker compose down`.
+
+Images: `ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`; override ports with `WEB_PORT=5180 API_PORT=3020 docker compose up -d` if needed.
+
+### Option 3: Local Node.js (≥ 22)
+
+```bash
+./scripts/setup.sh --key YOUR_API_KEY   # interactive mode: run ./scripts/setup.sh
+```
+
+The script installs dependencies, writes `server/.env` (key stays local), and starts both servers. Open http://localhost:5173 → register → cast a chart → summon the AI report.
+
+### 🖥️ Guanwei CLI (start / update / self-check)
+
+```bash
+npm link        # install globally (or use ./scripts/guanwei directly)
+
+guanwei setup --key sk-xxx   # configure API key (interactive: guanwei setup)
+guanwei start                # start (--docker for containers)
+guanwei doctor               # environment self-check (Node/config/ports/deps/version)
+guanwei update               # update to latest (git incremental merge; local config preserved)
+guanwei check / status       # version check / status
+guanwei stop                 # stop (docker mode)
+```
+
+> `guanwei update` uses **git incremental merge**: only pulls remote changes, keeps all local config (`.env` etc. are gitignored); uncommitted local edits are auto-stashed and restored.
+
+### 🔑 Getting an API Key (5 providers)
+
+| Provider | Portal | Notes |
+|---|---|---|
+| **DeepSeek** (recommended) | https://platform.deepseek.com | Best value, strong Chinese |
+| Groq | https://console.groq.com | Free tier |
+| Gemini | https://aistudio.google.com/apikey | Free tier |
+| Qwen (Alibaba) | https://dashscope.console.aliyun.com/ | China-friendly |
+| Custom endpoint | any OpenAI-compatible API | `--provider custom` |
+
+Then run `./scripts/setup.sh --key YOUR_KEY` (Windows: `scripts/setup.bat --key YOUR_KEY`); the UI shows a clear guide when the key is missing.
 
 ### Tests
 ```bash
-npm test    # 180+ tests (engines / rendering / interactions / storage / prompts)
+npm test    # 181 tests (engines / rendering / interactions / storage / prompts)
 ```
 
 ## 📁 Structure
 
 ```
-├── src/               # Frontend (pages / components / hooks / services)
+├── src/                 # Frontend (pages / components / hooks / services)
 ├── server/
-│   ├── src/routes/    # divine / ai / users / hour
-│   └── src/services/  # promptBuilder / llmProvider / divineStore / hourInference / relativesCheck
-├── shared/core/       # Shared chart engines (single copy)
-├── docs/              # Design docs & open-source assets
-└── tests/             # Tests (incl. regression set)
+│   ├── src/routes/      # divine / ai / users / hour
+│   └── src/services/    # promptBuilder / llmProvider / divineStore / hourInference / relativesCheck / sixRelatives
+├── shared/core/         # Shared chart engines (single copy)
+├── scripts/             # setup.sh / guanwei CLI / release.sh / setup.bat (Windows)
+├── deploy/              # nginx config (Docker)
+├── .devcontainer/       # GitHub Codespaces template
+├── Dockerfile.web / Dockerfile.server / docker-compose.yml
+├── docs/                # Open-source assets (banner / screenshots / GIF / sample report)
+└── tests/               # Tests (incl. regression set)
 ```
+
+## 🔐 Security
+- Keys live only in local `server/.env` (gitignored); Docker builds exclude `.env` via `.dockerignore`
+- Test data is fully fictional/anonymized — no real personal information in this repository
+
+## 📄 Sample Output
+
+- [Sample AI report (PDF)](docs/assets/sample-report.pdf) (fictional profile, generated by the real pipeline)
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) — including the **zero-privacy policy** (no real user data, keys, or personal info in this repository).
+See [CONTRIBUTING.md](CONTRIBUTING.md) — including the **zero-privacy policy** (no real user data, keys, or personal info in this repository). Releases follow semantic versioning — see [CHANGELOG.md](CHANGELOG.md).
 
 ## 📄 License
 [MIT](LICENSE)
