@@ -18,11 +18,36 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install & Build & Test
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Type check (frontend)
+        run: npx tsc --noEmit
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Type check (server)
+        working-directory: server
+        run: npx tsc --noEmit
+
+      - name: Start backend (for integration tests)
+        working-directory: server
         run: |
-          npm ci
-          cd server && npm ci && cd ..
-          npm test
+          npx tsx src/index.ts > /tmp/backend.log 2>&1 &
+          echo $! > /tmp/backend.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3018/api/health > /dev/null 2>&1; then
+              echo "backend ready"
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:3018/api/health || (echo "backend failed to start"; cat /tmp/backend.log; exit 1)
+
+      - name: Run tests
+        run: npx vitest run
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
