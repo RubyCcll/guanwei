@@ -51,4 +51,5 @@ tmp-test-*
 # ===== 发文/内容产出（仅本地，不入库） =====
 docs/zhihu-*.md
 docs/juejin-*.md
+docs/xiaohongshu-*.md
 docs/assets/architecture.*

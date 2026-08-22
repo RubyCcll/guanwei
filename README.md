@@ -93,34 +93,36 @@ AI 层：多 LLM 适配（兼容 OpenAI 兼容端点与 Google 格式，服务�
 
 - [示例 AI 报告 PDF](docs/assets/sample-report.pdf)（虚构档案，真实管线生成）
 
-## 🚀 快速开始
+## 🚀 快速开始（三选一，1 分钟跑起来）
 
-### 环境要求
-- Node.js ≥ 22（使用内置 node:sqlite）
-- 一个 LLM API Key（OpenAI 兼容端点或 Google 格式均可，见 server/.env.example）
+**只需一步：配置你的 API Key**（DeepSeek / Gemini / Groq / 通义 / 自定义端点均可）。
 
-### 安装与启动
+### 方式一：GitHub Codespaces（零本地安装，云端一键）
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/RubyCcll/guanwei)
+
+点击按钮 → 云端环境自动装好依赖 → 终端执行：
 
 ```bash
-# 1. 安装依赖
-npm install            # 前端
-cd server && npm install && cd ..
-
-# 2. 配置后端环境变量
-cp server/.env.example server/.env
-# 编辑 server/.env，填入所选服务商的 Key（见 .env.example 注释）
-
-# 3. 配置前端开发环境（可选）
-cp .env.development.example .env.development
-
-# 4. 启动后端（端口 3018）
-cd server && npm run dev
-
-# 5. 启动前端（默认端口 5173，另开终端）
-npm run dev
+./scripts/setup.sh --key 你的APIKey
 ```
 
-打开 http://localhost:5173 → 缘起页注册 → 九术页起占 → 召 AI 成报告。
+### 方式二：Docker（无需 Node 环境）
+
+```bash
+./scripts/setup.sh --docker --key 你的APIKey   # 自动配置 + 构建 + 启动
+# 或手动：cp server/.env.example server/.env（填入 Key）→ docker compose up -d
+```
+
+打开 http://localhost:5173 。停止：`docker compose down`。
+
+### 方式三：本地 Node.js（≥ 22）
+
+```bash
+./scripts/setup.sh --key 你的APIKey   # 交互式可直接运行 ./scripts/setup.sh
+```
+
+脚本自动：安装依赖 → 写入 `server/.env`（Key 仅存本地）→ 启动前后端。打开 http://localhost:5173 → 缘起页注册 → 九术页起占 → 召 AI 成报告。
 
 ### 测试
 ```bash

@@ -1,0 +1,28 @@
+# 观微一键部署：docker compose up -d
+# 首次使用：先填好 server/.env（API Key），或直接运行 ./scripts/setup.sh --docker --key sk-xxx
+name: guanwei
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    env_file:
+      - server/.env
+    ports:
+      - "3018:3018"
+    volumes:
+      - guanwei-data:/app/server/src/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  guanwei-data:
