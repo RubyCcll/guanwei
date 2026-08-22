@@ -1,28 +1,49 @@
 #!/usr/bin/env bash
 # ============================================================
-# 观微 Guanwei · 一键安装脚本
+# 观微 Guanwei · 一键安装脚本（备用方式）
 # 用法（复制这一行到终端执行）：
 #   curl -fsSL https://raw.githubusercontent.com/RubyCcll/guanwei/main/scripts/install.sh | bash
 #
-# 做什么：拉取项目 → 安装依赖 → 全局安装 guanwei 命令
+# 【推荐方式】一行命令（国内走 npmmirror，几秒装完）：
+#   npm i -g guanwei
+#   guanwei setup --key 你的APIKey
+#   guanwei start
+#
+# 本脚本做什么：拉取项目 → 安装依赖 → 全局安装 guanwei 命令
 # 装完：guanwei setup 配置 Key → guanwei start 启动
-# 只想快速跑？装完 Docker 后（不装本脚本也行）：
+# 只想快速跑？装好 Docker 后（不装本脚本也行）：
 #   docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=你的Key ghcr.io/rubyccll/guanwei:latest
 # ============================================================
 set -euo pipefail
+
+echo "=============================================="
+echo "  观微 Guanwei · 一键安装（源码方式）"
+echo "=============================================="
+
+# 0. 优先推荐 npm 方式（国内最快）
+if command -v npm >/dev/null 2>&1; then
+  echo ""
+  echo "检测到 npm——【推荐】直接用一行命令安装（几秒完成）："
+  echo ""
+  echo "    npm i -g guanwei"
+  echo "    guanwei setup --key 你的APIKey"
+  echo "    guanwei start"
+  echo ""
+  read -r -p "是否继续源码安装？[y/N] " answer
+  if [[ ! "${answer:-}" =~ ^[Yy]$ ]]; then
+    echo "已取消。用上面 npm 三行命令即可安装 ✓"
+    exit 0
+  fi
+fi
 
 REPO="https://github.com/RubyCcll/guanwei.git"
 INSTALL_DIR="${GUANWEI_DIR:-$HOME/guanwei}"
 BRANCH="main"
 
-echo "=============================================="
-echo "  观微 Guanwei · 一键安装"
-echo "=============================================="
-
 # 1. 检查 git / node
 if ! command -v git >/dev/null 2>&1; then
   echo "❌ 未检测到 git——请先安装：https://git-scm.com/downloads"
-  echo "   或者用 Docker 方式：docker run -d -p 5173:80 -e LLM_DEEPSEEK_KEY=你的Key ghcr.io/rubyccll/guanwei:latest"
+  echo "   或者用 npm 方式：npm i -g guanwei"
   exit 1
 fi
 
