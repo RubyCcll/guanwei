@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# ============================================================
+# 观微 Guanwei CLI
+#
+# 用法：
+#   guanwei setup [--key xxx] [--provider xxx] [--docker]  配置 API Key（首次）
+#   guanwei start [--docker]                                启动服务
+#   guanwei update [--docker]                               更新到最新版（git 增量合并，不覆盖本地配置）
+#   guanwei check                                           检查是否有新版本
+#   guanwei status                                          当前版本与远端版本
+#   guanwei stop                                            停止服务（docker 模式）
+#   guanwei --help                                          帮助
+#
+# 全局安装：npm link（或直接 ./scripts/guanwei <cmd>）
+# ============================================================
+set -uo pipefail
+cd "$(dirname "$0")/.."
+ROOT="$(pwd)"
+
+VERSION=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
+HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "?")
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+
+# ---------- 远端最新信息 ----------
+remote_head() { git ls-remote origin -h refs/heads/main 2>/dev/null | cut -f1; }
+latest_tag()  { git ls-remote --tags origin 'refs/tags/v*' 2>/dev/null | sed 's|.*refs/tags/||' | sort -V | tail -1; }
+
+# ---------- 子命令 ----------
+cmd_help() {
+  sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+cmd_check() {
+  local remote remoteTag
+  remote=$(remote_head)
+  remoteTag=$(latest_tag)
+  if [[ -z "${remote}" ]]; then echo "⚠️  无法连接 GitHub（离线或网络问题）"; return 0; fi
+  if [[ "${HEAD}" == "${remote:0:7}" ]]; then
+    echo "✅ 已是最新版本（${VERSION} · ${HEAD}）"
+  else
+    echo "📦 有新版本可用：本地 ${VERSION} · ${HEAD} → 远端 ${remoteTag} · ${remote:0:7}"
+    echo "   运行：guanwei update 更新"
+  fi
+}
+
+cmd_status() {
+  echo "观微 Guanwei"
+  echo "  本地版本 : ${VERSION}"
+  echo "  本地提交 : ${HEAD} (${BRANCH})"
+  echo "  API Key  : $([[ -s server/.env ]] && echo "已配置" || echo "未配置（运行 guanwei setup）")"
+  echo "  Docker   : $(docker-compose ps --services 2>/dev/null | tr '\n' ' ' | sed 's/ *$//' || echo "未运行")"
+  cmd_check
+}
+
+cmd_setup() {
+  if [[ ! -x scripts/setup.sh ]]; then chmod +x scripts/setup.sh; fi
+  exec ./scripts/setup.sh "$@"
+}
+
+cmd_start() {
+  if [[ ! -s server/.env ]]; then
+    echo "⚠️  尚未配置 API Key，先运行：guanwei setup"; exit 1
+  fi
+  if [[ "${1:-}" == "--docker" ]]; then
+    local compose
+    if docker compose version >/dev/null 2>&1; then compose="docker compose"; else compose="docker-compose"; fi
+    ${compose} up -d
+    echo "✅ 已启动：前端 http://localhost:5173 · 后端 http://localhost:3018"
+    echo "   停止：guanwei stop"
+  else
+    echo "📦 检查依赖..."
+    [[ -d node_modules ]] || npm install --no-fund --no-audit
+    [[ -d server/node_modules ]] || (cd server && npm install --no-fund --no-audit)
+    echo "🚀 启动（Ctrl+C 停止）..."
+    (cd server && npm run dev) &
+    npm run dev
+  fi
+}
+
+cmd_stop() {
+  local compose
+  if docker compose version >/dev/null 2>&1; then compose="docker compose"; else compose="docker-compose"; fi
+  ${compose} down 2>/dev/null && echo "✅ Docker 服务已停止" || echo "⚠️  Docker 服务未在运行"
+}
+
+cmd_update() {
+  echo "🔍 检查远端更新..."
+  git fetch origin 2>&1 | tail -1
+  local remote remoteTag
+  remote=$(remote_head)
+  remoteTag=$(latest_tag)
+  if [[ -z "${remote}" ]]; then echo "⚠️  无法连接 GitHub"; exit 1; fi
+  if [[ "${HEAD}" == "${remote:0:7}" ]]; then
+    echo "✅ 已是最新版本（${VERSION} · ${HEAD}）"
+    return 0
+  fi
+
+  # 保护本地未提交改动（不覆盖）：gitignore 之外的文件有改动则提示
+  local dirty
+  dirty=$(git status --porcelain --untracked-files=no 2>/dev/null | grep -v '^??' | head -5)
+  if [[ -n "${dirty}" ]]; then
+    echo "⚠️  检测到本地未提交修改（不会覆盖）："
+    echo "${dirty}" | sed 's/^/    /'
+    read -rp "  继续更新？[y/N] " ans
+    [[ "${ans,,}" == "y" ]] || { echo "已取消"; exit 1; }
+    git stash push -m "guanwei-update-auto" >/dev/null 2>&1 && STASHED=1
+  fi
+
+  echo "📦 增量更新（git 合并，.env 等本地配置不受影响）..."
+  git merge --ff-only origin/main 2>&1 | tail -2 || { git pull --rebase origin main 2>&1 | tail -3; }
+
+  if [[ "${1:-}" == "--docker" ]]; then
+    local compose
+    if docker compose version >/dev/null 2>&1; then compose="docker compose"; else compose="docker-compose"; fi
+    echo "🐳 重新构建镜像..."
+    ${compose} up -d --build
+  else
+    echo "📦 增量安装依赖..."
+    npm install --no-fund --no-audit 2>&1 | tail -1
+    (cd server && npm install --no-fund --no-audit 2>&1 | tail -1)
+  fi
+
+  if [[ -n "${STASHED:-}" ]]; then git stash pop >/dev/null 2>&1 && echo "✅ 本地修改已恢复"; fi
+
+  echo "✅ 更新完成：$(node -e "console.log(require('./package.json').version)" 2>/dev/null) · $(git rev-parse --short HEAD)"
+  echo "   重启生效：guanwei start${1:+ $1}"
+}
+
+# ---------- 入口 ----------
+CMD="${1:-help}"
+case "${CMD}" in
+  setup)  shift; cmd_setup "$@" ;;
+  start)  shift; cmd_start "$@" ;;
+  update) shift; cmd_update "$@" ;;
+  check)  cmd_check ;;
+  status) cmd_status ;;
+  stop)   cmd_stop ;;
+  help|-h|--help) cmd_help ;;
+  *) echo "未知命令: ${CMD}"; cmd_help; exit 1 ;;
+esac
