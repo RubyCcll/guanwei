@@ -65,12 +65,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set +e
           base="guanwei-${{ matrix.image }}"
-          ok=""
           for n in "$base" "${{ github.repository_owner }}-$base"; do
+            echo "trying package: $n"
             if gh api "user/packages/container/$n" >/dev/null 2>&1; then
-              gh api --method POST "user/packages/container/$n/visibility" -f visibility=public >/dev/null 2>&1 && { echo "public: $n"; ok=1; break; }
+              echo "found package: $n"
+              gh api --method POST "user/packages/container/$n/visibility" -f visibility=public
+              echo "public OK: $n"
+              exit 0
             fi
+            echo "not found: $n"
           done
-          [ -n "$ok" ] || echo "manual-set-needed: $base"
+          echo "ERROR: package not found by either name"
+          exit 1
