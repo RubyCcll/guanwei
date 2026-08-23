@@ -50,13 +50,14 @@ An open-source Chinese metaphysics application covering **nine arts of divinatio
 - Results computed by the backend and **persisted to SQLite**
 
 ### AI Deep Interpretation
-- 9 agents × skill orchestration (e.g. Ziwei: chart structure → star palaces → twelve houses → major cycles → life stages)
+- **9 role-based personas**: one persona per art (e.g. Ziwei: chart structure → star palaces → twelve houses → major cycles → life stages) with a skill list injected in a single prompt — true multi-agent orchestration is planned (guanwei-pro mode, see ROADMAP)
 - **Dual schemas**: natal-chart reports (raw reading / character / family / mind / life stages / career / love / wealth / health) and divination reports (situation / trend / timing)
 - **Chart-fact consistency**: the AI must quote chart data verbatim; the backend **verifies six-relations facts** (palace branch, main stars, borrowed stars, four transformations) and patches contradictions
 - **Stable readings**: cached chart-parsing step, low sampling temperature, evidence-anchored claims, de-duplication with word budgets
 - **Life-event calibration**: record known life events; the AI echoes them at the matching years and never contradicts them
 - Question–art **suitability analysis** (e.g. Qimen is not advised for romance questions)
 - Streaming generation + structured report cards; export to Markdown / PDF
+- **Classical citations (in progress)**: the duanyu library (`shared/core/data/duanyu.ts`) holds 16 verbatim classical excerpts, all still in `seed` status (pending word-by-word review); per policy they are not injected into the AI prompt until reviewed — current readings rely on model knowledge, with reviewed entries wired in progressively (see ROADMAP)
 
 ### Other
 - Classics pages, academy (history and knowledge of the nine arts)

@@ -1,4 +1,4 @@
-// 提示词构建：9 术 agent + Skills 编排 + 两套报告 Schema 模板 + 档案注入
+// 提示词构建：9 术角色 persona（单轮注入，多 Agent 编排规划中）+ 两套报告 Schema 模板 + 档案注入
 import type { ChatMessage } from './llmProvider';
 import { agentOf } from './skills';
 import { chartBrief } from './chartBrief';
@@ -89,7 +89,7 @@ function lifeEventsNote(profile?: unknown): string {
   return '【命主已知人生经历 · 解读校准】以下为命主本人确认的人生事件，解读必须与此相符：\n' + clean.join('\n') + '\n要求：① 凡解读涉及这些年份（或与之相邻的大运流年）时，必须呼应对应事件（如该年患病手术，则论健康/流年时须呼应）；② 严禁写出与已知经历相矛盾的内容（如已知 2024 年重大健康事件，就不得断言该年平安无事）；③ 已知经历未覆盖的年份正常论命，不得为了呼应而编造具体事件细节。';
 }
 
-// Skills 编排版：9 术 agent + 档案 + 排盘结果 → 结构化解读报告
+// 角色化解读版：9 术 persona（单轮注入）+ 档案 + 排盘结果 → 结构化解读报告
 export function buildReportMessages(
   artId: string,
   question: string,
