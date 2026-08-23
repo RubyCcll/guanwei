@@ -30,11 +30,7 @@ export function getDb(): DatabaseSync {
       report_quality TEXT,
       status        TEXT NOT NULL DEFAULT 'divined',
       created_at    INTEGER NOT NULL,
-      updated_at    INTEGER NOT NULL,
-      plan_tier     TEXT NOT NULL DEFAULT 'free',
-      quota_key     TEXT,
-      quota_consumed INTEGER NOT NULL DEFAULT 1,
-      billing_meta  TEXT
+      updated_at    INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_div_user_time ON divinations(username, created_at DESC);
 
