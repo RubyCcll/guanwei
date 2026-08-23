@@ -1,6 +1,5 @@
 // 奇门遁甲：起局面板 + 九宫盘渲染
 import { useState } from 'react';
-import { qimenCalc } from '@core/engine/qimen';
 import type { QimenResult } from '@core/types';
 import { ResultCard } from '@/components/ResultCard';
 import SongSelect from '@/components/SongSelect';

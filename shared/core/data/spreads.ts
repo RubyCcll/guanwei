@@ -1,4 +1,4 @@
-import type { Spread } from '@/types';
+import type { Spread } from '../types.js';
 
 export const defaultSpreads: Spread[] = [
   // ===== 极简牌阵 =====

@@ -1,8 +1,9 @@
 // 紫微斗数：简式星盘（命宫/五行局/紫微定位/十四主星）+ 补齐层（辅星/身宫/四化/庙旺/格局）
-import { NAYIN, NAYIN_JU, ganZhiIndex, mod } from '../data/ganzhi';
+import { NAYIN, ganZhiIndex, mod } from '../data/ganzhi';
+import { GAN } from '../data/ganzhi';
 import { trueSolarTime } from './trueSolarTime';
 import type { ZiweiInput, ZiweiResult } from '../types';
-import { GAN, ZHI } from '../data/ganzhi';
+
 import { PALACE_NAMES, ZW_SIHUA, ZW_BRIGHTNESS, LU_CUN, KUI_YUE, TIAN_MA, HUO_START, LING_START, ZW_GEJU } from '../data/ziwei';
 
 // 地支位：0=寅 起（与既有约定一致）

@@ -1,15 +1,9 @@
 // 生活化场景语料库
 // 根据场景提供具体的日常落地建议
 
-import type { Scene, Emotion } from '../utils/semanticAnalyzer.js';
+import type { Scene, LifeContext } from '../types.js';
 
-export interface LifeContext {
-  scenes: string[];
-  actions: string[];
-  warnings: string[];
-  timeline: { short: string; mid: string; long: string };
-  emotionAdvice: Record<Emotion, string>;
-}
+export type { LifeContext };
 
 export const LIFE_CONTEXTS: Record<Scene, LifeContext> = {
   love: {

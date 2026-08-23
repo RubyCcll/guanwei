@@ -5,15 +5,13 @@ import { apiDivineHistory, apiDivineDetail, apiDivineDelete, downloadReport } fr
 import ReportView from '@/components/ReportView';
 import {
   register, login, logout, currentUser, updateProfile,
-  addSampleProfile, updateSampleProfile, removeSampleProfile, promoteSampleProfile,
-  DEFAULT_PROFILE, type UserProfile, type NamedProfile,
+  updateSampleProfile, removeSampleProfile, promoteSampleProfile,
+  type UserProfile, type NamedProfile,
 } from '@/utils/userStore';
 import { useConfirm } from '@/components/SongDialog';
 import { syncRecordsFromServer } from '@/utils/recordStore';
 import { syncProfileToServer } from '@/utils/userStore';
 import ProfileForm from '@/components/ProfileForm';
-import SongSelect from '@/components/SongSelect';
-
 export default function AuthPage() {
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -220,12 +218,12 @@ export default function AuthPage() {
                 <p>此占尚未召 AI 成文，仅存排盘之象</p>
               </div>
             )}
-            {histDetail.resultRaw && (
+            {histDetail.resultRaw ? (
               <details className="mh-intro" style={{ marginTop: 'var(--sp-2)' }}>
                 <summary>排盘原始数据</summary>
                 <pre style={{ fontSize: '.72rem', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{JSON.stringify(histDetail.resultRaw, null, 1)}</pre>
               </details>
-            )}
+            ) : null}
           </div>
         </div>
       )}

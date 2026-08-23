@@ -1,7 +1,6 @@
 // 小六壬：掐指占时面板 + 掌诀/推演轨迹渲染
 import { useState } from 'react';
-import { xiaoliurenCalc } from '@core/engine/xiaoliuren';
-import { XLR_ORDER, XLR } from '@core/data/xiaoliuren';
+import { XLR_ORDER } from '@core/data/xiaoliuren';
 import { mod } from '@core/data/ganzhi';
 import type { XiaoliurenResult } from '@core/types';
 import { ResultCard } from '@/components/ResultCard';

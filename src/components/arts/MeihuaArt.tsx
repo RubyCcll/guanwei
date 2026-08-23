@@ -1,6 +1,5 @@
 // 梅花易数：起卦面板（时间/报数）+ 卦象渲染（本卦/互卦/变卦 + 体用）
 import { useState } from 'react';
-import { meihuaCalc } from '@core/engine/meihua';
 import { BAGUA } from '@core/data/gua64';
 import type { MeihuaResult } from '@core/types';
 import { ResultCard } from '@/components/ResultCard';

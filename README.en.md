@@ -127,7 +127,7 @@ Open http://localhost:5173 . Stop with `docker compose down`.
 
 Images: `ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`; override ports with `WEB_PORT=5180 API_PORT=3020 docker compose up -d` if needed.
 
-#### Option 6: Local Node.js (≥ 22)
+#### Option 6: Local Node.js (≥ 22.5, node:sqlite built-in)
 
 ```bash
 ./scripts/setup.sh --key YOUR_API_KEY   # interactive mode: run ./scripts/setup.sh
@@ -185,7 +185,9 @@ npm test    # 181 tests (engines / rendering / interactions / storage / prompts)
 
 ## 🔐 Security
 - Keys live only in local `server/.env` (gitignored); Docker builds exclude `.env` via `.dockerignore`
+- Passwords are hashed with **scrypt (random salt)**; legacy hashes are upgraded on successful login
 - Test data is fully fictional/anonymized — no real personal information in this repository
+- ⚠️ **Deployment boundary**: this app targets **local/private self-hosting** and ships **no auth middleware** — user identity is only the `username` passed in requests (anyone knowing a username can read that user's profile via `GET /:username/profile`). **Do not expose it directly to the public internet**; put a reverse proxy with gateway auth in front (e.g. Nginx basic auth / Authelia / Cloudflare Access) if you need public access.
 
 ## 📄 Sample Output
 

@@ -1,5 +1,4 @@
 // 所问之事的统一输入：类型选择 + 问题输入（占问类必填区，命盘类可留白）
-import { useState } from 'react';
 import SongSelect from '@/components/SongSelect';
 
 const DEFAULT_TYPES = [

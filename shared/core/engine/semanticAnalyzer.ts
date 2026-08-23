@@ -1,53 +1,16 @@
 // 问题语义分析器
 // 在解读阶段对用户问题进行多维度分析
+// 类型定义收敛自 shared/core/types.ts（单一副本），此处仅保留分析与函数逻辑
 
-export type Scene = 'love' | 'career' | 'wealth' | 'study' | 'health' | 'family' | 'friendship' | 'spiritual' | 'travel' | 'general';
-export type Emotion = 'anxious' | 'hopeful' | 'confused' | 'lost' | 'grateful' | 'calm' | 'angry' | 'sad' | 'curious';
-export type Tense = 'past' | 'present' | 'future' | 'hypothetical' | 'ongoing';
-export type Subject = 'self' | 'other' | 'mutual' | 'third-party';
-export type Depth = 'surface' | 'mid' | 'deep';
+import type {
+  Scene, Emotion, Tense, Subject, Depth,
+  QuestionType, ResponseNeed, KeyEntity, QuestionAnalysis, SemanticAnalysis,
+} from '../types.js';
 
-// 问题类型：决策 / 预测 / 原因 / 建议 / 读心 / 时间 / 通用
-export type QuestionType = 'decision' | 'prediction' | 'reason' | 'advice' | 'mindreading' | 'timing' | 'general';
-// 用户需要的回应方式：安慰 / 方向 / 确认 / 警示
-export type ResponseNeed = 'comfort' | 'direction' | 'confirmation' | 'warning';
-
-// 关键实体
-export interface KeyEntity {
-  type: 'person' | 'event' | 'time';
-  value: string;
-}
-
-// 问题的深度分析
-export interface QuestionAnalysis {
-  realQuestion: string; // 用户真正想问的是什么
-  emotionalNeed: string; // 问题背后的情绪需求
-  responseNeed: ResponseNeed; // 用户需要什么样的回应
-  responseNeedLabel: string;
-}
-
-export interface SemanticAnalysis {
-  scene: Scene;
-  sceneLabel: string;
-  emotion: Emotion;
-  emotionLabel: string;
-  tense: Tense;
-  tenseLabel: string;
-  subject: Subject;
-  subjectLabel: string;
-  depth: Depth;
-  depthLabel: string;
-  keywords: string[];
-  intensity: number; // 0-1，问题强度
-  confidence: number; // 0-1，分析置信度
-  // —— 以下为新增字段 ——
-  questionType: QuestionType; // 问题类型
-  questionTypeLabel: string; // 问题类型中文标签
-  questionCore: string; // 问题的核心意图
-  questionSummary: string; // 一句话概括用户问题的本质
-  keyEntities: KeyEntity[]; // 问题中的关键实体
-  questionAnalysis: QuestionAnalysis; // 深度分析问题的潜台词
-}
+export type {
+  Scene, Emotion, Tense, Subject, Depth,
+  QuestionType, ResponseNeed, KeyEntity, QuestionAnalysis, SemanticAnalysis,
+};
 
 // 场景关键词库
 const SCENE_KEYWORDS: Record<Scene, { label: string; words: string[]; weight: number }> = {

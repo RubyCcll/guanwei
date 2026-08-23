@@ -11,7 +11,7 @@ import { AstrologyPanel, AstrologyResult } from '@/components/arts/AstrologyArt'
 import { TarotPanel, TarotResult } from '@/components/arts/TarotArt';
 
 export interface ArtPair {
-  Panel: ComponentType<{ onDivine: (fn: () => unknown) => void }>;
+  Panel: ComponentType<{ onDivine: (...args: any[]) => void }>;
   Result: ComponentType<{ data: any }>;
   placeholder: string;
 }

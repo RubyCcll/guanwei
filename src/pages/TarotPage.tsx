@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Shuffle, Edit3, ChevronDown, ChevronUp, RotateCcw, Search, Plus, Library, X, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
-import type { QuestionCategory, Spread, DrawnCard, TarotCard as TarotCardType } from '@/types';
-import { defaultSpreads } from '@/data/spreads';
-import { tarotCards } from '@/data/tarotCards';
-import { drawCards, generateInterpretation } from '@/utils/tarotEngine';
+import { Sparkles, Shuffle, Edit3, RotateCcw, Search, Library, X, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
+import type { QuestionCategory, Spread, DrawnCard } from '@/types';
+import { defaultSpreads } from '@core/data/spreads';
+import { tarotCards } from '@core/data/tarotCards';
 import { generateComboResult } from '@/utils/comboEngine';
-import { saveRecord } from '@/utils/storage';
+
 import { getCustomSpreads } from '@/utils/spreadStorage';
+import { saveRecord } from '@/utils/storage';
 import { api } from '@/services/api';
 import { useDivinationStore } from '@/stores/useDivinationStore';
 import TarotCard from '@/components/TarotCard';
@@ -89,7 +89,6 @@ export default function TarotPage() {
   const [comboResultLocal, setComboResultLocal] = useState<any>(null);
   const [manualMode, setManualMode] = useState(false);
   const [manualCards, setManualCards] = useState<{ cardId: number; isReversed: boolean }[]>([]);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [cardSearch, setCardSearch] = useState('');
   const [activeSuit, setActiveSuit] = useState('all');
@@ -213,7 +212,6 @@ export default function TarotPage() {
     setIsComboEnabled(false);
     setManualMode(false);
     setManualCards([]);
-    setExpandedSection(null);
     setCurrentSectionIndex(0);
     setCompletedSections([]);
     setIsPlaying(false);
@@ -664,7 +662,7 @@ export default function TarotPage() {
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-2">
-                {interpretation.sections.map((_, idx) => (
+                {interpretation.sections.map((_: unknown, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => goToSection(idx)}
