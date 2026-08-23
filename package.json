@@ -91,6 +91,6 @@
     "url": "git+https://github.com/RubyCcll/guanwei.git"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.5.0"
   }
 }

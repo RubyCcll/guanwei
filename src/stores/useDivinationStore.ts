@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { TarotReading, ComboResult, QuestionCategory, DivinationRecord, DrawnCard } from '@/types';
+import type { TarotReading, ComboResult } from '@/types';
 
 interface DivinationState {
   currentReading: TarotReading | null;

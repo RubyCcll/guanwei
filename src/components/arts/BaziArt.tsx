@@ -1,6 +1,5 @@
 // 四柱八字：输入面板（含出生地点→真太阳时）+ 结果渲染（四柱/五行/十神）
 import { useState } from 'react';
-import { baziCalc } from '@core/engine/bazi';
 import { SHISHEN_MAP, WUXING } from '@core/data/ganzhi';
 import type { BaziResult, GeoLocation } from '@core/types';
 import type { UserProfile } from '@/utils/userStore';
@@ -257,13 +256,4 @@ export function BaziResult({ data }: { data: BaziResult }) {
       </ResultCard>
     </>
   );
-}
-// 十神格局点睛
-function shishenFocus(r: any): string {
-  const names = r.shishen.map((s: any) => s.name);
-  if (names.includes('正官') || names.includes('七杀')) return '官杀透干，主担当与约束，成事在于守正。';
-  if (names.includes('正财') || names.includes('偏财')) return '财星显露，主经营与所得，宜务实聚财。';
-  if (names.includes('正印') || names.includes('偏印')) return '印星为用，主学识与荫庇，宜向学深造。';
-  if (names.includes('食神') || names.includes('伤官')) return '食伤泄秀，主才情与输出，宜展露所长。';
-  return '比劫同气，主自立与同侪，宜广结善缘。';
 }

@@ -1,7 +1,7 @@
 // 塔罗：问镜面板（牌阵选择）+ 扇形翻牌（未翻开不示牌名）+ 牌阵之示
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { tarotDraw, SUIT } from '@core/engine/tarot';
+import { SUIT } from '@core/engine/tarot';
 import { allTarotSpreads, type TarotSpread } from '@core/data/tarotSpreads';
 import type { TarotCardData } from '@core/types';
 import { ResultCard } from '@/components/ResultCard';
@@ -96,7 +96,7 @@ export function TarotResult({ data }: { data: DrawResult }) {
   );
 }
 // 塔罗全阵参详（正逆位比例 + 元素侧重，现代语言）
-function tarotSummary(cards: any[], spread: any): string {
+function tarotSummary(cards: any[], _spread: any): string {
   const rev = cards.filter(c => c.reversed).length;
   const majors = cards.filter(c => c.major).length;
   const parts: string[] = [];

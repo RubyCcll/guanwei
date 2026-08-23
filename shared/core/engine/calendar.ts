@@ -16,7 +16,7 @@ export function daysSince(y: number, m: number, d: number): number {
 
 /* ---------- 节气 ---------- */
 // 近似表取法（奇门定遁 / 展示用）：
-export function getJieqiApproxName(y: number, m: number, d: number): string {
+export function getJieqiApproxName(_y: number, m: number, d: number): string {
   const v = m * 100 + d;
   let name = '大雪';
   for (let i = JIEQI_APPROX.length - 1; i >= 0; i--) {

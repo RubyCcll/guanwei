@@ -67,7 +67,6 @@ export default function DemoPage() {
   const [artId, setArtId] = useState('bazi');
   const [localResult, setLocalResult] = useState<unknown>(null);
   const art = ARTS.find(a => a.id === artId)!;
-  const chart = baziCalc(DEMO_BIRTH);
 
   const reset = () => {
     setPhase('idle');
@@ -136,7 +135,7 @@ export default function DemoPage() {
         {phase === 'done' && (
           <>
             <div className="altar-result stagger">
-              {localResult && RESULT_VIEWS[artId]?.(localResult)}
+              {localResult ? RESULT_VIEWS[artId]?.(localResult) : null}
               {report && (
                 <div className="result-card mt-3">
                   <h3>AI 深度解读 <span className="tag-cool" style={{ marginLeft: '.4rem', fontSize: '.72rem' }}>示例报告</span></h3>

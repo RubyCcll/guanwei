@@ -198,6 +198,163 @@ export interface TarotCardData {
   reversed: boolean;
 }
 
+// ─── 塔罗解读链路（原 src/types + src/utils/semanticAnalyzer 收敛至此，双端单一副本）───
+export interface TarotCard {
+  id: number;
+  name: string;
+  nameEn: string;
+  arcana: 'major' | 'minor';
+  suit?: 'wands' | 'cups' | 'swords' | 'pentacles';
+  number?: number;
+  keywords: string[];
+  meanings: {
+    upright: string;
+    reversed: string;
+  };
+  deepMeaning: {
+    coreTheme: string;
+    psychological: string;
+    spiritual: string;
+    shadow: string;
+    lifeAreas: {
+      love: string;
+      career: string;
+      wealth: string;
+      health: string;
+      growth: string;
+    };
+    advice: string;
+    warning: string;
+  };
+  imageSymbols: string[];
+  story: string;
+  astrology: {
+    zodiac?: string;
+    planet?: string;
+    element?: string;
+  };
+  kabbalah: {
+    path?: number;
+    sephirah?: string;
+  };
+  alchemy: {
+    stage?: string;
+    element?: string;
+  };
+  numerology: {
+    number: number;
+    meaning: string;
+  };
+  image: string;
+}
+
+export interface SpreadPosition {
+  id: number;
+  name: string;
+  description: string;
+  x: number;
+  y: number;
+}
+
+export interface Spread {
+  id: string;
+  name: string;
+  description: string;
+  positions: SpreadPosition[];
+  category: 'basic' | 'advanced' | 'custom';
+  scene?: string[];
+  isCustom?: boolean;
+}
+
+export interface DrawnCard {
+  cardId: number;
+  isReversed: boolean;
+  positionId: number;
+}
+
+export interface DivinationRecord {
+  id: string;
+  type: 'tarot' | 'combo' | 'ziwei' | 'bazi' | 'astrology';
+  question: string;
+  category: string;
+  spreadId?: string;
+  cards?: DrawnCard[];
+  comboMethod?: string;
+  comboResult?: string;
+  interpretation: string;
+  timestamp: number;
+}
+
+export interface ComboResult {
+  method: 'xiaoliuren' | 'daliuren' | 'liuyao' | 'meihua' | 'qimen';
+  methodName: string;
+  result: string;
+  detail: string;
+  relationToTarot: string;
+}
+
+export type QuestionCategory = 'love' | 'career' | 'wealth' | 'health' | 'study' | 'family' | 'friendship' | 'spiritual' | 'travel' | 'general';
+
+export interface TarotReading {
+  question: string;
+  category: QuestionCategory;
+  spreadId: string;
+  cards: DrawnCard[];
+  interpretation: string;
+  comboResult?: ComboResult;
+}
+
+// 问题语义分析（原 src/utils/semanticAnalyzer 类型部分）
+export type Scene = 'love' | 'career' | 'wealth' | 'study' | 'health' | 'family' | 'friendship' | 'spiritual' | 'travel' | 'general';
+export type Emotion = 'anxious' | 'hopeful' | 'confused' | 'lost' | 'grateful' | 'calm' | 'angry' | 'sad' | 'curious';
+export type Tense = 'past' | 'present' | 'future' | 'hypothetical' | 'ongoing';
+export type Subject = 'self' | 'other' | 'mutual' | 'third-party';
+export type Depth = 'surface' | 'mid' | 'deep';
+export type QuestionType = 'decision' | 'prediction' | 'reason' | 'advice' | 'mindreading' | 'timing' | 'general';
+export type ResponseNeed = 'comfort' | 'direction' | 'confirmation' | 'warning';
+
+export interface KeyEntity {
+  type: 'person' | 'event' | 'time';
+  value: string;
+}
+
+export interface QuestionAnalysis {
+  realQuestion: string;
+  emotionalNeed: string;
+  responseNeed: ResponseNeed;
+  responseNeedLabel: string;
+}
+
+export interface SemanticAnalysis {
+  scene: Scene;
+  sceneLabel: string;
+  emotion: Emotion;
+  emotionLabel: string;
+  tense: Tense;
+  tenseLabel: string;
+  subject: Subject;
+  subjectLabel: string;
+  depth: Depth;
+  depthLabel: string;
+  keywords: string[];
+  intensity: number; // 0-1，问题强度
+  confidence: number; // 0-1，分析置信度
+  questionType: QuestionType; // 问题类型
+  questionTypeLabel: string; // 问题类型中文标签
+  questionCore: string; // 问题的核心意图
+  questionSummary: string; // 一句话概括用户问题的本质
+  keyEntities: KeyEntity[]; // 问题中的关键实体
+  questionAnalysis: QuestionAnalysis; // 深度分析问题的潜台词
+}
+
+export interface LifeContext {
+  scenes: string[];
+  actions: string[];
+  warnings: string[];
+  timeline: { short: string; mid: string; long: string };
+  emotionAdvice: Record<Emotion, string>;
+}
+
 // 通用引擎契约
 export interface ArtEngine<TInput, TResult> {
   id: ArtId;

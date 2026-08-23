@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, Sparkles, Filter, X, Star } from 'lucide-react';
-import { defaultSpreads } from '@/data/spreads';
+import { defaultSpreads } from '@core/data/spreads';
 import { getCustomSpreads } from '@/utils/spreadStorage';
 import type { Spread } from '@/types';
 import { useEffect } from 'react';

@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { tarotCards } from '../data/tarotCards.js';
-import { defaultSpreads } from '../data/spreads.js';
-import { drawCards, generateInterpretation } from '../utils/tarotEngine.js';
-import { analyzeQuestion } from '../utils/semanticAnalyzer.js';
+import { tarotCards } from '../../../shared/core/data/tarotCards.js';
+import { defaultSpreads } from '../../../shared/core/data/spreads.js';
+import { drawCards, generateInterpretation } from '../../../shared/core/engine/tarotEngine.js';
+import { analyzeQuestion } from '../../../shared/core/engine/semanticAnalyzer.js';
 import type { QuestionCategory, Spread } from '../types/index.js';
 
 const router = Router();

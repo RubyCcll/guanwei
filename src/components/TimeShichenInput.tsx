@@ -9,6 +9,7 @@ interface Props {
 }
 
 export default function TimeShichenInput({ value, onChange, id, label = '出生时刻（精确）' }: Props) {
+  void label;
   return (
     <div>
       <div style={{ display: 'flex', gap: '.5rem', alignItems: 'stretch' }}>

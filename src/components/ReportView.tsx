@@ -1,6 +1,5 @@
 // AI 解读报告结构化展示：按 Schema 匹配填充（命盘类/占问类）
 import type { AIReport } from '@/services/api';
-import { ResultCard } from '@/components/ResultCard';
 
 interface Props {
   report: AIReport;

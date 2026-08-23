@@ -104,7 +104,6 @@ export function baziCalc(input: BaziInput): BaziResult {
   const nayin = NAYIN[Math.floor(jiaziIndex(y) / 2) % 30];
   const support = wxCount[dayGanWx] + wxCount[WX_ORDER[(WX_ORDER.indexOf(dayGanWx) + 4) % 5]];
   const drain = gzList.length * 2 - support;
-  const strength = support > drain ? '身强' : (support < drain ? '身弱' : '中和');
 
   // ─── 7. 地支藏干 + 藏干十神 + 加权五行 ───
   const canggan = gzList.map(gz => ({

@@ -1,6 +1,6 @@
 // 大六壬：起课面板 + 天地盘/四课三传渲染
 import { useState } from 'react';
-import { liurenCalc, jiangName } from '@core/engine/liuren';
+import { jiangName } from '@core/engine/liuren';
 import { ZHI } from '@core/data/ganzhi';
 import { LR_JIANG_SYMBOL, LR_JIANG_WX } from '@core/data/liuren';
 import type { LiurenResult } from '@core/types';

@@ -1,6 +1,5 @@
 // 六爻：铜钱摇卦面板 + 六爻/卦象渲染
 import { useState } from 'react';
-import { liuyaoCalc } from '@core/engine/liuyao';
 import type { LiuyaoResult } from '@core/types';
 import { ResultCard } from '@/components/ResultCard';
 import SongSelect from '@/components/SongSelect';

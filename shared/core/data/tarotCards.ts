@@ -1,4 +1,4 @@
-import type { TarotCard } from '../types/index.js';
+import type { TarotCard } from '../types.js';
 
 export const tarotCards: TarotCard[] = [
   // ===== 大阿卡纳 Major Arcana =====

@@ -144,7 +144,7 @@ guanwei start
 
 镜像：`ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`；端口冲突时 `WEB_PORT=5180 API_PORT=3020 docker compose up -d` 覆盖。也可直接 `docker pull ghcr.io/rubyccll/guanwei-guanwei-web:latest`。
 
-#### 方式六：本地 Node.js（≥ 22）
+#### 方式六：本地 Node.js（≥ 22.5，需 node:sqlite 内置支持）
 
 ```bash
 ./scripts/setup.sh --key 你的APIKey   # 交互式可直接运行 ./scripts/setup.sh
@@ -208,8 +208,10 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 
 ## 🔐 安全说明
 - 所有密钥仅存于本地 `server/.env`（已 gitignore），仓库只提供 `.env.example` 模板；Docker 镜像构建已排除 `.env`（.dockerignore）
+- 密码哈希使用 **scrypt（带随机盐）**，登录时兼容升级存量旧哈希
 - AI 报告质量门槛：结构评分不达标不入库，自动留档供改进提示词
 - 测试数据全部虚构/匿名化，不含真实用户隐私；真实案例仅存本地（git 忽略）
+- ⚠️ **部署边界（务必知晓）**：本项目定位为「本地/内网自部署」工具，**未内置登录鉴权体系**——用户身份仅靠传入的 username 区分，知道用户名即可读取该用户档案（`GET /:username/profile` 无口令校验）。**请勿直接暴露到公网**；如需公网访问，必须在前面架设反向代理 + 网关鉴权（如 Nginx basic auth / Authelia / Cloudflare Access 等），或在应用层另行加固。
 
 ## 📄 示例输出
 

@@ -7,40 +7,13 @@ import { useDivine } from '@/hooks/useDivine';
 import { useAIInterpret } from '@/hooks/useAIInterpret';
 import { artPairOf } from '@/arts/registry';
 import { saveRecord } from '@/utils/recordStore';
-import { downloadReport, apiDivine, type AIReport } from '@/services/api';
+import { apiDivine, type AIReport } from '@/services/api';
 import ReportView from '@/components/ReportView';
 import { currentUser, addSampleProfile } from '@/utils/userStore';
 import { analyzeQuestionFit } from '@core/engine/questionFit';
 import type { UserProfile } from '@/utils/userStore';
 import { useEffect, useRef, useState } from 'react';
-import { BaziPanel, BaziResult } from '@/components/arts/BaziArt';
-import { ZiweiPanel, ZiweiResult } from '@/components/arts/ZiweiArt';
-import { QimenPanel, QimenResultView } from '@/components/arts/QimenArt';
-import { MeihuaPanel, MeihuaResult } from '@/components/arts/MeihuaArt';
-import { LiuyaoPanel, LiuyaoResult } from '@/components/arts/LiuyaoArt';
-import { LiurenPanel, LiurenResult } from '@/components/arts/LiurenArt';
-import { XiaoliurenPanel, XiaoliurenResult } from '@/components/arts/XiaoliurenArt';
-import { AstrologyPanel, AstrologyResult } from '@/components/arts/AstrologyArt';
-import { TarotPanel, TarotResult } from '@/components/arts/TarotArt';
-import type { ComponentType } from 'react';
 
-interface ArtPair {
-  Panel: ComponentType<{ onDivine: (fn: () => unknown) => void }>;
-  Result: ComponentType<{ data: unknown }>;
-  placeholder: string;
-}
-
-const ART_PAIRS: Record<string, ArtPair> = {
-  bazi:       { Panel: BaziPanel, Result: BaziResult, placeholder: '静候四柱 · 观五行流转' },
-  ziwei:      { Panel: ZiweiPanel, Result: ZiweiResult, placeholder: '静候星布 · 观十四主星' },
-  qimen:      { Panel: QimenPanel, Result: QimenResultView, placeholder: '静候局成 · 观九宫遁甲' },
-  meihua:     { Panel: MeihuaPanel, Result: MeihuaResult, placeholder: '静候心动 · 观梅花开落' },
-  liuyao:     { Panel: LiuyaoPanel, Result: LiuyaoResult, placeholder: '静候钱落 · 观六爻成象' },
-  liuren:     { Panel: LiurenPanel, Result: LiurenResult, placeholder: '静候课起 · 观天地人盘' },
-  xiaoliuren: { Panel: XiaoliurenPanel, Result: XiaoliurenResult, placeholder: '静候指落 · 观掌诀玄机' },
-  astrology: { Panel: AstrologyPanel, Result: AstrologyResult, placeholder: '静候星布 · 观天穹为书' },
-  tarot: { Panel: TarotPanel, Result: TarotResult, placeholder: '静候牌启 · 观镜照本心' },
-};
 
 const PANEL_META: Record<string, { panelTitle: string; btn: string; btnSmall: string }> = {
   bazi:       { panelTitle: '布盘', btn: '排 盘', btnSmall: '布四柱 · 观五行 · 推十神' },
@@ -106,10 +79,11 @@ export default function ModulePage() {
   };
   const isProfileArt = ['bazi', 'ziwei', 'astrology'].includes(art?.id || '');
   const exportReport = (rep: AIReport) => {
+    const artName = art?.name || '观微';
     const lines = [
       '# ' + (rep.title || '观微解读报告'),
       '',
-      '> 术别：' + art.name + '　·　' + new Date().toLocaleString('zh-CN'),
+      '> 术别：' + artName + '　·　' + new Date().toLocaleString('zh-CN'),
       '',
       '## 总述',
       '',
@@ -237,11 +211,11 @@ export default function ModulePage() {
                 <p>凝神静气 · 卦象将成</p>
               </div>
             )}
-            {status === 'done' && result && PairResult && <PairResult data={result} />}
+            {status === 'done' && result ? (PairResult ? <PairResult data={result} /> : null) : null}
             {status === 'error' && (
               <ResultPlaceholder glyph="滞" text={divineError || '推演未应机 · 请稍后再试'} />
             )}
-            {status === 'done' && result && (
+            {status === 'done' && result ? (
               <div className="result-card mt-3">
                 <h3>AI 深度解读</h3>
                 {ai.status === 'idle' && (
@@ -329,7 +303,7 @@ export default function ModulePage() {
                 )}
                 <button className="btn-seal btn-ghost no-print" style={{ marginTop: 'var(--sp-3)', fontSize: '.9rem', padding: '.5rem 1.4rem' }} onClick={() => { ai.reset(); reset(); }}>再 起 一 占</button>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
         <Disclaimer />

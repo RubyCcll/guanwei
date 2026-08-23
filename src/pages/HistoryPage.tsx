@@ -61,7 +61,7 @@ export default function HistoryPage() {
   }
 
   const records = useMemo(() => getRecords(), [tick, artFilter, search]);
-  const [profileFilter, setProfileFilter] = useState('all');
+  const [profileFilter] = useState('all');
   const filtered = records.filter(r => {
     if (profileFilter !== 'all' && (r.profileId || 'main') !== profileFilter) return false;
     if (artFilter !== 'all' && r.artId !== artFilter) return false;
@@ -115,15 +115,16 @@ export default function HistoryPage() {
 function summarize(result: unknown): string {
   const r = result as Record<string, any>;
   if (!r) return '（结果不可读）';
-  if (r.yearGZ) return `${r.yearGZ}年 ${r.monthGZ}月 ${r.dayGZ}日 ${r.hourGZ}时 · ${r.strength || ''}`;
-  if (r.benGua) return `本卦${r.benGua.name} · ${r.bianGua ? '变' + r.bianGua.name : ''} · ${r.shengke || ''}`;
-  if (r.ju) return `${r.jqName} · ${r.yin ? '阴' : '阳'}遁${r.ju}局 · ${r.dayGZ}日`;
-  if (r.name && r.detail) return `${r.name} · ${r.detail.ji || ''} · ${r.detail.wx || ''}`;
-  if (r.jiang) return `${r.jiang}将加时 · 四课${r.ke1}/${r.ke2}/${r.ke3}/${r.ke4}`;
-  if (r.ming !== undefined) return `命宫@${r.ming} · ${r.juName || ''} · 紫微@${r.zwPos}`;
+  const o: Record<string, any> = Array.isArray(r) ? {} : r;
+  if (o.yearGZ) return `${o.yearGZ}年 ${o.monthGZ}月 ${o.dayGZ}日 ${o.hourGZ}时 · ${o.strength || ''}`;
+  if (o.benGua) return `本卦${o.benGua.name} · ${o.bianGua ? '变' + o.bianGua.name : ''} · ${o.shengke || ''}`;
+  if (o.ju) return `${o.jqName} · ${o.yin ? '阴' : '阳'}遁${o.ju}局 · ${o.dayGZ}日`;
+  if (o.name && o.detail) return `${o.name} · ${o.detail.ji || ''} · ${o.detail.wx || ''}`;
+  if (o.jiang) return `${o.jiang}将加时 · 四课${o.ke1}/${o.ke2}/${o.ke3}/${o.ke4}`;
+  if (o.ming !== undefined) return `命宫@${o.ming} · ${o.juName || ''} · 紫微@${o.zwPos}`;
   if (Array.isArray(r) && r[0] && r[0].name) return `${r.length} 张牌：${r.map((c: any) => c.name).join('、')}`;
-  if (r.planets) return `太阳落${signOf(r.sun)} · 月亮落${signOf(r.moon)}`;
-  if (r.yin !== undefined) return `${r.jqName || ''} · ${r.yin ? '阴' : '阳'}遁${r.ju}局`;
+  if (o.planets) return `太阳落${signOf(o.sun)} · 月亮落${signOf(o.moon)}`;
+  if (o.yin !== undefined) return `${o.jqName || ''} · ${o.yin ? '阴' : '阳'}遁${o.ju}局`;
   return JSON.stringify(r).slice(0, 40);
 }
 

@@ -1,9 +1,7 @@
 // 紫微斗数：输入面板（干支年/农历月日时 + 地点经度校正）+ 紫微盘渲染
 import { useState } from 'react';
-import { ziweiCalc } from '@core/engine/ziwei';
-import { ZW_STARS, ZW_STAR_MEAN, PALACE_NAMES } from '@core/data/ziwei';
+import { PALACE_NAMES } from '@core/data/ziwei';
 import { interpretZiwei } from '@core/engine/ziweiInterpret';
-import { ganZhiIndex, GAN, ZHI, NAYIN } from '@core/data/ganzhi';
 import { timeToHourIndex, hourIndexLabel } from '@/data/shichen';
 import TimeShichenInput from '@/components/TimeShichenInput';
 import type { ZiweiResult, GeoLocation } from '@core/types';
@@ -21,16 +19,6 @@ import LifeEventsInput, { type LifeEvent } from '@/components/LifeEventsInput';
 
 const DIZHI = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
 const mod = (a: number, n: number) => ((a % n) + n) % n;
-
-// 干支年选项（1950-2010）
-function ganzhiOptions() {
-  const out: { gz: string; year: number }[] = [];
-  for (let y = 1950; y <= 2010; y++) {
-    const i = ((y - 4) % 60 + 60) % 60;
-    out.push({ gz: GAN[i % 10] + ZHI[i % 12], year: y });
-  }
-  return out;
-}
 
 interface PanelProps { onDivine: (inputs: unknown, profile?: UserProfile, question?: string, profileId?: string) => void; }
 
@@ -53,7 +41,7 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
     if (new Date(yy, mm - 1, dd).getMonth() !== mm - 1) { setFormMsg('⚠ 出生日期不合法，请检查'); return; }
     setFormMsg('');
     // 公历 → 农历（万年历），紫微依农历排盘
-    let lm = 1, ld = 1, gz = '甲子', birthYear = yy;
+    let lm = 1, ld = 1, gz = '甲子';
     try {
       const lunar = Solar.fromYmd(yy, mm, dd).getLunar();
       const rawMonth = lunar.getMonth();
@@ -61,7 +49,6 @@ export function ZiweiPanel({ onDivine }: PanelProps) {
       // 闰月（lunar 返回负数）：按 iztro fixLeap 规则，后半月算下月
       lm = Math.abs(rawMonth) + (rawMonth < 0 && ld > 15 ? 1 : 0);
       gz = lunar.getYearInGanZhi();
-      birthYear = lunar.getYear();
     } catch { /* 非法日期回退默认 */ }
     // 时辰未知：紫微以午时示例排盘（仅命局五行参考），档案标记未知供 AI 解读约束
     const hourIdx = hourUnknown ? 6 : timeToHourIndex(birthTime);

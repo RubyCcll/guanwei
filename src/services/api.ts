@@ -1,5 +1,5 @@
 import type { QuestionCategory, Spread, DrawnCard } from '@/types';
-import type { InterpretationResult } from '@/utils/tarotEngine';
+import type { InterpretationResult } from '@core/engine/tarotEngine';
 
 // 开发环境直连后端（规避 proxy/IPv6 组合的 SSE 不确定性）；生产同域 /api
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/api';
@@ -189,7 +189,7 @@ export async function aiInterpretStream(
     // 超时从「收到首个字节」起算（两步管线 Step1 为非流式，首字节前可能等待 30-120 秒，不能误判超时）
     timeoutTimer = setInterval(() => {
       if (firstByteAt && Date.now() - firstByteAt > 180000) {
-        clearInterval(timeoutTimer);
+        if (timeoutTimer) clearInterval(timeoutTimer);
         controller.abort();
         fail('STREAM_TIMEOUT', 'AI 生成逾时，请重试');
       }
@@ -240,7 +240,7 @@ export interface DivineResult {
   display?: unknown;
 }
 
-export async function apiDivine(username: string, artId: string, inputs: unknown, profile?: unknown, question?: string, profileId?: string): Promise<DivineResult> {
+export async function apiDivine(username: string, artId: string, inputs: unknown, profile?: unknown, question?: string, _profileId?: string): Promise<DivineResult> {
   const res = await fetch(API_BASE + '/divine', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -290,7 +290,7 @@ export function downloadReport(report: AIReport, artName: string, question: stri
     '',
     report.overview,
     '',
-    ...report.chapters.flatMap(c => ['## ' + (c.skill || '参详'), '', c.content, '']),
+    ...(report.chapters || []).flatMap(c => ['## ' + (c.skill || '参详'), '', c.content, '']),
     '## 结语',
     '',
     report.conclusion,

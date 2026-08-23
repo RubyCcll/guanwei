@@ -1,7 +1,7 @@
-import type { TarotCard, DrawnCard, Spread, QuestionCategory } from '@/types';
-import { tarotCards } from '@/data/tarotCards';
-import { analyzeQuestion, type SemanticAnalysis, type Scene, type Emotion } from '@/utils/semanticAnalyzer';
-import { LIFE_CONTEXTS } from '@/data/lifeContext';
+import type { TarotCard, DrawnCard, Spread, QuestionCategory } from '../types.js';
+import { tarotCards } from '../data/tarotCards.js';
+import { analyzeQuestion, type SemanticAnalysis, type Scene, type Emotion } from './semanticAnalyzer.js';
+import { LIFE_CONTEXTS } from '../data/lifeContext.js';
 
 type LifeAreaKey = 'love' | 'career' | 'wealth' | 'health' | 'growth';
 
@@ -157,7 +157,7 @@ ${revealLines[Math.floor(Math.random() * revealLines.length)]}`;
 function generateOverviewSection(
   cards: DrawnCard[],
   spread: Spread,
-  question: string,
+  _question: string,
   semantic: SemanticAnalysis
 ): InterpretationSection {
   const cardData = cards.map((drawn) => {
@@ -316,7 +316,7 @@ function generateOverviewSection(
 
 function generateOverviewStoryFlow(
   cardData: { card: TarotCard; drawn: DrawnCard; position: { name: string; description: string } }[],
-  semantic: SemanticAnalysis
+  _semantic: SemanticAnalysis
 ): string {
   if (cardData.length === 0) return '';
 
@@ -362,7 +362,7 @@ function generateCardSection(
   position: { name: string; description: string },
   index: number,
   semantic: SemanticAnalysis,
-  lifeContext: typeof LIFE_CONTEXTS.love,
+  _lifeContext: typeof LIFE_CONTEXTS.love,
   totalCards: number
 ): InterpretationSection {
   const orientation = drawn.isReversed ? '逆位' : '正位';
@@ -429,7 +429,7 @@ ${selectedSymbols[0] || '画面里的核心意象'}在这个位置倒过来，�
   };
 }
 
-function generateEsotericSection(cards: DrawnCard[], semantic: SemanticAnalysis): InterpretationSection {
+function generateEsotericSection(cards: DrawnCard[], _semantic: SemanticAnalysis): InterpretationSection {
   const elements: Record<string, number> = { 火: 0, 水: 0, 风: 0, 土: 0, 以太: 0 };
   const planets = new Set<string>();
   const sephiroth = new Set<string>();

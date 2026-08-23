@@ -73,9 +73,6 @@ export function interpretZiwei(r: ZiweiResult): ZiweiInsight[] {
     const stars = starsOf(r, pos);
     if (stars.length === 0) continue;
     const pname = PALACE_NAMES[i];
-    const brief = stars.map(starBrief).join('；');
-    const line = pname + '宫（' + DIZHI[pos] + '）见' + stars.join('、') + '——' + brief + '。此宫主' + palaceTheme(pname) + '。'
-      + stars[0] + '入' + pname + '，' + (GOOD_STARS.includes(stars[0]) ? '为得地之象，多主顺遂。' : '须留意分寸，化其棱角则吉。');
     overview.push({ name: pname, stars, pos });
   }
   out.push({
