@@ -1,6 +1,6 @@
 // 演示模式（Demo Mode）：无需后端 / 无需 API Key 的完整体验页
 // 九术排盘用 shared/core 本地引擎在浏览器计算，AI 报告加载内置示例（静态 JSON）——GitHub Pages 上可直接体验
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { baziCalc } from '@core/engine/bazi';
 import { ziweiCalc } from '@core/engine/ziwei';
@@ -92,6 +92,19 @@ export default function DemoPage() {
       default: return () => null;
     }
   };
+
+  // 切换术数时清空上一术的排盘结果（否则旧数据传给新术 Result 组件会崩溃）
+  const prevArtRef = useRef(artId);
+  useEffect(() => {
+    if (prevArtRef.current !== artId) {
+      prevArtRef.current = artId;
+      setPhase('idle');
+      setReport(null);
+      setLocalResult(null);
+      setShowRaw(false);
+    }
+  }, [artId]);
+
   const reset = () => {
     setPhase('idle');
     setReport(null);
