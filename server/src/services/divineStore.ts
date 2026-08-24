@@ -160,7 +160,7 @@ export function listDivinations(username: string, page = 1, pageSize = 20, profi
   const where = profileId ? 'WHERE username = ? AND profile_id = ?' : 'WHERE username = ?';
   const params = profileId ? [username, profileId] : [username];
   const totalRow = d.prepare('SELECT COUNT(*) AS c FROM divinations ' + where).get(...params) as any;
-  const rows = d.prepare('SELECT id, art_id, question, created_at, report_json, status, profile_id FROM divinations ' + where + ' ORDER BY created_at DESC LIMIT ? OFFSET ?')
+  const rows = d.prepare('SELECT id, art_id, question, created_at, report_json, status, profile_id FROM divinations ' + where + ' ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?')
     .all(...params, size, (pageN - 1) * size) as any[];
   return {
     list: rows.map(r => ({
