@@ -83,7 +83,7 @@ app.use('/api', hourRouter);
 
 app.listen(PORT, () => {
   console.log(`
-  🎴 玄冥占星后端服务已启动
+  🎴 观微后端服务已启动
   
   地址: http://localhost:${PORT}
   健康检查: http://localhost:${PORT}/api/health

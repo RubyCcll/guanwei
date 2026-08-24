@@ -1,4 +1,4 @@
-// 观微 · 应用路由（HashRouter，映射参考项目 hash 语义）
+// 观微 · 应用路由（HashRouter，兼容 GitHub Pages 静态托管）
 // 路由表：
 //   /           首页（含 #home-arts / #home-fa 锚点）
 //   /about      缘起
