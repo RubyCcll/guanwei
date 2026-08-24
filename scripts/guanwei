@@ -119,9 +119,12 @@ cmd_start() {
     esac
   done
   if [[ ! -f "${ENV_FILE}" ]]; then
-    echo "⚠️  尚未配置，先运行：guanwei setup --key 你的APIKey"; exit 1
+    echo "ℹ️  尚未配置模型 Key——排盘/演示等功能不受影响，仅 AI 解读不可用"
+    echo "   配置：guanwei setup --key 你的APIKey（DeepSeek 等 5 家任选）"
+    echo ""
+  else
+    set -a; source "${ENV_FILE}"; set +a
   fi
-  set -a; source "${ENV_FILE}"; set +a
   export PORT="${api_port}"   # 后端实际监听端口
 
   local mode_label="生产"
