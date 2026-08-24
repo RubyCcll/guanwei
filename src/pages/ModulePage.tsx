@@ -129,6 +129,24 @@ export default function ModulePage() {
   const divineIdRef = useRef<string | null>(null);
   divineIdRef.current = divineId;
 
+  // ─── 术数切换（/art/qimen → /art/ziwei）必须全量重置 ───
+  // 若不重置：上一术的 status='done' + result 会传给新术的 Result 组件，
+  // 新术访问旧数据结构中不存在的字段 → TypeError → ErrorBoundary 兜底显示「此页一时未应机」
+  const prevArtRef = useRef(artId);
+  useEffect(() => {
+    if (prevArtRef.current !== artId) {
+      prevArtRef.current = artId;
+      ai.reset();          // 清 AI 解读 + 在途流式请求作废（reqId 失效）
+      reset();             // 清排盘 status/result/divineId
+      setFit(null);
+      profileRef.current = null;
+      questionRef.current = '';
+      inputsRef.current = null;
+      profileIdRef.current = 'main';
+      savedRef.current = null;
+    }
+  }, [artId, ai, reset]);
+
   // 起占成功 → 自动存档（StrictMode 防重复：以 result 引用去重）
   const savedRef = useRef<unknown>(null);
   useEffect(() => {
