@@ -31,22 +31,16 @@ import Disclaimer from '@/components/Disclaimer';
 const DEMO_BIRTH = { y: 1988, m: 6, d: 15, hourIndex: 6, time: '12:00', gender: '女' as const, location: { lng: 116.4, lat: 39.9, province: '北京市', city: '北京市', district: '东城区' } };
 
 // 九术本地排盘（与后端 divine.ts 同一引擎、同一输入口径）
-const ARTS: { id: string; name: string; glyph: string; calc: () => unknown }[] = [
-  { id: 'bazi', name: '四柱八字', glyph: '命', calc: () => baziCalc(DEMO_BIRTH) },
-  { id: 'ziwei', name: '紫微斗数', glyph: '星', calc: () => {
-      const lunar = Solar.fromYmd(DEMO_BIRTH.y, DEMO_BIRTH.m, DEMO_BIRTH.d).getLunar();
-      return ziweiCalc({ ganzhi: lunar.getYearInGanZhi(), month: Math.abs(lunar.getMonth()), day: lunar.getDay(), hour: DEMO_BIRTH.hourIndex, time: DEMO_BIRTH.time, location: DEMO_BIRTH.location, gender: DEMO_BIRTH.gender, birthYear: DEMO_BIRTH.y, solarDate: [DEMO_BIRTH.y, DEMO_BIRTH.m, DEMO_BIRTH.d] });
-  } },
-  { id: 'astrology', name: '古典星盘', glyph: '穹', calc: () => astrologyCalc(DEMO_BIRTH.y, DEMO_BIRTH.m, DEMO_BIRTH.d, 12, 0, DEMO_BIRTH.location.lng, DEMO_BIRTH.location.lat) },
-  { id: 'qimen', name: '奇门遁甲', glyph: '遁', calc: () => qimenCalc({ datetime: new Date() }) },
-  { id: 'meihua', name: '梅花易数', glyph: '梅', calc: () => meihuaCalc({ mode: 'time', n1: 3, n2: 5, n3: 7, now: new Date() }) },
-  { id: 'liuyao', name: '六爻', glyph: '爻', calc: () => liuyaoCalc(undefined, { y: new Date().getFullYear(), m: new Date().getMonth() + 1, d: new Date().getDate() }) },
-  { id: 'liuren', name: '大六壬', glyph: '课', calc: () => liurenCalc(new Date()) },
-  { id: 'xiaoliuren', name: '小六壬', glyph: '掌', calc: () => xiaoliurenCalc('time', new Date().getMonth() + 1, new Date().getDate(), new Date().getHours() % 12, 3, 5, 7) },
-  { id: 'tarot', name: '塔罗', glyph: '镜', calc: () => {
-      const spread = allTarotSpreads().find((x: any) => x.id === 'three') || allTarotSpreads()[0];
-      return { spread, cards: tarotDraw(3) };
-  } },
+const ARTS: { id: string; name: string; glyph: string }[] = [
+  { id: 'bazi', name: '四柱八字', glyph: '命' },
+  { id: 'ziwei', name: '紫微斗数', glyph: '星' },
+  { id: 'astrology', name: '古典星盘', glyph: '穹' },
+  { id: 'qimen', name: '奇门遁甲', glyph: '遁' },
+  { id: 'meihua', name: '梅花易数', glyph: '梅' },
+  { id: 'liuyao', name: '六爻', glyph: '爻' },
+  { id: 'liuren', name: '大六壬', glyph: '课' },
+  { id: 'xiaoliuren', name: '小六壬', glyph: '掌' },
+  { id: 'tarot', name: '塔罗', glyph: '镜' },
 ];
 const RESULT_VIEWS: Record<string, (data: unknown) => React.ReactElement> = {
   bazi: d => <BaziResult data={d as any} />,
@@ -66,8 +60,38 @@ export default function DemoPage() {
   const [showRaw, setShowRaw] = useState(false);
   const [artId, setArtId] = useState('bazi');
   const [localResult, setLocalResult] = useState<unknown>(null);
-  const art = ARTS.find(a => a.id === artId)!;
+  // ─── 演示输入（#2）：日期/时刻/报数，替换固定示例档案 ───
+  const [y, setY] = useState(DEMO_BIRTH.y);
+  const [m, setM] = useState(DEMO_BIRTH.m);
+  const [d, setD] = useState(DEMO_BIRTH.d);
+  const [hour, setHour] = useState(12);
+  const [n1, setN1] = useState(3);
+  const [n2, setN2] = useState(5);
+  const [n3, setN3] = useState(7);
 
+  const birth = { ...DEMO_BIRTH, y, m, d, hourIndex: Math.floor((hour % 24) / 2), time: (hour < 10 ? '0' + hour : '' + hour) + ':00' };
+
+  // 按术别用当前输入起例（命盘类用输入日期；占问类用报数/当前时刻）
+  const buildCalc = (id: string): (() => unknown) => {
+    switch (id) {
+      case 'bazi': return () => baziCalc(birth);
+      case 'ziwei': return () => {
+        const lunar = Solar.fromYmd(birth.y, birth.m, birth.d).getLunar();
+        return ziweiCalc({ ganzhi: lunar.getYearInGanZhi(), month: Math.abs(lunar.getMonth()), day: lunar.getDay(), hour: birth.hourIndex, time: birth.time, location: birth.location, gender: birth.gender, birthYear: birth.y, solarDate: [birth.y, birth.m, birth.d] });
+      };
+      case 'astrology': return () => astrologyCalc(birth.y, birth.m, birth.d, hour, 0, birth.location.lng, birth.location.lat);
+      case 'qimen': return () => qimenCalc({ datetime: new Date(y, m - 1, d, hour, 0) });
+      case 'meihua': return () => meihuaCalc({ mode: 'number', n1, n2, n3, now: new Date() } as any);
+      case 'liuyao': return () => liuyaoCalc(undefined, { y, m, d });
+      case 'liuren': return () => liurenCalc(new Date(y, m - 1, d, hour, 0));
+      case 'xiaoliuren': return () => xiaoliurenCalc('time', m, d, Math.floor((hour % 24) / 2), n1, n2, n3);
+      case 'tarot': return () => {
+        const spread = allTarotSpreads().find((x: any) => x.id === 'three') || allTarotSpreads()[0];
+        return { spread, cards: tarotDraw(3) };
+      };
+      default: return () => null;
+    }
+  };
   const reset = () => {
     setPhase('idle');
     setReport(null);
@@ -82,7 +106,7 @@ export default function DemoPage() {
     // 本地引擎排盘（纯浏览器计算，无需后端）
     setTimeout(() => {
       try {
-        setLocalResult(art.calc());
+        setLocalResult(buildCalc(artId)());
       } catch (e) {
         console.error('本地排盘失败', e);
       }
@@ -109,9 +133,9 @@ export default function DemoPage() {
       <div className="wrap" style={{ marginTop: 'var(--sp-4)' }}>
         {phase === 'idle' && (
           <div className="result-card" style={{ padding: 'var(--sp-5)' }}>
-            <p style={{ fontSize: '1.05rem', marginBottom: 'var(--sp-2)' }}>选一种术数，点一下就能看到排盘结果；八字还会附带一份完整的 AI 解读示例。</p>
-            <p className="tiny muted" style={{ marginBottom: 'var(--sp-2)' }}>示例档案：1988年6月15日 · 北京 · 女；其余术数按当前时刻起例</p>
-            <p className="tiny muted" style={{ marginBottom: 'var(--sp-3)' }}>三步即玩：① 选术数 → ② 点「开始体验」→ ③ 看结果</p>
+            <p style={{ fontSize: '1.05rem', marginBottom: 'var(--sp-2)' }}>选一种术数，填好（或直接用默认）日期时刻，点一下就能看到排盘结果；八字还会附带一份完整的 AI 解读示例。</p>
+            <p className="tiny muted" style={{ marginBottom: 'var(--sp-2)' }}>命盘类（八字/紫微/星盘）用下面日期时刻排盘；占问类（奇门/六壬/小六壬）用该时刻起例；梅花可用报数起卦</p>
+            <p className="tiny muted" style={{ marginBottom: 'var(--sp-3)' }}>三步即玩：① 选术数 → ② 填日期（可选）→ ③ 点「开始体验」看结果</p>
             <div className="art-picker" style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem', marginBottom: 'var(--sp-4)' }}>
               {ARTS.map(a => (
                 <button key={a.id} onClick={() => setArtId(a.id)}
@@ -120,6 +144,27 @@ export default function DemoPage() {
                   {a.glyph} {a.name}
                 </button>
               ))}
+            </div>
+            {/* 演示输入表单：日期/时刻/报数 */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', marginBottom: 'var(--sp-4)', padding: 'var(--sp-3)', border: '1px dashed var(--line-soft)', borderRadius: 'var(--r-sm)' }}>
+              <label className="tiny muted">日期
+                <input className="input-line" type="number" style={{ width: 70, marginLeft: '.4rem' }} value={y} min={1900} max={2100} onChange={e => setY(Number(e.target.value) || 1988)} />
+                <span className="tiny muted" style={{ margin: '0 .2rem' }}>/</span>
+                <input className="input-line" type="number" style={{ width: 46 }} value={m} min={1} max={12} onChange={e => setM(Number(e.target.value) || 6)} />
+                <span className="tiny muted" style={{ margin: '0 .2rem' }}>/</span>
+                <input className="input-line" type="number" style={{ width: 46 }} value={d} min={1} max={31} onChange={e => setD(Number(e.target.value) || 15)} />
+              </label>
+              <label className="tiny muted">时刻
+                <input className="input-line" type="number" style={{ width: 56, marginLeft: '.4rem' }} value={hour} min={0} max={23} onChange={e => setHour(Math.max(0, Math.min(23, Number(e.target.value) || 12)))} />
+                <span className="tiny muted" style={{ marginLeft: '.3rem' }}>时（24 小时制）</span>
+              </label>
+              {artId === 'meihua' && (
+                <label className="tiny muted">报数
+                  <input className="input-line" type="number" style={{ width: 46, marginLeft: '.4rem' }} value={n1} min={1} max={9} onChange={e => setN1(Number(e.target.value) || 3)} />
+                  <input className="input-line" type="number" style={{ width: 46, marginLeft: '.3rem' }} value={n2} min={1} max={9} onChange={e => setN2(Number(e.target.value) || 5)} />
+                  <input className="input-line" type="number" style={{ width: 46, marginLeft: '.3rem' }} value={n3} min={1} max={9} onChange={e => setN3(Number(e.target.value) || 7)} />
+                </label>
+              )}
             </div>
             <button className="btn-seal" style={{ fontSize: '1rem', padding: '.7rem 2.2rem' }} onClick={start}>开 始 体 验</button>
           </div>

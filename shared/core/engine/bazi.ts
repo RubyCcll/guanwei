@@ -62,6 +62,8 @@ export function baziCalc(input: BaziInput): BaziResult {
   const min = 0;
 
   // 2. 年柱（立春为界）
+  // 注意：getJieQiTableExact(yy) 返回的是「农历年」节气表，冬至后的立春可能落在公历次年
+  // （如 2023 表中含 2024-02-04 立春）——取立春发生的公历年份定年柱，不能用表格年份 yy
   const t = new Date(y, m - 1, d, hour, min).getTime();
   let lichunBest = -Infinity;
   let lichunYear = y - 1;
@@ -69,7 +71,7 @@ export function baziCalc(input: BaziInput): BaziResult {
     for (const jq of getJieQiTableExact(yy)) {
       if (jq.name === '立春') {
         const tt = jq.time.getTime();
-        if (tt <= t && tt > lichunBest) { lichunBest = tt; lichunYear = yy; }
+        if (tt <= t && tt > lichunBest) { lichunBest = tt; lichunYear = jq.time.getFullYear(); }
       }
     }
   }

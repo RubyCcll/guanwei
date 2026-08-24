@@ -160,6 +160,9 @@ export interface LiurenResult {
   chuanJiang: { chuan: string; jiang: string }[];  // 三传所乘天将
   keti: string;     // 课体（伏吟/反吟/常课）
   ketiNote: string; // 课体断语
+  // ─── 九宗门起三传（2026-08-23）───
+  chuanMethod: string;  // 起传法门（元首/始入/重审/知一/涉害/蒿矢/弹射/昴星/别责/八专/返吟/伏吟）
+  chuanNote: string;    // 起传断语
 }
 
 // 小六壬输出

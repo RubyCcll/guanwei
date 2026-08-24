@@ -27,14 +27,23 @@ export function getJieqiApproxName(_y: number, m: number, d: number): string {
 }
 
 // 精确节气时刻表（某年全年 24 节气）
+// 注：lunar-typescript 的 getJieQiTable key 混用中英文（当年冬至→次年惊蛰段为英文拼音），此处统一映射为中文
 export interface JieQiTime { name: string; time: Date }
+const JQ_KEY_CN: Record<string, string> = {
+  LI_CHUN: '立春', YU_SHUI: '雨水', JING_ZHE: '惊蛰', CHUN_FEN: '春分',
+  QING_MING: '清明', GU_YU: '谷雨', LI_XIA: '立夏', XIAO_MAN: '小满',
+  MANG_ZHONG: '芒种', XIA_ZHI: '夏至', XIAO_SHU: '小暑', DA_SHU: '大暑',
+  LI_QIU: '立秋', CHU_SHU: '处暑', BAI_LU: '白露', QIU_FEN: '秋分',
+  HAN_LU: '寒露', SHUANG_JIANG: '霜降', LI_DONG: '立冬', XIAO_XUE: '小雪',
+  DA_XUE: '大雪', DONG_ZHI: '冬至', XIAO_HAN: '小寒', DA_HAN: '大寒',
+};
 export function getJieQiTableExact(year: number): JieQiTime[] {
   const solar = Solar.fromYmdHms(year, 6, 1, 12, 0, 0);
   const table = solar.getLunar().getJieQiTable();
   const out: JieQiTime[] = [];
   for (const key of Object.keys(table)) {
     const s = table[key];
-    out.push({ name: key, time: new Date(s.getYear(), s.getMonth() - 1, s.getDay(), s.getHour(), s.getMinute(), s.getSecond()) });
+    out.push({ name: JQ_KEY_CN[key] || key, time: new Date(s.getYear(), s.getMonth() - 1, s.getDay(), s.getHour(), s.getMinute(), s.getSecond()) });
   }
   return out;
 }

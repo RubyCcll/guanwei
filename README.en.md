@@ -57,7 +57,7 @@ An open-source Chinese metaphysics application covering **nine arts of divinatio
 - **Life-event calibration**: record known life events; the AI echoes them at the matching years and never contradicts them
 - Question–art **suitability analysis** (e.g. Qimen is not advised for romance questions)
 - Streaming generation + structured report cards; export to Markdown / PDF
-- **Classical citations (in progress)**: the duanyu library (`shared/core/data/duanyu.ts`) holds 16 verbatim classical excerpts, all still in `seed` status (pending word-by-word review); per policy they are not injected into the AI prompt until reviewed — current readings rely on model knowledge, with reviewed entries wired in progressively (see ROADMAP)
+- **Classical citations**: the duanyu library (`shared/core/data/duanyu.ts`) holds 16 verbatim classical excerpts; **11 are reviewed against authoritative sources (ctext / Wikisource / Shidianguji) and injected into the AI prompt** — the reading may quote 「《Book·Chapter》: original text」 with provenance; the remaining 5 stay uninjected until reviewed
 
 ### Other
 - Classics pages, academy (history and knowledge of the nine arts)
