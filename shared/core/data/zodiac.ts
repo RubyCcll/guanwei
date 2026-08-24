@@ -1,4 +1,4 @@
-// 星盘数据（移植参考项目 data.js）
+// 星盘数据（黄道十二宫/庙旺表）
 
 export const ZODIAC: [string, string, string][] = [
   ['白羊', 'Aries', '♈'], ['金牛', 'Taurus', '♉'], ['双子', 'Gemini', '♊'], ['巨蟹', 'Cancer', '♋'],

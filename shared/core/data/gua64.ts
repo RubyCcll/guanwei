@@ -1,4 +1,4 @@
-// 八卦与六十四卦（移植参考项目 data.js GUA64）
+// 八卦与六十四卦（卦名/卦象/上下卦）
 
 export const BAGUA: Record<number, { name: string; symbol: string; nature: string; wx: string }> = {
   1: { name: '乾', symbol: '☰', nature: '天', wx: '金' },

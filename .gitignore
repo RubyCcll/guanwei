@@ -57,4 +57,7 @@ docs/assets/architecture.*
 docs/manual-*.md
 docs/ROADMAP.md
 docs/RELEASE-SOP.md
+docs/guanwei-api-plan.md
+docs/version-plan.md
+docs/research-*.md
 .npm-cache

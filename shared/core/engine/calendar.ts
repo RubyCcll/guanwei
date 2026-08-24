@@ -58,7 +58,7 @@ export function currentJieqiNameExact(y: number, m: number, d: number): string {
   return best ? best.name : '大雪';
 }
 
-// 十二「节」（定月支用）与月支映射（0=寅 … 11=丑，与参考项目一致）
+// 十二「节」（定月支用）与月支映射（0=寅 … 11=丑）
 export const JIE_BRANCH: Record<string, number> = {
   小寒: 11, 立春: 0, 惊蛰: 1, 清明: 2, 立夏: 3, 芒种: 4,
   小暑: 5, 立秋: 6, 白露: 7, 寒露: 8, 立冬: 9, 大雪: 10,

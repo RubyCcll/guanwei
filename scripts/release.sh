@@ -44,9 +44,24 @@ if ! grep -q "^## \[${NEW_VER}\]" CHANGELOG.md; then
   read -rp "   已补好？回车继续: " _
 fi
 
+# 2.5 防 tag 错位：提交后 HEAD 的 package.json 版本号必须等于目标版本（否则 tag 会落到错误 commit）
+echo "2.5️⃣  校验 HEAD 版本号 === ${NEW_VER}（防 v1.1.0 式 tag 错位）..."
+HEAD_VER="$(node -e "console.log(require('./package.json').version)")"
+if [[ "$HEAD_VER" != "$NEW_VER" ]]; then
+  echo "   ⚠️  当前工作区 package.json 版本为 ${HEAD_VER}，目标为 ${NEW_VER}"
+  echo "      （若刚跑过步骤 1 的版本升级但尚未提交，继续即可；提交后 tag 前将再次校验）"
+fi
+
 echo "3️⃣  提交 + 打 tag + 推送 git"
 git add package.json package-lock.json server/package.json server/package-lock.json CHANGELOG.md
 git commit -m "chore: 版本升级 ${NEW_VER}"
+# 提交后再次校验：确保 tag 一定落在版本号已落地的 commit 上
+HEAD_VER="$(node -e "console.log(require('./package.json').version)")"
+if [[ "$HEAD_VER" != "$NEW_VER" ]]; then
+  echo "   ❌ 提交后 HEAD 版本为 ${HEAD_VER}，目标 ${NEW_VER}——版本号未落地，拒绝打 tag"
+  exit 1
+fi
+echo "   ✅ 版本号一致，打 tag v${NEW_VER}"
 git tag "v${NEW_VER}"
 git push origin main
 git push origin "v${NEW_VER}"

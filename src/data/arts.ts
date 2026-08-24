@@ -1,4 +1,4 @@
-// 九术元数据（移植自参考项目「观微·宋式玄学占卜」data.js ARTS）
+// 九术元数据（名称/编号/卦象符号/说明）
 export interface ArtMeta {
   id: ArtId;
   num: string;

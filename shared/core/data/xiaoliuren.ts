@@ -1,4 +1,4 @@
-// 小六壬掌诀（移植参考项目 data.js）
+// 小六壬掌诀（六掌诀与吉凶）
 
 export const XLR: Record<string, { ji: string; wx: string; num: string; dir: string; poem: string; text: string }> = {
   大安: { ji: '吉', wx: '木', num: '一、五、七', dir: '东方', poem: '身不动时，属木青龙，谋事主一、五、七。',
