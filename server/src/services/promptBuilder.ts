@@ -3,6 +3,7 @@ import type { ChatMessage } from './llmProvider';
 import { agentOf } from './skills';
 import { chartBrief } from './chartBrief';
 import { sixRelativesFacts } from './sixRelatives';
+import { duanyuPromptBlock } from './duanyu';
 
 // ===== 报告 Schema 模板（命盘类：八字/紫微/星盘） =====
 const MINGPAN_SAMPLE = {
@@ -139,6 +140,8 @@ export function buildReportMessages(
     '',
     hourUnknownNote(profile),
     '',
+    duanyuPromptBlock(artId, resultRaw),
+    '',
     '【Skills 编排 · 请依序调用以下技能，逐章成文】',
     skillLines,
     '',
@@ -252,6 +255,8 @@ export function buildStep2Messages(
     '2. 禁止使用「严格/宽松/慈爱/冷漠/严厉/溺爱」等主观程度词，除非能从盘面推出并注明依据（例：正官坐月柱主规矩约束，可写「家教较严」并注明正官依据；父母宫化忌可写「关系有隔阂」；若盘面无明确指向，写「盘面未明示」，绝不编造程度）；',
     '3. 全篇论断须自洽：性格/家庭/事业/感情各区块相互呼应，不得前后矛盾（同一维度两次出现必须口径一致）。',
     relativesFacts,
+    '',
+    duanyuPromptBlock(artId, resultRaw),
     '',
     '【技能编排】依序运用以下技能完成报告（每一步的结论都要落进对应章节）：',
     skillLines,

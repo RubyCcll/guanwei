@@ -1,8 +1,27 @@
-// 奇门遁甲：演示级九宫起局（精确节气定阴阳遁，三候取局）
+// 奇门遁甲：九宫起局（节气定阴阳遁 · 日干支三元定局 · 时干支定旬首）
+// 说明：超神接气/置闰（节气时刻与甲己日不齐时的补闰规则）属专业级范畴，当前按「正授」近似：
+//       以日干支查三元表定局，与交节日正授情形完全一致；超接偏差时可能差一元，后续专业级补齐。
 import { GAN, ZHI, mod } from '../data/ganzhi';
 import { QM_SEASONS, QM_STARS, QM_MEN, LUOSHU } from '../data/qimen';
 import { daysSince, currentJieqiNameExact } from './calendar';
 import type { QimenInput, QimenResult } from '../types';
+
+
+// 三元定局表（时家奇门标准）：行=日干五合组，列=日支组（0=子午卯酉 1=寅申巳亥 2=辰戌丑未）
+// 值 0=上元 1=中元 2=下元。甲子旬前五日上元、次五日中元、甲戌旬前五日下元——已按日干支循环验证自洽。
+const SAN_YUAN: number[][] = [
+  [0, 1, 2], // 甲己：子午卯酉上元 寅申巳亥中元 辰戌丑未下元
+  [1, 2, 0], // 乙庚：子午卯酉中元 寅申巳亥下元 辰戌丑未上元
+  [2, 0, 1], // 丙辛：子午卯酉下元 寅申巳亥上元 辰戌丑未中元
+  [0, 1, 2], // 丁壬：同甲己
+  [1, 2, 0], // 戊癸：同乙庚
+];
+
+function sanYuanOf(dayGan: string, dayZhi: string): number {
+  const ganGroup = ['甲', '己'].includes(dayGan) ? 0 : ['乙', '庚'].includes(dayGan) ? 1 : ['丙', '辛'].includes(dayGan) ? 2 : ['丁', '壬'].includes(dayGan) ? 3 : 4;
+  const zhiGroup = ['子', '午', '卯', '酉'].includes(dayZhi) ? 0 : ['寅', '申', '巳', '亥'].includes(dayZhi) ? 1 : 2;
+  return SAN_YUAN[ganGroup][zhiGroup];
+}
 
 export function qimenCalc(input: QimenInput): QimenResult {
   const d = input.datetime instanceof Date ? input.datetime : new Date(input.datetime);
@@ -21,13 +40,16 @@ export function qimenCalc(input: QimenInput): QimenResult {
   const season = QM_SEASONS.find(s => s.name === jqName);
   if (!season) throw new Error('节气未找到: ' + jqName);
   const yin = season.yin;
-  /* 候（三元）：按日数粗略取元 */
-  const xun = Math.floor(day / 5) % 3;
+  /* 三元定局（按日干支，替代旧「按日数粗略取元」） */
+  const xun = sanYuanOf(dayGZ[0], dayGZ[1]);
   const ju = season.ju[xun];
-  /* 旬首六仪（由时干定） */
-  const xunshouMap: Record<string, string> = { 戊: '甲子', 己: '甲戌', 庚: '甲申', 辛: '甲午', 壬: '甲辰', 癸: '甲寅' };
-  const hourGan = hourGZ[0];
-  const xunShou = ['戊', '己', '庚', '辛', '壬', '癸'].includes(hourGan) ? hourGan : '戊';
+  /* 旬首六仪（按时干支真实旬首：时干支序号 → 所在旬 → 六仪） */
+  const gzIdx = mod((GAN.indexOf(hourGZ[0] as any) - ZHI.indexOf(hourGZ[1] as any)) * 6 + ZHI.indexOf(hourGZ[1] as any), 60);
+  const xunStart = Math.floor(gzIdx / 10) * 10;               // 旬首干支序号（甲子=0 甲戌=10 …）
+  const xunShouZhi = ZHI[xunStart % 12];
+  const xunshouMap: Record<string, string> = { 子: '戊', 戌: '己', 申: '庚', 午: '辛', 辰: '壬', 寅: '癸' };
+  const xunShou = xunshouMap[xunShouZhi];                     // 旬首六仪（甲子戊 甲戌己 …）
+  const xunshouName = '甲' + xunShouZhi;
   /* 地盘布奇仪：阳遁顺布（1→8→3→4→9→2→7→6→中5），阴遁逆布 */
   const qiyiOrder = ['戊', '己', '庚', '辛', '壬', '癸', '丁', '丙', '乙'];
   const yiAt: Record<number, string> = {};
@@ -74,5 +96,5 @@ export function qimenCalc(input: QimenInput): QimenResult {
     shen[p] = shenSeq[step];
   });
   shen[5] = '';
-  return { yin, ju, jqName, dayGZ, hourGZ, xunShou, xunshouName: xunshouMap[xunShou] || '', zfStar, zsMen, zfPalace, pan, zsPalace, tianYi, shen };
+  return { yin, ju, jqName, dayGZ, hourGZ, xunShou, xunshouName, zfStar, zsMen, zfPalace, pan, zsPalace, tianYi, shen };
 }

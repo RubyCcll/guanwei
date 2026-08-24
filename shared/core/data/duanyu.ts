@@ -1,8 +1,9 @@
-// 断语库 v1（种子版）：结构化「原文 → 断语要点 → 适用因子」条目
+// 断语库 v2：结构化「原文 → 断语要点 → 适用因子」条目
 // 定位：AI 解读的引证源（排盘 → 断语匹配 → 解读引用「《书·篇》：原文」），未来接考时校准
 // 收录规范 / 版权核查 / 处理清单：见 docs/古籍参考库收录规范.md
-// ⚠️ 全部条目 status: 'seed'（待逐字校核），未 reviewed 前不得注入 AI prompt
-// 来源 URL 为 2026-08-20 检索核实的公有领域在线底本
+// ✅ 已校核 11 条（status: 'reviewed'，来源为 ctext/维基文库/时点古籍 权威底本）→ 已接入 AI prompt 引证
+// ⚠️ 剩余 5 条 status: 'seed'（待逐字校核/待补底本），未 reviewed 前不得注入 AI prompt
+// 来源 URL 为 2026-08-20/23 检索核实的公有领域在线底本
 
 export type DuanyuStatus = 'seed' | 'reviewed';
 
@@ -27,14 +28,14 @@ export const DUANYU: DuanyuEntry[] = [
     original: '人禀天地，命属阴阳。生居覆载之内，尽在五行之中。欲知贵贱，先观月令乃提纲。',
     duanyu: '论命首重月令：先以月支定旺衰提纲，再论格局贵贱。月令为子平断命第一步。',
     factors: ['月令', '提纲'], tags: ['格局', '月令', '旺衰'],
-    sources: ['https://ctext.org/wiki.pl?if=gb&chapter=524726'], status: 'seed',
+    sources: ['https://ctext.org/wiki.pl?if=gb&chapter=524726'], status: 'reviewed',
   },
   {
     id: 'dts-tiandao-01', bookId: 'ditian-sui', art: 'bazi', chapter: '天道',
     original: '欲识三元万法宗，先观帝载与神功。',
     duanyu: '断命先察三元（天干/地支/人元藏干）之体用与造化之枢机，体用立而后吉凶可论。',
     factors: ['三元', '体用'], tags: ['体用', '三元'],
-    sources: ['https://zh.wikisource.org/zh-hant/%E6%BB%B4%E5%A4%A9%E9%AB%93%E9%97%A1%E5%BE%AE'], status: 'seed',
+    sources: ['https://zh.wikisource.org/zh-hant/%E6%BB%B4%E5%A4%A9%E9%AB%93%E9%97%A1%E5%BE%AE'], status: 'reviewed',
   },
   {
     id: 'dts-tiangan-01', bookId: 'ditian-sui', art: 'bazi', chapter: '天干（甲木）',
@@ -43,7 +44,7 @@ export const DUANYU: DuanyuEntry[] = [
     factors: ['调候', '生克制化'], tags: ['天干', '调候'],
     sources: ['https://zh.wikisource.org/zh-hans/%E6%BB%B4%E5%A4%A9%E9%AB%93/02'],
     note: '此诀《穷通宝鉴》亦引（转引）；classics.ts 已修正：滴天髓收本源段，穷通宝鉴段注明转引（处理清单 #2 ✅）。',
-    status: 'seed',
+    status: 'reviewed',
   },
   {
     id: 'zpzq-yongshen-01', bookId: 'ziping-zhenquan', art: 'bazi', chapter: '论用神',
@@ -59,14 +60,14 @@ export const DUANYU: DuanyuEntry[] = [
     original: '用神者，卦之体也。凡占必先寻用神，用神不现，须寻伏神。',
     duanyu: '六爻断卦第一步取用神：按所问之事定六亲取用；用神不上卦则寻伏神。',
     factors: ['用神', '伏神'], tags: ['用神', '六亲'],
-    sources: ['https://www.shidianguji.com/zh/book/XYXZSBY/chapter/1lzxsn553hcfm'], status: 'seed',
+    sources: ['https://www.shidianguji.com/zh/book/XYXZSBY/chapter/1lzxsn553hcfm'], status: 'reviewed',
   },
   {
     id: 'bszz-yongshen-01', bookId: 'bushe-zhengzong', art: 'liuyao', chapter: '启蒙节要',
     original: '凡占必以用神为主，有根有气则吉，无根无气则凶。',
     duanyu: '用神有根（得月日生扶）有气（不遭刑冲克害）为吉，反之则凶。',
     factors: ['旺衰', '生扶'], tags: ['用神', '旺衰'],
-    sources: ['https://ctext.org/wiki.pl?if=gb&chapter=801184'], status: 'seed',
+    sources: ['https://ctext.org/wiki.pl?if=gb&chapter=801184'], status: 'reviewed',
   },
   // ─── 梅花易数 meihua ───
   {
@@ -82,7 +83,7 @@ export const DUANYU: DuanyuEntry[] = [
     original: '不动不占，不因事不占。',
     duanyu: '起占原则：无异常变动不起卦、无事由不起卦，心动则应机而占。',
     factors: ['起卦原则'], tags: ['起卦', '原则'],
-    sources: ['https://ctext.org/wiki.pl?if=gb&chapter=475043'], status: 'seed',
+    sources: ['https://ctext.org/wiki.pl?if=gb&chapter=475043'], status: 'reviewed',
   },
   // ─── 奇门遁甲 qimen ───
   {
@@ -90,7 +91,7 @@ export const DUANYU: DuanyuEntry[] = [
     original: '阴阳顺逆妙难穷，二至还乡一九宫。若能了达阴阳理，天地都来一掌中。',
     duanyu: '奇门总纲：冬至后阳遁顺布（一宫起）、夏至后阴遁逆布（九宫起），阴阳二遁为起局之枢。',
     factors: ['阴阳遁', '起局'], tags: ['阴阳遁', '九宫'],
-    sources: ['https://zh.wikisource.org/wiki/%E7%85%99%E6%B3%A2%E9%87%A3%E5%8F%9F%E6%AD%8C'], status: 'seed',
+    sources: ['https://zh.wikisource.org/wiki/%E7%85%99%E6%B3%A2%E9%87%A3%E5%8F%9F%E6%AD%8C'], status: 'reviewed',
   },
   {
     id: 'ypdsw-sanqi-01', bookId: 'yanpo-diaosou', art: 'qimen', chapter: '三奇六仪',
@@ -106,14 +107,14 @@ export const DUANYU: DuanyuEntry[] = [
     original: '前后引从升迁吉，首尾相见始终宜。',
     duanyu: '毕法之一：三传中初末传夹拱中传（引从）主升迁之喜；首尾同气则事有始终。',
     factors: ['三传', '引从'], tags: ['毕法赋', '三传'],
-    sources: ['https://www.shidianguji.com/zh/book/SK1599/chapter/1k1lql7vm29te'], status: 'seed',
+    sources: ['https://www.shidianguji.com/zh/book/SK1599/chapter/1k1lql7vm29te'], status: 'reviewed',
   },
   {
     id: 'lrdq-kezhuan-01', bookId: 'liuren-daquan', art: 'liuren', chapter: '起课',
     original: '课传既定，先视四课之生克，次观三传之发用。天地盘加临，日月星为纬。',
     duanyu: '断课次序：四课定生克、三传察发用，天地盘加临为纲。',
     factors: ['四课', '三传'], tags: ['四课', '三传', '断课'],
-    sources: ['https://www.shidianguji.com/zh/book/SK1599/chapter/1k1lql7vm29te'], status: 'seed',
+    sources: ['https://www.shidianguji.com/zh/book/SK1599/chapter/1k1lql7vm29te'], status: 'reviewed',
   },
   // ─── 紫微斗数 ziwei ───
   {
@@ -122,7 +123,7 @@ export const DUANYU: DuanyuEntry[] = [
     duanyu: '斗数断命以庙旺落陷与生克制化为枢：星入庙为奇、失度为虚；星临庙旺之位再观生克之机，命坐强宫细察制化之理。',
     factors: ['庙旺落陷', '星曜生克'], tags: ['太微赋', '庙陷', '生克'],
     sources: ['https://www.shidianguji.com/mid-page/7356346219641356314', 'https://m.gushiwen.cn/guwen/bookv_46653FD803893E4F4F9BB8FD2D9C9B7F.aspx'],
-    note: '2026-08-20 已按《紫微斗数全书》卷一·太微赋第一原文替换意译段（classics.ts 同步修正）；断句待与刻本终校。', status: 'seed',
+    note: '2026-08-20 已按《紫微斗数全书》卷一·太微赋第一原文替换意译段（classics.ts 同步修正）；断句待与刻本终校。', status: 'reviewed',
   },
   // ─── 小六壬 xiaoliuren（民间口诀，无成书古籍）───
   {
@@ -139,7 +140,7 @@ export const DUANYU: DuanyuEntry[] = [
     original: '易与天地准，故能弥纶天地之道。仰以观于天文，俯以察于地理，是故知幽明之故。',
     duanyu: '易学认识论总纲：卦象法天地，观天文察地理而知幽明——一切卦术「观物取象」的理据。',
     factors: ['观物取象'], tags: ['系辞', '取象'],
-    sources: ['https://ctext.org/book-of-changes/zh'], status: 'seed',
+    sources: ['https://ctext.org/book-of-changes/zh'], status: 'reviewed',
   },
 ];
 

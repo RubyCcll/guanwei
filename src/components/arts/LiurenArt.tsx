@@ -67,7 +67,8 @@ export function LiurenResult({ data }: { data: LiurenResult }) {
           { k: '三课 · 支上', v: r.ke3, big: true },
           { k: '四课 · 支阴', v: r.ke4, big: true },
         ]}>
-        <p>三传（简式）：<strong className="tag-hot">初传 {r.chuan1}</strong> → <strong className="tag-cool">中传 {r.chuan2}</strong> → <strong>末传 {r.chuan3}</strong>。</p>
+        <p>三传（{r.chuanMethod || '起传'}）：<strong className="tag-hot">初传 {r.chuan1}</strong> → <strong className="tag-cool">中传 {r.chuan2}</strong> → <strong>末传 {r.chuan3}</strong>。</p>
+        {r.chuanNote && <p className="tiny muted">{r.chuanNote}</p>}
         <p>初传为事发之端，中传为事进之中，末传为事成之归。干为外、支为内，四课之内外，即人事之表里。</p>
         <p className="mt-2"><strong>三传参详：</strong>{liurenAdvice(r)}</p>
       </ResultCard>
