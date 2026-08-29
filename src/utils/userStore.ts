@@ -44,7 +44,7 @@ export async function syncProfileToServer(username: string, profile: UserProfile
   try {
     await fetch(API + '/' + encodeURIComponent(username) + '/profile', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: syncHeaders(),
       body: JSON.stringify({ profile, samples }),
     });
   } catch { /* 离线忽略 */ }
@@ -55,7 +55,7 @@ export async function pushRecordsToServer(username: string, records: unknown[]):
   try {
     await fetch(API + '/' + encodeURIComponent(username) + '/records', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: syncHeaders(),
       body: JSON.stringify({ records }),
     });
   } catch { /* 离线忽略 */ }
@@ -64,7 +64,7 @@ export async function pushRecordsToServer(username: string, records: unknown[]):
 export async function pullRecordsFromServer(username: string): Promise<unknown[] | null> {
   if (!(await apiOk())) return null;
   try {
-    const res = await fetch(API + '/' + encodeURIComponent(username) + '/records');
+    const res = await fetch(API + '/' + encodeURIComponent(username) + '/records', { headers: syncHeaders() });
     if (!res.ok) return null;
     const data = await res.json();
     return data.records || null;
@@ -117,6 +117,8 @@ export function register(username: string, password: string, profile: UserProfil
   users.push(user);
   saveUsers(users);
   setSession(name);
+  // 后端在线时换取云同步 token（离线纯本地也能用）
+  fetchServerToken(name, password);
   return { ok: true, message: '入馆成功', user };
 }
 
@@ -125,15 +127,60 @@ export function login(username: string, password: string): AuthResult {
   const user = users.find(u => u.username === username.trim());
   if (!user || user.passHash !== hashPassword(password)) return { ok: false, message: '名号或密语未合' };
   setSession(user.username);
+  // 后端在线时换取云同步 token
+  fetchServerToken(user.username, password);
   return { ok: true, message: '入馆成功', user };
+}
+
+// 向后端登录/注册换取云同步 token（失败静默——离线纯本地场景不受影响）
+// 前端注册/登录是本地体系；后端 db.json 无此用户时自动注册（同密码）以获取 token
+async function fetchServerToken(username: string, password: string): Promise<void> {
+  try {
+    let res = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      // 后端无此用户 → 注册（自动建档即可；注册接口对已有用户返回 400）
+      res = await fetch(API + '/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) return;
+    }
+    const data = await res.json();
+    if (data.token) {
+      const sess = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+      sess.token = data.token;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+    }
+  } catch { /* 离线忽略 */ }
 }
 
 export function logout(): void {
   localStorage.removeItem(SESSION_KEY);
 }
 
-function setSession(username: string): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username, loginAt: Date.now() }));
+function setSession(username: string, token?: string): void {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username, token: token || '', loginAt: Date.now() }));
+}
+
+/** 当前会话的云同步 token（登录/注册时后端签发） */
+export function sessionToken(): string {
+  try {
+    const sess = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    return sess?.token || '';
+  } catch { return ''; }
+}
+
+/** 云同步请求头：带 token 则后端校验归属（写他人档案会被拒） */
+function syncHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  const tk = sessionToken();
+  if (tk) h['X-Guanwei-Token'] = tk;
+  return h;
 }
 
 export function currentUser(): User | null {
