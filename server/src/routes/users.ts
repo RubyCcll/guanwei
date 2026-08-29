@@ -21,6 +21,8 @@ interface DbUser {
   profile: Record<string, unknown>;
   samples: { id: string; name: string; profile: Record<string, unknown> }[];
   records: Record<string, unknown>[];
+  /** 登录态 token（注册/登录时签发，云同步写接口须携带校验归属） */
+  token?: string;
 }
 
 interface Db { users: DbUser[] }
@@ -43,6 +45,18 @@ async function hashPassword(pw: string): Promise<string> {
   const salt = crypto.randomBytes(16);
   const key = await scryptAsync(pw, salt, SCRYPT_KEYLEN);
   return 'scrypt$' + salt.toString('hex') + '$' + key.toString('hex');
+}
+
+// 登录态 token：随机 32 字节 hex；写接口（profile/records/samples）须携带且归属匹配
+function newToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function tokenMatches(user: DbUser, token: string | undefined): boolean {
+  if (!token || !user.token) return false;
+  // 恒时比较，防时序侧信道
+  const a = Buffer.from(token), b = Buffer.from(user.token);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 async function verifyPassword(pw: string, stored: string): Promise<boolean> {
@@ -89,16 +103,17 @@ router.post('/register', async (req, res) => {
     // 云同步自动建档的占位账号（无密语）可被正式注册升级
     if (!existing.passHash) {
       existing.passHash = await hashPassword(String(password));
+      existing.token = newToken();
       if (profile) existing.profile = { ...existing.profile, ...profile };
       saveDb(db);
-      return res.json({ ok: true, upgraded: true, user: { username: existing.username, profile: existing.profile, samples: existing.samples } });
+      return res.json({ ok: true, upgraded: true, token: existing.token, user: { username: existing.username, profile: existing.profile, samples: existing.samples } });
     }
     return res.status(400).json({ error: '此名号已有人用' });
   }
-  const user: DbUser = { username: name, passHash: await hashPassword(String(password)), createdAt: Date.now(), profile: profile || {}, samples: [], records: [] };
+  const user: DbUser = { username: name, passHash: await hashPassword(String(password)), createdAt: Date.now(), profile: profile || {}, samples: [], records: [], token: newToken() };
   db.users.push(user);
   saveDb(db);
-  res.json({ ok: true, user: { username: user.username, profile: user.profile, samples: user.samples } });
+  res.json({ ok: true, token: user.token, user: { username: user.username, profile: user.profile, samples: user.samples } });
 });
 
 // 登录
@@ -115,18 +130,30 @@ router.post('/login', async (req, res) => {
     saveDb(db);
     console.log(`[users] 密码哈希已升级为 scrypt: ${user.username}`);
   }
-  res.json({ ok: true, user: { username: user.username, profile: user.profile, samples: user.samples } });
+  res.json({ ok: true, token: user.token, user: { username: user.username, profile: user.profile, samples: user.samples } });
 });
 
-// 档案读取/更新
-router.get('/:username/profile', (req, res) => {
+// ─── 写接口鉴权中间件：云同步写操作须携带本人 token（堵「知道 username 即可写任意档案」）───
+function requireOwner(req: any, res: any, next: any): void {
+  const username = req.params.username;
+  const token = String(req.headers['x-guanwei-token'] || '');
+  const db = loadDb();
+  const user = db.users.find(u => u.username === username);
+  if (!user) return res.status(404).json({ error: '馆中无此人' });
+  if (!tokenMatches(user, token)) return res.status(401).json({ error: 'AUTH_REQUIRED', message: '请先入馆（登录）后再同步档案' });
+  (req as any)._dbUser = user;
+  next();
+}
+
+// 档案读取/更新（读他人档案也须本人 token——防止知道 username 即可窥探）
+router.get('/:username/profile', requireOwner, (req, res) => {
   const db = loadDb();
   const user = db.users.find(u => u.username === req.params.username);
   if (!user) return res.status(404).json({ error: '馆中无此人' });
   res.json({ profile: user.profile, samples: user.samples });
 });
 
-router.put('/:username/profile', (req, res) => {
+router.put('/:username/profile', requireOwner, (req, res) => {
   const db = loadDb();
   const user = db.users.find(u => u.username === req.params.username);
   if (!user) return res.status(404).json({ error: '馆中无此人' });
@@ -136,7 +163,7 @@ router.put('/:username/profile', (req, res) => {
 });
 
 // 示例档案增删/提升
-router.post('/:username/samples', (req, res) => {
+router.post('/:username/samples', requireOwner, (req, res) => {
   const db = loadDb();
   const user = db.users.find(u => u.username === req.params.username);
   if (!user) return res.status(404).json({ error: '馆中无此人' });
@@ -146,7 +173,7 @@ router.post('/:username/samples', (req, res) => {
   res.json({ ok: true, samples: user.samples });
 });
 
-router.delete('/:username/samples/:id', (req, res) => {
+router.delete('/:username/samples/:id', requireOwner, (req, res) => {
   const db = loadDb();
   const user = db.users.find(u => u.username === req.params.username);
   if (!user) return res.status(404).json({ error: '馆中无此人' });
@@ -156,7 +183,7 @@ router.delete('/:username/samples/:id', (req, res) => {
 });
 
 // 记录同步（按用户整表覆盖）
-router.put('/:username/records', (req, res) => {
+router.put('/:username/records', requireOwner, (req, res) => {
   const db = loadDb();
   const user = db.users.find(u => u.username === req.params.username);
   if (!user) return res.status(404).json({ error: '馆中无此人' });
@@ -165,7 +192,7 @@ router.put('/:username/records', (req, res) => {
   res.json({ ok: true, count: user.records.length });
 });
 
-router.get('/:username/records', (req, res) => {
+router.get('/:username/records', requireOwner, (req, res) => {
   const db = loadDb();
   const user = db.users.find(u => u.username === req.params.username);
   if (!user) return res.status(404).json({ error: '馆中无此人' });

@@ -31,8 +31,8 @@ describe('断语库（古籍引证）', () => {
     const block = duanyuPromptBlock('bazi', { monthZhi: '申', yongshen: '印', geju: '正官格' });
     expect(block).toContain('古籍引证');
     expect(block).toContain('《');
-    // 引证块不得包含 seed 条目的原文（如「子平真诠」待校核条）
-    expect(block).not.toContain('八字用神，专求月令'); // zpzq-yongshen-01 为 seed
+    // 断语库已 100% reviewed：注入条目全部来自已校核库
+    expect(block).toContain('八字用神，专求月令'); // zpzq-yongshen-01 已 reviewed
   });
 
   it('Step2 prompt 注入引证段（system 含「古籍引证」）', () => {

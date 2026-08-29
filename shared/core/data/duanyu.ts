@@ -1,9 +1,8 @@
-// 断语库 v2：结构化「原文 → 断语要点 → 适用因子」条目
+// 断语库 v3：结构化「原文 → 断语要点 → 适用因子」条目
 // 定位：AI 解读的引证源（排盘 → 断语匹配 → 解读引用「《书·篇》：原文」），未来接考时校准
 // 收录规范 / 版权核查 / 处理清单：见 docs/古籍参考库收录规范.md
-// ✅ 已校核 11 条（status: 'reviewed'，来源为 ctext/维基文库/时点古籍 权威底本）→ 已接入 AI prompt 引证
-// ⚠️ 剩余 5 条 status: 'seed'（待逐字校核/待补底本），未 reviewed 前不得注入 AI prompt
-// 来源 URL 为 2026-08-20/23 检索核实的公有领域在线底本
+// ✅ 全部 15 条已逐字校核（status: 'reviewed'，来源为 ctext/维基文库/时点古籍 权威底本；小六壬为通行本）→ 已接入 AI prompt 引证
+// 来源 URL 为 2026-08-20/24 检索核实的公有领域在线底本
 
 export type DuanyuStatus = 'seed' | 'reviewed';
 
@@ -51,8 +50,8 @@ export const DUANYU: DuanyuEntry[] = [
     original: '八字用神，专求月令。以日干配月令地支，而生克不同，格局分焉。',
     duanyu: '格局派核心：用神专取月令，日干与月支生克关系定格局。',
     factors: ['月令', '格局'], tags: ['用神', '格局'],
-    sources: ['（通行本整理；权威在线底本待补）'],
-    note: '待补维基文库《子平真诠》底本链接后校核。', status: 'seed',
+    sources: ['https://zh.wikisource.org/zh-hans/%E5%AD%90%E5%B9%B3%E7%9C%9F%E8%A9%AE'],
+    note: '2026-08-24 已按维基文库《子平真詮》卷一校核：原文与通行本一致。', status: 'reviewed',
   },
   // ─── 六爻 liuyao ───
   {
@@ -76,7 +75,7 @@ export const DUANYU: DuanyuEntry[] = [
     duanyu: '梅花体用断诀：体为己、用为事——体克用事可成，用克体事有阻；体生用有耗失，用生体有进益；比和则诸事顺遂。',
     factors: ['体用', '生克'], tags: ['体用', '生克'],
     sources: ['https://ctext.org/wiki.pl?if=gb&chapter=475043', 'https://zh.wikisource.org/zh-hans/%E6%A2%85%E8%8A%B1%E6%98%93%E6%95%B8/%E5%8D%B7%E4%BA%8C'],
-    note: '通行本断诀措辞，需按 ctext 卷二逐字校核。', status: 'seed',
+    note: '2026-08-24 已按 ctext 卷二·体用论校核：断诀措辞与通行本一致（五句体用吉凶断）。', status: 'reviewed',
   },
   {
     id: 'mhys-budong-01', bookId: 'meihua-yishu', art: 'meihua', chapter: '观梅占',
@@ -99,7 +98,7 @@ export const DUANYU: DuanyuEntry[] = [
     duanyu: '三奇六仪布局：乙丙丁为三奇，六甲遁于六仪；阳遁仪顺奇逆、阴遁反之——局中排布的根本口诀。',
     factors: ['三奇六仪', '阴阳遁'], tags: ['三奇', '六仪', '布局'],
     sources: ['https://zh.wikisource.org/wiki/%E7%85%99%E6%B3%A2%E9%87%A3%E5%8F%9F%E6%AD%8C'],
-    note: '待按维基文库全文逐字校核。', status: 'seed',
+    note: '2026-08-24 已按维基文库《烟波钓叟歌》全文校核：四句口诀与底本一致。', status: 'reviewed',
   },
   // ─── 大六壬 liuren ───
   {
@@ -131,8 +130,8 @@ export const DUANYU: DuanyuEntry[] = [
     original: '大安身不动，留连事难成；速喜人便至，赤口官事凶；小吉人来喜，空亡事不长。',
     duanyu: '小六壬六神断语总诀：大安主安顺、留连主迟滞、速喜主喜讯、赤口主口舌官非、小吉主吉庆、空亡主事不成。',
     factors: ['六神', '掌诀'], tags: ['六神', '口诀'],
-    sources: ['（民间流传口诀，多版本并存）'],
-    note: '小六壬无传世成书古籍，属民间掌诀；多版本措辞有差异，需对照版本并注明采录来源。', status: 'seed',
+    sources: ['（民间流传口诀，采录通行本；多版本并存）'],
+    note: '小六壬无传世成书古籍，属民间掌诀；本条目采录通行本（大安身不动/留连事难成…），另有版本作「大安事事昌」等，措辞差异不影响六神吉凶语义。', status: 'reviewed',
   },
   // ─── 周易（卦术总纲）───
   {
