@@ -1,6 +1,6 @@
 {
-  "name": "mystic-server",
-  "version": "1.2.3",
+  "name": "guanwei-server",
+  "version": "1.2.4",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -19,6 +19,6 @@
     "typescript": "^5.8.3"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "guanwei",
   "private": false,
-  "version": "1.2.3",
+  "version": "1.2.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -91,6 +91,6 @@
     "url": "git+https://github.com/RubyCcll/guanwei.git"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   }
 }

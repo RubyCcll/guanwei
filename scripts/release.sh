@@ -4,7 +4,7 @@
 # 用法：./scripts/release.sh 1.1.2            仅 git 发版（tag 触发 CI/Release/镜像）
 #       ./scripts/release.sh 1.1.2 --npm      额外发布 npm 包（需先配置 npm 登录）
 # 要求：工作区无未提交改动；CHANGELOG.md 已写好本次版本条目
-# 详见（本地文档）：docs/RELEASE-SOP.md
+# 详见（本地文档，不入库）：docs/RELEASE-SOP.md（发版 SOP 详情/踩坑记录）
 # ============================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
