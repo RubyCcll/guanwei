@@ -295,6 +295,8 @@ export function buildStep2Messages(
     '【盘面事实（原始排盘，引用须一致）】',
     chartBrief(artId, resultRaw),
     '',
+    nowFact(),
+    '',
     lifeEventsNote(profile),
     '',
     semantic ? '【问题语义分析】' + JSON.stringify(semantic, null, 1) : '',
@@ -317,6 +319,7 @@ function systemPrompt(artId: string): string {
     '',
     '【语言规范】现代白话，温润克制，不作绝对化断言；引经据典附出处；结尾附免责声明。',
     '输出结构：严格输出合法 json 对象（字段名不可更改）。',
+    nowFact(),
     '【可引古籍】' + (p?.classics || ''),
   ].join('\n');
 }
@@ -332,6 +335,8 @@ export function buildMessages(
     '',
     '【排盘结果】',
     JSON.stringify(resultRaw, null, 1),
+    '',
+    nowFact(),
     '',
     semantic ? '【问题语义分析】' + JSON.stringify(semantic, null, 1) : '',
     '',

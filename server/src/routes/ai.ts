@@ -196,10 +196,12 @@ interface RawReading { summary: string; keyPoints: string[] }
 // ─── Step1 盘面解析缓存 ───
 // 同一 divineId + 同一问题复用同一份盘面解析：多次解读的输入一致 → 输出不再互相矛盾
 // （Step1 每次调用结果都不同是「一会严格一会宽松」的主因之一）
+// 键含日期：prompt 注入了【当前时间 · 事实】，跨日/跨年复用会给出过期的"现在"——按天隔离
 const step1Cache = new Map<string, string>();
 const STEP1_CACHE_MAX = 300;
 async function getStep1(divineId: string, artId: string, question: string, resultRaw: unknown, profile: unknown): Promise<string> {
-  const key = divineId + '|' + (question || '');
+  const day = new Date().toISOString().slice(0, 10);
+  const key = divineId + '|' + day + '|' + (question || '');
   const hit = step1Cache.get(key);
   if (hit) return hit;
   try {
