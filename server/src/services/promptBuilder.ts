@@ -79,6 +79,14 @@ function hourUnknownNote(profile?: unknown): string {
 }
 
 // 命主已知人生经历 → 解读校准注入（报告须呼应该年份事件、不得与其矛盾）
+// 当前公历时间事实：注入给 AI，防止其自行推算年份（占问类无出生档案，AI 不知道"现在是哪年"）
+function nowFact(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const week = '日一二三四五六'[d.getDay()];
+  return '【当前时间 · 事实】现在是公历 ' + d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 ' + p(d.getHours()) + ':' + p(d.getMinutes()) + '（星期' + week + '）。\n凡涉及年份/日期/时令的表述（如"今年""去年""明年""当下节令"），必须以此为准，不得自行推算或编造年份。';
+}
+
 function lifeEventsNote(profile?: unknown): string {
   const evs: { year: number; text: string }[] = (profile as any)?.lifeEvents;
   if (!Array.isArray(evs) || evs.length === 0) return '';
@@ -166,6 +174,8 @@ export function buildReportMessages(
     '【盘面事实（以下为不可更改的排盘结果，解读必须逐字引用、不得编造）】',
     chartBrief(artId, resultRaw),
     '',
+    nowFact(),
+    '',
     lifeEventsNote(profile),
     '',
     semantic ? '【问题语义分析】' + JSON.stringify(semantic, null, 1) : '',
@@ -212,6 +222,8 @@ export function buildStep1Messages(
     '',
     '【盘面事实】',
     chartBrief(artId, resultRaw),
+    '',
+    nowFact(),
     '',
     '请输出盘面解析 json。',
   ].filter(Boolean).join('\n');
