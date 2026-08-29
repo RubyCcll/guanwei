@@ -78,25 +78,28 @@ AI:       multi-LLM adapter (OpenAI-compatible & Google formats; DeepSeek / Gemi
 
 ```bash
 npm i -g guanwei
-guanwei setup --key YOUR_API_KEY
+guanwei setup
 guanwei start
 ```
 
 Open http://localhost:5173 . Upgrade: `guanwei update`. Stop: `guanwei stop`.
 
+> 💡 **Configure your key (`guanwei setup`)**: interactive wizard — pick a provider, paste your key (not echoed), stored in `~/.guanwei/.env` (readable only by you). Or one-shot: `guanwei setup --key YOUR_API_KEY` (5 providers, see below).
+> 💡 **No key? Still works**: `guanwei start` runs fine — charting, demos and classics all work; only AI reading needs a key (the page shows a config hint).
+
 ### ⚡ Docker one-liner (no Node needed, easiest)
 
 ```bash
-docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=YOUR_API_KEY ghcr.io/rubyccll/guanwei:latest
+docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=sk-YOUR_REAL_KEY ghcr.io/rubyccll/guanwei:latest
 ```
 
-Open http://localhost:5173 . Stop: `docker stop guanwei`. Other providers: `-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=...` (deepseek / gemini / groq / qwen / custom).
+Open http://localhost:5173 . Stop: `docker stop guanwei`. Other providers: `-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=sk-YOUR_REAL_KEY` (deepseek / gemini / groq / qwen / custom).
 
 ### ⚡ Source installer (fallback)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RubyCcll/guanwei/main/scripts/install.sh | bash
-guanwei setup --key YOUR_API_KEY
+guanwei setup
 guanwei start
 ```
 
@@ -140,7 +143,8 @@ The script installs dependencies, writes `server/.env` (key stays local), and st
 ```bash
 npm link        # install globally (or use ./scripts/guanwei directly)
 
-guanwei setup --key sk-xxx   # configure API key (interactive: guanwei setup)
+guanwei setup                # configure API key (interactive wizard)
+guanwei setup --key sk-xxx   # one-shot (replace sk-xxx with your real key)
 guanwei start                # start (--docker for containers)
 guanwei doctor               # environment self-check (Node/config/ports/deps/version)
 guanwei update               # update to latest (git incremental merge; local config preserved)
