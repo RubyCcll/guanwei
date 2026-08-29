@@ -1,10 +1,28 @@
 // AI 解读路由：/api/ai/interpret（非流式）+ /api/ai/interpret/stream（SSE）
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 import { buildMessages, buildReportMessages, buildStep1Messages, buildStep2Messages } from '../services/promptBuilder.js';
 import { chatOnce, chatStream, activeProvider, providerStatus, lastFinishReason } from '../services/llmProvider.js';
 import { getDivination, attachReport, markAiFailed } from '../services/divineStore.js';
 import { verifyRelatives, fixFamilyRelatives } from '../services/relativesCheck.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// 请求 token → 用户名（与 divine.ts 同策略：有 token 以 token 为准，防 body 自报他人名）
+function authedUsername(req: any): string | null {
+  const tk = String(req.headers['x-guanwei-token'] || '');
+  if (!tk) return null;
+  try {
+    const db = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'db.json'), 'utf-8'));
+    const user = db.users.find((u: any) => u.token && u.token.length === tk.length && crypto.timingSafeEqual(Buffer.from(u.token), Buffer.from(tk)));
+    return user ? user.username : null;
+  } catch { return null; }
+}
+
+// 非流式：token 优先归属
 const router = Router();
 
 // Provider 健康状态
@@ -23,7 +41,8 @@ router.post('/interpret', async (req, res) => {
     if (divineId) {
       const rec = getDivination(divineId);
       if (!rec) return res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
-      if (username && rec.username !== username) return res.status(403).json({ error: 'FORBIDDEN' });
+      const authed = authedUsername(req);
+      if (authed ? authed !== rec.username : (username && rec.username !== username)) return res.status(403).json({ error: 'FORBIDDEN' });
       resultRaw = rec.resultRaw;
       recProfile = rec.profile;
     } else {
@@ -87,7 +106,8 @@ router.post('/interpret/stream', async (req, res) => {
     res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
     return;
   }
-  if (username && rec.username !== username) {
+  const authed = authedUsername(req);
+  if (authed ? authed !== rec.username : (username && rec.username !== username)) {
     res.status(403).json({ error: 'FORBIDDEN' });
     return;
   }

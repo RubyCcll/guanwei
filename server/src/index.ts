@@ -53,6 +53,24 @@ const PORT = process.env.PORT || 3018;
 app.use(cors());
 app.use(express.json());
 
+// ─── AI 接口限流（防 BYOK Key 被刷爆）：per-IP 令牌桶 ───
+const AI_RATE_LIMIT = { windowMs: 60_000, max: 30 };  // 每分钟 30 次（本地单用户无感，公网防刷）
+const aiHits = new Map<string, { count: number; resetAt: number }>();
+app.use('/api/ai', (req, res, next) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const rec = aiHits.get(ip);
+  if (!rec || now > rec.resetAt) {
+    aiHits.set(ip, { count: 1, resetAt: now + AI_RATE_LIMIT.windowMs });
+    return next();
+  }
+  rec.count++;
+  if (rec.count > AI_RATE_LIMIT.max) {
+    return res.status(429).json({ error: 'AI_RATE_LIMITED', message: '请求过于频繁，请稍后再试' });
+  }
+  next();
+});
+
 // 请求日志（联调排查用）
 app.use((req, res, next) => {
   res.on('finish', () => {

@@ -84,7 +84,7 @@ function upsertUser(username: string): DbUser {
   const db = loadDb();
   let user = db.users.find((x: any) => x.username === username);
   if (!user) {
-    user = { username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [] };
+    user = { username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [], token: newToken() };
     db.users.push(user);
     saveDb(db);
     console.log(`[users] 自动建档: ${username}`);
@@ -100,8 +100,12 @@ router.post('/register', async (req, res) => {
   const db = loadDb();
   const existing = db.users.find(u => u.username === name);
   if (existing) {
-    // 云同步自动建档的占位账号（无密语）可被正式注册升级
+    // 占位账号（自动建档、无密语）：升级须持有建档时发放的 claimToken，防任意抢占
     if (!existing.passHash) {
+      const claimToken = String(req.body.claimToken || '');
+      if (!tokenMatches(existing, claimToken)) {
+        return res.status(409).json({ error: 'ACCOUNT_CLAIMED', message: '此名号已被自动建档占用，需持有建档凭据方可注册（或更换名号）' });
+      }
       existing.passHash = await hashPassword(String(password));
       existing.token = newToken();
       if (profile) existing.profile = { ...existing.profile, ...profile };

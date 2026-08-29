@@ -48,4 +48,10 @@ describe('断语库（古籍引证）', () => {
     const block = duanyuPromptBlock('tarot', { cards: [] });
     expect(block).toBe('');
   });
+
+  it('关键词零命中时不兜底注入（L7）', () => {
+    // 八字但盘面不含任何断语关键词（如空盘）→ 不应注入无关断语
+    const block = duanyuPromptBlock('bazi', {});
+    expect(block).toBe('');
+  });
 });

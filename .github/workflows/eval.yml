@@ -1,0 +1,44 @@
+name: Eval Sentry
+
+# AI 解读质量回归哨兵（M2）：降采样跑 MingLi-Bench，防 prompt 改动导致准确率回退
+# 每周一自动跑 + 手动触发（Actions → Eval Sentry → Run workflow）
+# 需要仓库 secret：LLM_DEEPSEEK_KEY（DeepSeek API Key，可与服务端同一把）
+on:
+  schedule:
+    - cron: '0 2 * * 1'   # 每周一 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  eval-sentry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Run eval (sampled 20, guanwei pipeline)
+        working-directory: server
+        env:
+          LLM_PROVIDER: deepseek
+          LLM_DEEPSEEK_KEY: ${{ secrets.LLM_DEEPSEEK_KEY }}
+        run: npx tsx scripts/eval/harness.ts --mode guanwei --limit 20 2>&1 | tail -30
+
+      - name: Archive eval report
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: server/scripts/eval/reports/*.json
+          retention-days: 14

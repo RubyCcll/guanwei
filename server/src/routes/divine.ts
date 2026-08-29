@@ -13,6 +13,7 @@ import { allTarotSpreads } from '../../../shared/core/data/tarotSpreads.js';
 import { createDivination, listDivinations, getDivination, deleteDivination } from '../services/divineStore.js';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -21,24 +22,42 @@ const DB_FILE = path.join(__dirname, '..', 'data', 'db.json');
 const router = Router();
 const MINGPAN_ARTS = ['bazi', 'ziwei', 'astrology'];
 
-// 宽松建档：前端本地注册的用户在此同步建档（与 users.ts upsert 同策略）
+// 宽松建档：前端本地注册的用户在此同步建档（与 users.ts upsert 同策略；建档即发 claimToken 防抢占）
 function ensureUser(username: string): boolean {
   if (!username || typeof username !== 'string') return false;
   try {
     const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
-    if (db.users.some((u: any) => u.username === username)) return true;
-    db.users.push({ username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [] });
+    const exist = db.users.find((u: any) => u.username === username);
+    if (exist) return true;
+    const token = crypto.randomBytes(32).toString('hex');
+    db.users.push({ username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [], token });
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
     console.log('[divine] 自动建档:', username);
     return true;
-  } catch { return false; }
+  } catch (e: any) {
+    console.error('[divine] ensureUser 异常:', e?.message || e);
+    return false;
+  }
+}
+
+// 请求携带的 token → 对应用户名（有 token 则以其为准，堵「query/body 自报 username」越权）
+function authedUsername(req: any): string | null {
+  const tk = String(req.headers['x-guanwei-token'] || '');
+  if (!tk) return null;
+  try {
+    const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+    const user = db.users.find((u: any) => u.token && u.token.length === tk.length && crypto.timingSafeEqual(Buffer.from(u.token), Buffer.from(tk)));
+    return user ? user.username : null;
+  } catch { return null; }
 }
 
 // POST /api/divine —— 起占入库
 router.post('/', (req, res) => {
   const { artId, inputs, profile, question, username, profileId } = req.body || {};
+  const authed = authedUsername(req);
+  const owner = authed || String(username || '');  // 有 token 以 token 为准，防自报他人名
   // 游客不允许
-  if (!ensureUser(username)) {
+  if (!ensureUser(owner)) {
     return res.status(401).json({ error: 'UNAUTHORIZED', message: '请先入馆（登录）再起占' });
   }
   if (!artId || !inputs) return res.status(400).json({ error: '缺少必要参数' });
@@ -124,8 +143,11 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const rec = getDivination(req.params.id);
   if (!rec) return res.status(404).json({ error: 'DIVINE_NOT_FOUND' });
-  // 归属校验：query username 必须与记录一致
-  if (req.query.username !== rec.username) return res.status(403).json({ error: 'FORBIDDEN' });
+  // 归属校验：token 优先；无 token 时 query username 必须与记录一致（向后兼容本地旧前端）
+  const authed = authedUsername(req);
+  if (authed ? authed !== rec.username : String(req.query.username || '') !== rec.username) {
+    return res.status(403).json({ error: 'FORBIDDEN' });
+  }
   res.json({ ...rec, resultRaw: rec.resultRaw, display: rec.display, report: rec.report || null });
 });
 

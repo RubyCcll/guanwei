@@ -49,10 +49,9 @@ export function matchDuanyu(artId: string, resultRaw: unknown, limit = 3): Duany
     const hit = d.tags.filter(t => kws.includes(t)).length + (d.factors || []).filter(f => kws.includes(f)).length;
     return { d, hit };
   }).sort((a, b) => b.hit - a.hit);
-  // 至少命中 1 个关键词才注入（避免无关引证）；全部不命中则按术别取第一条最通用的
+  // 至少命中 1 个关键词才注入（避免无关引证）；零命中不注入
   const matched = scored.filter(s => s.hit > 0);
-  const picked = matched.length > 0 ? matched : [scored[0]];
-  return picked.slice(0, limit).map(s => s.d);
+  return matched.slice(0, limit).map(s => s.d);
 }
 
 // 生成 prompt 引证段（仅 reviewed 条目；未校核 seed 一律不注入）
