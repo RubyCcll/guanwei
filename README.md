@@ -93,25 +93,28 @@ AI 层：多 LLM 适配（OpenAI 兼容 / Google 格式，DeepSeek / Gemini / Gr
 
 ```bash
 npm i -g guanwei
-guanwei setup --key 你的APIKey
+guanwei setup
 guanwei start
 ```
 
 打开 http://localhost:5173 即用。国内用户自动走 npmmirror 加速；升级：`guanwei update`。停止：`guanwei stop`。
 
+> 💡 **配置 Key（`guanwei setup`）**：交互式引导——选服务商 → 粘贴 Key（不回显），写进 `~/.guanwei/.env` 仅本机可读。也可一步到位：`guanwei setup --key sk-你的真实Key`（DeepSeek 等 5 家任选，Key 申请见下文）。
+> 💡 **不配 Key 也能启动**：`guanwei start` 直接跑，排盘/演示/古籍全部可用，仅 AI 解读不可用（页面会提示配置入口）。
+
 ### ⚡ 方式二：Docker 一行启动（免装 Node，最省心）
 
 ```bash
-docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=你的APIKey ghcr.io/rubyccll/guanwei:latest
+docker run -d --name guanwei -p 5173:80 -e LLM_DEEPSEEK_KEY=sk-你的真实Key ghcr.io/rubyccll/guanwei:latest
 ```
 
-打开 http://localhost:5173 即用。停止：`docker stop guanwei`。其他服务商：`-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=你的Key`（deepseek / gemini / groq / qwen / custom 均可）。
+打开 http://localhost:5173 即用。停止：`docker stop guanwei`。其他服务商：`-e LLM_PROVIDER=gemini -e LLM_GEMINI_KEY=sk-你的真实Key`（deepseek / gemini / groq / qwen / custom 均可）。
 
 ### ⚡ 方式三：curl 一键安装（源码方式，备用）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RubyCcll/guanwei/main/scripts/install.sh | bash
-guanwei setup --key 你的APIKey
+guanwei setup
 guanwei start
 ```
 
@@ -126,7 +129,7 @@ guanwei start
 点击按钮 → 云端环境自动装好依赖 → 终端执行：
 
 ```bash
-./scripts/setup.sh --key 你的APIKey
+./scripts/setup.sh --key sk-你的真实Key
 ```
 
 #### 方式五：Docker Compose（多容器）
@@ -134,7 +137,7 @@ guanwei start
 预构建镜像已发布到 GitHub Container Registry（amd64 + arm64 双平台）：
 
 ```bash
-./scripts/setup.sh --docker --key 你的APIKey   # 自动配置 + 拉取镜像 + 启动
+./scripts/setup.sh --docker --key sk-你的真实Key   # 自动配置 + 拉取镜像 + 启动
 # 或手动：
 #   cp server/.env.example server/.env   （填入 Key）
 #   docker compose up -d                  （自动拉取 GHCR 镜像）
@@ -147,7 +150,8 @@ guanwei start
 #### 方式六：本地 Node.js（≥ 22.5，需 node:sqlite 内置支持）
 
 ```bash
-./scripts/setup.sh --key 你的APIKey   # 交互式可直接运行 ./scripts/setup.sh
+./scripts/setup.sh                    # 交互式：选服务商 + 输入 Key
+# 或一步到位：./scripts/setup.sh --key sk-你的真实Key
 ```
 
 脚本自动：安装依赖 → 写入 `server/.env`（Key 仅存本地）→ 启动前后端。打开 http://localhost:5173 → 缘起页注册 → 九术页起占 → 召 AI 成报告。
@@ -159,7 +163,8 @@ guanwei start
 npm link
 # ② 不想全局安装？直接使用：./scripts/guanwei <命令>
 
-guanwei setup --key sk-xxx   # 配置 API Key（交互式：guanwei setup）
+guanwei setup                # 配置 API Key（交互式：选服务商 + 粘贴 Key）
+guanwei setup --key sk-xxx   # 一步到位（sk-xxx 换成你的真实 Key）
 guanwei start                # 启动（--docker 用容器）
 guanwei doctor               # 环境自检（Node/配置/占位密钥/端口/依赖/版本）
 guanwei update               # 更新到最新版（git 增量合并，.env 等本地配置不覆盖）
