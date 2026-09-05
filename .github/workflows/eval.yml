@@ -38,7 +38,7 @@ jobs:
         run: npx tsx scripts/eval/harness.ts --mode guanwei --limit 20 --min-accuracy 0.25
 
       - name: Archive eval report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-report
           path: server/scripts/eval/reports/*.json
