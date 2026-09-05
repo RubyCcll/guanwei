@@ -3,6 +3,16 @@ import type { InterpretationResult } from '@core/engine/tarotEngine';
 
 // 开发环境直连后端（规避 proxy/IPv6 组合的 SSE 不确定性）；生产同域 /api
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/api';
+
+// 云同步 token（登录后 localStorage 会话中保存）：所有需要归属校验的请求带上，
+// 后端有 token 即以 token 解析用户，堵「自报 username」越权（H-NEW1 修复）
+function authHeaders(): Record<string, string> {
+  try {
+    const sess = JSON.parse(localStorage.getItem('guanwei_session') || 'null');
+    if (sess?.token) return { 'X-Guanwei-Token': sess.token };
+  } catch { /* ignore */ }
+  return {};
+}
 // 诊断：全局暴露当前 API 基址
 if (typeof window !== 'undefined') { (window as any).__API_BASE__ = API_BASE; }
 console.log('[观微] API_BASE =', API_BASE);
@@ -11,6 +21,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const res = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders(),
       ...options.headers,
     },
     ...options,
@@ -169,7 +180,7 @@ export async function aiInterpretStream(
   try {
     const res = await fetch(API_BASE + '/ai/interpret/stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(params),
       signal: controller.signal,
     });
@@ -238,12 +249,14 @@ export interface DivineResult {
   divineId: string;
   resultRaw: unknown;
   display?: unknown;
+  /** 起占建档返回的 claimToken（本地占位账号注册升级用，L-NEW1） */
+  claimToken?: string;
 }
 
 export async function apiDivine(username: string, artId: string, inputs: unknown, profile?: unknown, question?: string, _profileId?: string): Promise<DivineResult> {
   const res = await fetch(API_BASE + '/divine', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ username, artId, inputs, profile, question }),
   });
   if (!res.ok) {
@@ -264,19 +277,19 @@ export interface DivineHistoryItem {
 }
 
 export async function apiDivineHistory(username: string, page = 1, pageSize = 20, profileId?: string): Promise<{ list: DivineHistoryItem[]; total: number }> {
-  const res = await fetch(API_BASE + '/divine?username=' + encodeURIComponent(username) + '&page=' + page + '&pageSize=' + pageSize + (profileId ? '&profileId=' + encodeURIComponent(profileId) : ''));
+  const res = await fetch(API_BASE + '/divine?username=' + encodeURIComponent(username) + '&page=' + page + '&pageSize=' + pageSize + (profileId ? '&profileId=' + encodeURIComponent(profileId) : ''), { headers: authHeaders() });
   if (!res.ok) return { list: [], total: 0 };
   return res.json();
 }
 
 export async function apiDivineDetail(id: string, username: string): Promise<Record<string, unknown> | null> {
-  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username));
+  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username), { headers: authHeaders() });
   if (!res.ok) return null;
   return res.json();
 }
 
 export async function apiDivineDelete(id: string, username: string): Promise<boolean> {
-  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username), { method: 'DELETE' });
+  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username), { method: 'DELETE', headers: authHeaders() });
   return res.ok;
 }
 
@@ -330,7 +343,7 @@ export async function apiHourInfer(params: {
 }): Promise<HourInferResult> {
   const res = await fetch(API_BASE + '/hour-infer', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(params),
   });
   if (!res.ok) {

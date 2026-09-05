@@ -53,22 +53,38 @@ const PORT = process.env.PORT || 3018;
 app.use(cors());
 app.use(express.json());
 
-// ─── AI 接口限流（防 BYOK Key 被刷爆）：per-IP 令牌桶 ───
-const AI_RATE_LIMIT = { windowMs: 60_000, max: 30 };  // 每分钟 30 次（本地单用户无感，公网防刷）
-const aiHits = new Map<string, { count: number; resetAt: number }>();
-app.use('/api/ai', (req, res, next) => {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+// ─── 限流（防 BYOK Key 被刷爆 / 无限建占刷库）：per-IP 令牌桶 ───
+// /api/ai：每分钟 30 次（AI 烧 token，重点防护）
+// /api/divine 写：每分钟 60 次（防无限建占刷 SQLite）
+const AI_RATE_LIMIT = { windowMs: 60_000, max: 30 };
+const DIVINE_RATE_LIMIT = { windowMs: 60_000, max: 60 };
+const hits = new Map<string, { count: number; resetAt: number }>();
+// 定期清理过期桶（防内存泄漏，M-NEW3）
+setInterval(() => {
   const now = Date.now();
-  const rec = aiHits.get(ip);
-  if (!rec || now > rec.resetAt) {
-    aiHits.set(ip, { count: 1, resetAt: now + AI_RATE_LIMIT.windowMs });
-    return next();
-  }
-  rec.count++;
-  if (rec.count > AI_RATE_LIMIT.max) {
-    return res.status(429).json({ error: 'AI_RATE_LIMITED', message: '请求过于频繁，请稍后再试' });
-  }
-  next();
+  for (const [k, v] of hits) if (now > v.resetAt) hits.delete(k);
+}, 10 * 60 * 1000).unref();
+
+function rateLimit(limit: { windowMs: number; max: number }) {
+  return (req: any, res: any, next: any) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const rec = hits.get(ip);
+    if (!rec || now > rec.resetAt) {
+      hits.set(ip, { count: 1, resetAt: now + limit.windowMs });
+      return next();
+    }
+    rec.count++;
+    if (rec.count > limit.max) {
+      return res.status(429).json({ error: 'RATE_LIMITED', message: '请求过于频繁，请稍后再试' });
+    }
+    next();
+  };
+}
+app.use('/api/ai', rateLimit(AI_RATE_LIMIT));
+app.use('/api/divine', (req, res, next) => {
+  if (req.method === 'GET') return next();  // 读操作不限制
+  return rateLimit(DIVINE_RATE_LIMIT)(req, res, next);
 });
 
 // 请求日志（联调排查用）

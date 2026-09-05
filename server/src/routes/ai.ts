@@ -22,6 +22,20 @@ function authedUsername(req: any): string | null {
   } catch { return null; }
 }
 
+
+// 解读归属校验（与 divine.resolveOwner 同策略）：正式账号须本人 token，占位账号兼容无 token
+function canReadChart(req: any, recUsername: string, fallbackUsername: string): boolean {
+  const authed = authedUsername(req);
+  if (authed) return authed === recUsername;
+  // 无 token：仅当目标是占位账号（未正式注册）时允许 fallback username
+  if (fallbackUsername && fallbackUsername !== recUsername) return false;
+  try {
+    const db = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'db.json'), 'utf-8'));
+    const user = db.users.find((u: any) => u.username === recUsername);
+    return !user || !user.passHash;  // 占位账号放行
+  } catch { return true; }
+}
+
 // 非流式：token 优先归属
 const router = Router();
 
@@ -41,8 +55,7 @@ router.post('/interpret', async (req, res) => {
     if (divineId) {
       const rec = getDivination(divineId);
       if (!rec) return res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
-      const authed = authedUsername(req);
-      if (authed ? authed !== rec.username : (username && rec.username !== username)) return res.status(403).json({ error: 'FORBIDDEN' });
+      if (!canReadChart(req, rec.username, String(username || ''))) return res.status(403).json({ error: 'FORBIDDEN' });
       resultRaw = rec.resultRaw;
       recProfile = rec.profile;
     } else {
@@ -106,8 +119,7 @@ router.post('/interpret/stream', async (req, res) => {
     res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
     return;
   }
-  const authed = authedUsername(req);
-  if (authed ? authed !== rec.username : (username && rec.username !== username)) {
+  if (!canReadChart(req, rec.username, String(username || ''))) {
     res.status(403).json({ error: 'FORBIDDEN' });
     return;
   }

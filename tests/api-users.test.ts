@@ -119,20 +119,31 @@ describe('云同步鉴权（写他人档案须本人 token）', () => {
     expect(res.status).toBe(401);
   });
 
-  it('登录返回与注册一致的 token（同一账号可登录换 token）', async () => {
-    const name = '登鉴' + Date.now().toString().slice(-4);
+  it('登录轮换 token：新 token 有效、旧 token 失效（M-NEW2）', async () => {
+    const name = '轮换' + Date.now().toString().slice(-4);
     let res = await fetch(BASE + '/register', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: name, password: 'pw1234' }),
     });
     const reg = await res.json();
+    const oldToken = reg.token;
+    // 旧 token 读档案 → 200（注册后未轮换仍有效）
+    res = await fetch(BASE + '/' + name + '/profile', { headers: { 'X-Guanwei-Token': oldToken } });
+    expect(res.status).toBe(200);
+    // 登录 → 应返回新 token（轮换）
     res = await fetch(BASE + '/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: name, password: 'pw1234' }),
     });
-    expect(res.status).toBe(200);
     const login = await res.json();
-    expect(login.token).toBe(reg.token);
+    expect(login.token).toBeTruthy();
+    expect(login.token).not.toBe(oldToken);
+    // 旧 token 已失效 → 401
+    res = await fetch(BASE + '/' + name + '/profile', { headers: { 'X-Guanwei-Token': oldToken } });
+    expect(res.status).toBe(401);
+    // 新 token 有效 → 200
+    res = await fetch(BASE + '/' + name + '/profile', { headers: { 'X-Guanwei-Token': login.token } });
+    expect(res.status).toBe(200);
   });
 });
 
@@ -188,10 +199,10 @@ describe('H1 安全加固（claimToken 抢占防护 + 越权防护）', () => {
       body: JSON.stringify({ username: a, password: 'pw1234' }),
     });
     const tokA = (await res.json()).token;
-    await fetch(BASE + '/register', {
+    const regB = await (await fetch(BASE + '/register', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: b, password: 'pw1234' }),
-    });
+    })).json();
     // 甲起占
     res = await fetch('http://localhost:3018/api/divine', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Guanwei-Token': tokA },
@@ -199,11 +210,63 @@ describe('H1 安全加固（claimToken 抢占防护 + 越权防护）', () => {
     });
     expect(res.status).toBe(200);
     const divineId = (await res.json()).divineId;
-    // 用乙的 token 读甲的记录 → 403
+    // 无 token + 目标是正式账号甲 → 401（H-NEW1：不再允许自报 username 越权）
+    res = await fetch('http://localhost:3018/api/divine/' + divineId + '?username=' + a);
+    expect(res.status).toBe(401);
+    // 乙的 token 读甲的记录 → 403（token 归属不匹配）
     res = await fetch('http://localhost:3018/api/divine/' + divineId + '?username=' + a, {
-      headers: { 'X-Guanwei-Token': 'bogus' },
+      headers: { 'X-Guanwei-Token': regB.token },
     });
-    // 无有效 token → 403（query 自报 a 但无 token 时向后兼容放行？——v1.2.4 策略：无 token 时按 query 校验）
-    expect([200, 403]).toContain(res.status);
+    expect(res.status).toBe(403);
+    // 甲自己的 token 读自己记录 → 200
+    res = await fetch('http://localhost:3018/api/divine/' + divineId + '?username=' + a, {
+      headers: { 'X-Guanwei-Token': tokA },
+    });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('H-NEW2/3：divine 历史列表与删除鉴权', () => {
+  const BASE = 'http://localhost:3018/api/users';
+
+  it('正式账号：无 token 列/删被拒；他人 token 列/删被拒；本人 token 放行', async () => {
+    const a = '列删' + Date.now().toString().slice(-4);
+    const b = '删乙' + Date.now().toString().slice(-4);
+    let res = await fetch(BASE + '/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: a, password: 'pw1234' }),
+    });
+    const tokA = (await res.json()).token;
+    const regB = await (await fetch(BASE + '/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: b, password: 'pw1234' }),
+    })).json();
+    // 甲起占两条
+    for (let i = 0; i < 2; i++) {
+      res = await fetch('http://localhost:3018/api/divine', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Guanwei-Token': tokA },
+        body: JSON.stringify({ username: a, artId: 'liuyao', inputs: {} }),
+      });
+      expect(res.status).toBe(200);
+    }
+    // 无 token 列甲历史 → 401（H-NEW2）
+    res = await fetch('http://localhost:3018/api/divine?username=' + a);
+    expect(res.status).toBe(401);
+    // 乙 token 列"甲的 URL" → 按 token 用户（乙）返回，拿不到甲数据（空列表 200）
+    res = await fetch('http://localhost:3018/api/divine?username=' + a, { headers: { 'X-Guanwei-Token': regB.token } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).list.length).toBe(0);
+    // 甲 token 列自己历史 → 200 且 2 条
+    res = await fetch('http://localhost:3018/api/divine?username=' + a, { headers: { 'X-Guanwei-Token': tokA } });
+    expect(res.status).toBe(200);
+    const list = await res.json();
+    expect(list.list.length).toBe(2);
+    const id = list.list[0].divineId;
+    // 无 token 删 → 401（H-NEW3）
+    res = await fetch('http://localhost:3018/api/divine/' + id + '?username=' + a, { method: 'DELETE' });
+    expect(res.status).toBe(401);
+    // 甲 token 删自己 → 200
+    res = await fetch('http://localhost:3018/api/divine/' + id + '?username=' + a, { method: 'DELETE', headers: { 'X-Guanwei-Token': tokA } });
+    expect(res.status).toBe(200);
   });
 });

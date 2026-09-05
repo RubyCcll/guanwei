@@ -23,6 +23,8 @@ interface DbUser {
   records: Record<string, unknown>[];
   /** 登录态 token（注册/登录时签发，云同步写接口须携带校验归属） */
   token?: string;
+  /** token 过期时间（ms；30 天滚动，登录时轮换续期） */
+  tokenExpires?: number;
 }
 
 interface Db { users: DbUser[] }
@@ -47,13 +49,15 @@ async function hashPassword(pw: string): Promise<string> {
   return 'scrypt$' + salt.toString('hex') + '$' + key.toString('hex');
 }
 
-// 登录态 token：随机 32 字节 hex；写接口（profile/records/samples）须携带且归属匹配
+const TOKEN_TTL = 30 * 24 * 3600 * 1000;  // 30 天
+
 function newToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
 function tokenMatches(user: DbUser, token: string | undefined): boolean {
   if (!token || !user.token) return false;
+  if (user.tokenExpires && Date.now() > user.tokenExpires) return false;  // 过期即失效
   // 恒时比较，防时序侧信道
   const a = Buffer.from(token), b = Buffer.from(user.token);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -84,7 +88,7 @@ function upsertUser(username: string): DbUser {
   const db = loadDb();
   let user = db.users.find((x: any) => x.username === username);
   if (!user) {
-    user = { username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [], token: newToken() };
+    user = { username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [], token: newToken(), tokenExpires: Date.now() + TOKEN_TTL };
     db.users.push(user);
     saveDb(db);
     console.log(`[users] 自动建档: ${username}`);
@@ -108,13 +112,14 @@ router.post('/register', async (req, res) => {
       }
       existing.passHash = await hashPassword(String(password));
       existing.token = newToken();
+      existing.tokenExpires = Date.now() + TOKEN_TTL;
       if (profile) existing.profile = { ...existing.profile, ...profile };
       saveDb(db);
       return res.json({ ok: true, upgraded: true, token: existing.token, user: { username: existing.username, profile: existing.profile, samples: existing.samples } });
     }
     return res.status(400).json({ error: '此名号已有人用' });
   }
-  const user: DbUser = { username: name, passHash: await hashPassword(String(password)), createdAt: Date.now(), profile: profile || {}, samples: [], records: [], token: newToken() };
+  const user: DbUser = { username: name, passHash: await hashPassword(String(password)), createdAt: Date.now(), profile: profile || {}, samples: [], records: [], token: newToken(), tokenExpires: Date.now() + TOKEN_TTL };
   db.users.push(user);
   saveDb(db);
   res.json({ ok: true, token: user.token, user: { username: user.username, profile: user.profile, samples: user.samples } });
@@ -134,6 +139,10 @@ router.post('/login', async (req, res) => {
     saveDb(db);
     console.log(`[users] 密码哈希已升级为 scrypt: ${user.username}`);
   }
+  // 登录成功 → 轮换 token（旧 token 即失效；防泄露长期有效）
+  user.token = newToken();
+  user.tokenExpires = Date.now() + TOKEN_TTL;
+  saveDb(db);
   res.json({ ok: true, token: user.token, user: { username: user.username, profile: user.profile, samples: user.samples } });
 });
 

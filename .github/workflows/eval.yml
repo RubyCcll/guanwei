@@ -34,7 +34,8 @@ jobs:
         env:
           LLM_PROVIDER: deepseek
           LLM_DEEPSEEK_KEY: ${{ secrets.LLM_DEEPSEEK_KEY }}
-        run: npx tsx scripts/eval/harness.ts --mode guanwei --limit 20 2>&1 | tail -30
+        # --min-accuracy 0.25：20 题降采样噪声大（±20pp），低于 25% 判定明显回退 → job 失败告警（M4 闭环）
+        run: npx tsx scripts/eval/harness.ts --mode guanwei --limit 20 --min-accuracy 0.25
 
       - name: Archive eval report
         uses: actions/upload-artifact@v4

@@ -36,6 +36,7 @@ const CATEGORY = getArg('--category');
 const WORKERS = Math.max(1, parseInt(getArg('--workers', '3'), 10) || 3);
 const VERBOSE = hasArg('--verbose');
 const FOCUS = hasArg('--focus');
+const MIN_ACC = parseFloat(getArg('--min-accuracy', '0'));  // 低于该准确率则退出码 1（CI 告警闭环用）
 const ENGINE = getArg('--engine', 'iztro'); // iztro（基准预排紫微盘）| own（观微自研八字引擎）
 
 if (MODE !== 'baseline' && MODE !== 'guanwei') { console.error('--mode 仅支持 baseline|guanwei'); process.exit(1); }
@@ -228,6 +229,10 @@ for (const [k, v] of Object.entries(byCat).sort((a, b) => b[1].total - a[1].tota
   console.log('  ' + k.padEnd(4) + ' ' + ((v.pass / v.total) * 100).toFixed(1) + '%  (' + v.pass + '/' + v.total + ')');
 }
 console.log('\n报告已保存: ' + fname);
+if (MIN_ACC > 0 && report.accuracy < MIN_ACC) {
+  console.error('\n❌ 准确率 ' + (report.accuracy * 100).toFixed(1) + '% 低于阈值 ' + (MIN_ACC * 100).toFixed(0) + '%——质量回退，退出码 1');
+  process.exit(1);
+}
 if (!VERBOSE) {
   const misses = results.filter(r => !r.pass);
   console.log('\n答错样本（前 10）:');
