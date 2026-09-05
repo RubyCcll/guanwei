@@ -51,7 +51,7 @@ npx tsx scripts/eval/harness.ts --mode guanwei --category 婚姻 --limit 30
 
 1. **年龄口径**：大限定位疑似虚岁口径，边缘年份需 age/age+1 双查
 2. **无年份事件题**：「何年结婚」类需流年四化/星动推理注入（衔接方向 D 考时校准）
-3. **断语库未注入**：`shared/core/data/duanyu.ts` 全部为 seed 状态，按规范未 reviewed 不注入；reviewed ≥ 10 条后接入
+3. ~~断语库未注入~~（2026-08-29 已解决）：duanyu.ts 已 15/15 reviewed 并接入 prompt（matchDuanyu 按盘面关键词匹配，零命中不注入）
 4. **Agent 编排未接入**：当前是「单轮 prompt 注入」管线；9 Agent×Skills 编排接入后作为 guanwei-pro 模式
 5. **评测集与观微术数体系差异**：基准为八字+紫微体系，观微其他七术暂无评测集（可自建）
 6. **八字侧未接入**：当前全用 iztro 紫微盘，可加四柱五行十神注入对照
