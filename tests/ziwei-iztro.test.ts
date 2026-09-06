@@ -28,6 +28,8 @@ const CASES: [string, number, number, string][] = [
   ['1996-12-24', 7, 38, '男'], ['1990-06-15', 12, 0, '男'], ['1984-02-02', 8, 30, '女'],
   ['2000-01-01', 6, 15, '男'], ['1974-04-28', 16, 40, '男'], ['2008-08-08', 20, 8, '女'],
   ['1966-05-16', 10, 20, '男'], ['2020-01-25', 14, 50, '女'], ['1958-09-12', 3, 20, '男'], ['2031-06-30', 22, 45, '女'],
+  // 1991-08-17 16:30 山东德州武城（报告案例）：命宫子·天同+太阴 土五局 身宫辰(官禄) 庚子 紫微巳(交友)
+  ['1991-08-17', 16, 30, '男'],
 ];
 
 function ownCalc(dateStr: string, h: number, gender: string) {
@@ -74,6 +76,18 @@ describe('紫微排盘 vs iztro 事实标准', () => {
         if (iFu[s] !== undefined) {
           expect(DIZHI[g.fuStars[s]], dateStr + ' ' + s).toBe(iFu[s]);
         }
+      }
+    }
+  });
+  it('主星亮度（10 案例 × 14 星，表源=iztro STARS_INFO）', () => {
+    for (const [dateStr, h, , gender] of CASES) {
+      const hourIndex = Math.floor(((h + 1) % 24) / 2);
+      const it = astro.bySolar(dateStr, hourIndex, gender, true, 'zh-CN');
+      const iB: Record<string, string> = {};
+      it.palaces.forEach((p: any) => p.majorStars?.forEach((s: any) => { if (MAJORS.includes(s.name) && !iB[s.name]) iB[s.name] = s.brightness; }));
+      const g = ownCalc(dateStr, h, gender);
+      for (const s of MAJORS) {
+        expect(g.brightness[s], dateStr + ' ' + s).toBe(iB[s]);
       }
     }
   });

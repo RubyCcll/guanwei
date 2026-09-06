@@ -157,10 +157,11 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   });
 
   /* 3.1 昼夜调整（修正反馈：太阳喜昼、太阴喜夜，brightness 只按宫位未计生时昼夜）
-     规则：昼生（卯~申时支 2..7）太阳+1 级、太阴-1 级；夜生反之；庙/陷为界不越 */
-  const LV: Record<string, number> = { 陷: 1, 平: 2, 利: 3, 得: 4, 旺: 5, 庙: 6 };
+     规则：昼生（卯~申时支 3..8，时辰序 0=子）太阳+1 级、太阴-1 级；夜生反之；庙/陷为界不越
+     （2026-09 修正：原 2..7 实为寅~未，把凌晨寅时误判为昼、下午申时误判为夜；昼夜分界按卯~申对齐） */
+  const LV: Record<string, number> = { 不: 1, 陷: 1, 平: 2, 利: 3, 得: 4, 旺: 5, 庙: 6 };
   const LV_NAME = ['', '陷', '平', '利', '得', '旺', '庙'];
-  const dayNight: 'day' | 'night' = correctedHour >= 2 && correctedHour <= 7 ? 'day' : 'night';
+  const dayNight: 'day' | 'night' = correctedHour >= 3 && correctedHour <= 8 ? 'day' : 'night';
   const effBrightness: Record<string, string> = {};
   for (const s of Object.keys(brightness)) {
     let lv = LV[brightness[s]] || 2;

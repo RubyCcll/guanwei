@@ -260,8 +260,9 @@ export function liurenCalc(dt: string | Date): LiurenResult {
     壬: ['卯', '巳'], 癸: ['卯', '巳'],
     辛: ['午', '寅'],
   };
-  // 昼占：卯时至酉时前（hourIndex 2..7）；夜占：酉时至卯时前
-  const isDay = hourIndex >= 2 && hourIndex < 8;
+  // 昼占：卯时至申时（hourIndex 3..8，时辰序 0=子）；夜占：酉时至寅时
+  // （2026-09 修正：原 2..7 实为寅~未，凌晨寅时误判昼占、下午申时误判夜占，按卯~申对齐）
+  const isDay = hourIndex >= 3 && hourIndex <= 8;
   const guiRen = (GUIREN[dayGZ[0]] || ['丑', '未'])[isDay ? 0 : 1];
   // 天将序列（贵人起）：贵人 螣蛇 朱雀 六合 勾陈 青龙 天空 白虎 太常 玄武 太阴 天后
   const JIANG_SEQ = ['贵人', '螣蛇', '朱雀', '六合', '勾陈', '青龙', '天空', '白虎', '太常', '玄武', '太阴', '天后'];
