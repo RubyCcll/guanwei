@@ -2,6 +2,7 @@
 import { NAYIN, ganZhiIndex, mod } from '../data/ganzhi';
 import { GAN } from '../data/ganzhi';
 import { trueSolarTime } from './trueSolarTime';
+import { daysSince } from './calendar';
 import type { ZiweiInput, ZiweiResult } from '../types';
 
 import { PALACE_NAMES, ZW_SIHUA, ZW_BRIGHTNESS, LU_CUN, KUI_YUE, TIAN_MA, HUO_START, LING_START, ZW_GEJU } from '../data/ziwei';
@@ -124,6 +125,21 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   fuStars['天哭'] = mod(yearZhiIdx + 6, 12);      // 午起子年顺行
   fuStars['天虚'] = mod(fuStars['天哭'] + 6, 12);
 
+  /* 1.6 杂曜（修正反馈：辅星/杂曜覆盖有限，2026-09-05 补常用）
+     三台/八座：日支起子时顺/逆数至生时（日支由公历日期推，同八字历元） */
+  const dayZhiIdx = input.solarDate
+    ? mod(daysSince(input.solarDate[0], input.solarDate[1], input.solarDate[2]) + 55, 60) % 12
+    : 0;
+  fuStars['三台'] = mod(dayZhiIdx + correctedHour, 12);
+  fuStars['八座'] = mod(dayZhiIdx - correctedHour, 12);
+  // 天才/天寿（年干禄存、年支起法）
+  const luIdx2 = LU_CUN[gan] ? zhiIdx(LU_CUN[gan]) : 0;
+  fuStars['天才'] = mod(luIdx2 + correctedHour, 12);
+  fuStars['天寿'] = mod(yearZhiIdx + 5, 12);        // 子年起未宫顺行（近似，无古籍精确法时按口诀）
+  // 恩光/天贵（年干禄存宫起，恩光顺行、天贵逆行）
+  fuStars['恩光'] = mod(luIdx2 + correctedHour, 12);
+  fuStars['天贵'] = mod(luIdx2 + 6 - correctedHour, 12);
+
   /* 2. 生年四化 */
   const sh = ZW_SIHUA[gan] || { lu: '', quan: '', ke: '', ji: '' };
   const sihua = { lu: sh.lu, quan: sh.quan, ke: sh.ke, ji: sh.ji };
@@ -139,6 +155,19 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
     const pos = zwStars[s];
     brightness[s] = (ZW_BRIGHTNESS[s] || [])[pos] || '平';
   });
+
+  /* 3.1 昼夜调整（修正反馈：太阳喜昼、太阴喜夜，brightness 只按宫位未计生时昼夜）
+     规则：昼生（卯~申时支 2..7）太阳+1 级、太阴-1 级；夜生反之；庙/陷为界不越 */
+  const LV: Record<string, number> = { 陷: 1, 平: 2, 利: 3, 得: 4, 旺: 5, 庙: 6 };
+  const LV_NAME = ['', '陷', '平', '利', '得', '旺', '庙'];
+  const dayNight: 'day' | 'night' = correctedHour >= 2 && correctedHour <= 7 ? 'day' : 'night';
+  const effBrightness: Record<string, string> = {};
+  for (const s of Object.keys(brightness)) {
+    let lv = LV[brightness[s]] || 2;
+    if (s === '太阳') lv += dayNight === 'day' ? 1 : -1;
+    if (s === '太阴') lv += dayNight === 'night' ? 1 : -1;
+    effBrightness[s] = LV_NAME[Math.max(1, Math.min(6, lv))];
+  }
 
   /* 4. 格局识别 */
   const geju: ZiweiResult['geju'] = [];
@@ -191,6 +220,30 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   if (zwStars['廉贞'] === zwStars['七杀']) pushGeju('廉贞七杀', '廉贞七杀同守 ' + DIZHI[zwStars['廉贞']] + ' 宫');
   // 命无正曜
   if (mingStars.length === 0) pushGeju('命无正曜', '命宫无十四主星，借对宫 ' + [...new Set(duiStars)].join('、') + ' 为用');
+  // 水澄桂萼：太阴在子庙且坐命/命三方（传统格须太阴得地于命局关键位）
+  const moonPos = zwStars['太阴'];
+  const moonInKey = moonPos !== undefined && (moonPos === ming || sanhe.includes(moonPos));
+  if (moonInKey && effBrightness['太阴'] === '庙' && DIZHI[moonPos] === '子') pushGeju('水澄桂萼', '太阴' + DIZHI[moonPos] + '宫庙旺' + (moonPos === ming ? '坐命' : '照命三方'));
+  // 明珠出海：太阴在未（位置 5）庙（同上：坐命/三方）
+  if (moonInKey && effBrightness['太阴'] === '庙' && DIZHI[moonPos] === '未') pushGeju('明珠出海', '太阴' + DIZHI[moonPos] + '宫庙旺' + (moonPos === ming ? '坐命' : '照命三方'));
+  // 日照雷门：太阳在卯（位置 1）庙旺 + 昼生
+  const sunPos = zwStars['太阳'];
+  if (sunPos !== undefined && DIZHI[sunPos] === '卯' && effBrightness['太阳'] !== '陷' && effBrightness['太阳'] !== '平') pushGeju('日照雷门', '太阳坐卯宫' + effBrightness['太阳'] + '，' + (dayNight === 'day' ? '昼生' : '夜生') + '人');
+  // 日月并明：太阳庙旺于卯辰巳 且 太阴庙旺于酉戌亥
+  const sunGood = sunPos !== undefined && ['卯', '辰', '巳'].includes(DIZHI[sunPos]) && effBrightness['太阳'] !== '陷' && effBrightness['太阳'] !== '平';
+  const moonGood = moonPos !== undefined && ['酉', '戌', '亥'].includes(DIZHI[moonPos]) && effBrightness['太阴'] !== '陷' && effBrightness['太阴'] !== '平';
+  if (sunGood && moonGood) pushGeju('日月并明', '太阳' + DIZHI[sunPos] + effBrightness['太阳'] + '、太阴' + DIZHI[moonPos] + effBrightness['太阴'] + '皆得地');
+
+  /* 4.1 空宫借对宫（修正反馈：空宫须借对宫主星看）——十二宫逐一输出所借主星 */
+  const borrowedStars: Record<number, string[]> = {};
+  for (let i = 0; i < 12; i++) {
+    const p = palaces[i];
+    const own = Object.keys(zwStars).filter(s => zwStars[s] === p);
+    if (own.length === 0) {
+      const opp = mod(p + 6, 12);
+      borrowedStars[i] = Object.keys(zwStars).filter(s => zwStars[s] === opp);
+    }
+  }
 
   /* ===== 大限与流年（原逻辑保留） ===== */
   const JU_AGE: Record<string, number> = { 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
@@ -214,5 +267,5 @@ export function ziweiCalc(input: ZiweiInput): ZiweiResult {
   const liunianPalaceName = PALACE_NAMES[Object.keys(palaces).find(k => palaces[Number(k)] === liunianIdx) ? Number(Object.keys(palaces).find(k => palaces[Number(k)] === liunianIdx)) : 0];
   const liunianStars = Object.keys(zwStars).filter(s => zwStars[s] === liunianIdx);
 
-  return { ming, shen, zwPos, zwStars, fuStars, palaces, juName, mingGZ, nayin, correctedHour, dayun, curDayunIdx, nominalAge, liunianIdx, liunianPalaceName, liunianStars, startAge, forward, sihua, sihuaPos, brightness, geju };
+  return { ming, shen, zwPos, zwStars, fuStars, palaces, juName, mingGZ, nayin, correctedHour, dayun, curDayunIdx, nominalAge, liunianIdx, liunianPalaceName, liunianStars, startAge, forward, sihua, sihuaPos, brightness, geju, dayNight, effBrightness, borrowedStars };
 }

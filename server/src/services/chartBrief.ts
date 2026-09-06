@@ -61,6 +61,16 @@ function ziweiBrief(r: ZiweiResult): string {
     palaceLines.push(PALACE_NAMES[i] + parts.join('｜'));
   }
   L.push('【十二宫事实（解读六亲/宫位必须逐字引用，不得推算或编造）】' + palaceLines.join('；') + '。');
+  // 昼夜与有效亮度（修正反馈：太阳喜昼、太阴喜夜——AI 论日月亮度须用有效值）
+  if (r.dayNight) L.push('【昼夜】' + (r.dayNight === 'day' ? '昼生（太阳得时、太阴减力）' : '夜生（太阴得时、太阳减力）') + '——论太阳/太阴亮度以【有效亮度】为准。');
+  if (r.effBrightness) L.push('【有效亮度（昼夜调整后）】' + Object.entries(r.effBrightness).map(([s, b]) => s + b).join('、') + '。');
+  // 空宫借对宫（修正反馈：空宫须借对宫看，勿论作真空）
+  if (r.borrowedStars) {
+    const PALACE2 = ['命', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母'];
+    const bl = Object.entries(r.borrowedStars).filter(([, v]) => v.length > 0)
+      .map(([k, v]) => PALACE2[+k] + '宫空借对宫' + [...new Set(v)].join('、')).join('；');
+    if (bl) L.push('【空宫借星（空宫须借对宫主星论之，非真空）】' + bl + '。');
+  }
   if (r.geju?.length) L.push('【格局】' + r.geju.map(g => g.name + '(' + g.ji + ')').join('、') + '。');
   if (r.dayun?.length) L.push('【大限】当前第' + ((r.curDayunIdx ?? 0) + 1) + '大限（' + r.dayun[r.curDayunIdx ?? 0].start + '-' + r.dayun[r.curDayunIdx ?? 0].end + '岁，行至' + DIZHI[r.dayun[r.curDayunIdx ?? 0].palaceIdx] + '宫）。');
   L.push('【流年】' + (r.nominalAge ?? '') + '虚岁流年命宫落' + (r.liunianPalaceName || '') + '（' + DIZHI[r.liunianIdx ?? 0] + '），主星' + (r.liunianStars?.join('、') || '未临') + '。');
