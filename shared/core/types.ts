@@ -89,6 +89,10 @@ export interface ZiweiResult {
   sihuaPos: { lu?: number; quan?: number; ke?: number; ji?: number };  // 四化落宫位
   brightness: Record<string, string>;    // 十四主星亮度（'庙'|'旺'|'得'|'利'|'平'|'陷'）
   geju: { key: string; name: string; ji: '吉' | '凶' | '平'; desc: string; why: string }[];  // 格局
+  // ─── 修正层（2026-09-05 算法边界反馈）───
+  dayNight?: 'day' | 'night';           // 昼生/夜生（按生时：卯~申为昼，酉~寅为夜）
+  effBrightness?: Record<string, string>;  // 昼夜调整后有效亮度（太阳喜昼、太阴喜夜）
+  borrowedStars?: Record<number, string[]>; // 空宫借对宫主星（十二宫位 → 所借主星）
 }
 
 // 奇门输入输出
