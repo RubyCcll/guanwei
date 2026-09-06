@@ -1,0 +1,23 @@
+{
+  "name": "guanwei-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "观微排盘 API（/v1 · 开放分发，复用 shared/core 单一算法副本）",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "mcp": "tsx src/mcp.ts",
+    "api": "tsx src/server.ts"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "tsx": "^4.7.0"
+  },
+  "bin": {
+    "guanwei-mcp": "src/mcp.ts"
+  }
+}

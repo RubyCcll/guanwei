@@ -6,7 +6,23 @@
 - **次版本**：新功能（向后兼容）
 - **补丁**：Bug 修复与小幅优化
 
-当前版本：**v1.2.7**（已发布）→ 后续迭代 **v1.2.x**（补丁）；破坏性变更进入 **v2.0.0**。
+当前版本：**v1.3.0**（已发布）→ 后续迭代 **v1.3.x**（补丁）；破坏性变更进入 **v2.0.0**。
+
+## [1.3.0] - 2026-09-05
+
+### ✨ 新功能
+- **开放分发（商业化 Gate 1 前哨）**：排盘能力可被程序调用——
+  - **REST API**（packages/guanwei-api，免费无 Key）：POST /v1/chart 九术排盘 + GET /v1/arts 能力清单（参数 schema）；协议风格与未来托管 API 一致
+  - **MCP Server**（零依赖 stdio 实现）：Claude Code / Cursor 等 agent 经 guanwei_chart 工具直接排盘（initialize/tools/list/tools/call 全协议）
+  - **访问日志**：每次调用记录时间/方法/术名（Gate 1 需求验证数据）
+- **chartCalc 统一调度**：九术排盘 switch 收敛为 shared/core/engine/chart.ts 单一函数——divine 路由与 /v1/chart/MCP 同源，杜绝各层另写副本
+- **真·多 Agent 编排 v1（guanwei-pro 雏形）**：紫微三步链式推理（结构解构→宫位专题→行运推演→汇总成报告），每步独立调用、上步结论注入下步；POST /api/ai/interpret 带 `orchestrate:"ziwei-deep"` 启用
+
+### 🧪 测试
+- 新增 9 项：chartCalc 统一调度 5、MCP 握手 2、编排器三步链 2——合计 **244 项全过**
+
+### 📝 文档
+- README 新增「开放分发」章节（MCP 配置 + REST 用法）
 
 ## [1.2.7] - 2026-09-05
 

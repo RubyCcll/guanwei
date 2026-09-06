@@ -53,7 +53,7 @@ const ZHANWEN_SAMPLE = {
   disclaimer: '免责声明',
   suitability: { suitable: true, note: '适问性说明 2-3 句', suggestion: '换问建议或无' },
 };
-const MINGPAN_TEMPLATE = JSON.stringify(MINGPAN_SAMPLE, null, 2);
+export const MINGPAN_TEMPLATE = JSON.stringify(MINGPAN_SAMPLE, null, 2);
 const ZHANWEN_TEMPLATE = JSON.stringify(ZHANWEN_SAMPLE, null, 2);
 const MINGPAN_ARTS = ['bazi', 'ziwei', 'astrology'];
 
@@ -80,7 +80,7 @@ function hourUnknownNote(profile?: unknown): string {
 
 // 命主已知人生经历 → 解读校准注入（报告须呼应该年份事件、不得与其矛盾）
 // 当前公历时间事实：注入给 AI，防止其自行推算年份（占问类无出生档案，AI 不知道"现在是哪年"）
-function nowFact(): string {
+export function nowFact(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
   const week = '日一二三四五六'[d.getDay()];
