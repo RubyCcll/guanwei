@@ -6,7 +6,19 @@
 - **次版本**：新功能（向后兼容）
 - **补丁**：Bug 修复与小幅优化
 
-当前版本：**v1.3.0**（已发布）→ 后续迭代 **v1.3.x**（补丁）；破坏性变更进入 **v2.0.0**。
+当前版本：**v1.3.1**（已发布）→ 后续迭代 **v1.3.x**（补丁）；破坏性变更进入 **v2.0.0**。
+
+## [1.3.1] - 2026-09-05
+
+### ✨ 新功能
+- **MCP HTTP/SSE 传输（国内客户端）**：MCP 协议核心抽为共享 handleMcpRequest，新增两条 HTTP 通道——
+  - `/mcp`（Streamable HTTP 新版标准，POST 收请求返回 JSON/SSE）
+  - `/mcp/sse` + `/mcp/messages`（旧版 SSE 传输）
+  - WorkBuddy / ima / Trae 等国内客户端配置 `type:"http"` 或 `type:"sse"` 填 URL 即可接入（README 有配置示例）
+- stdio 主循环加直接运行守卫：HTTP 网关 import mcp.ts 不会挂起等 stdin
+
+### 🧪 测试
+- 新增 3 项 HTTP MCP（Streamable HTTP initialize/排盘、SSE 建连、旧版 messages）——合计 **247 项全过**
 
 ## [1.3.0] - 2026-09-05
 

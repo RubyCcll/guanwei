@@ -11,8 +11,8 @@ const ART_NAMES: Record<string, string> = {
 };
 
 // ─── MCP 协议 ───
-interface McpRequest { jsonrpc: '2.0'; id?: number | string | null; method: string; params?: any }
-interface McpResponse { jsonrpc: '2.0'; id: number | string | null; result?: any; error?: { code: number; message: string } }
+export interface McpRequest { jsonrpc: '2.0'; id?: number | string | null; method: string; params?: any }
+export interface McpResponse { jsonrpc: '2.0'; id: number | string | null; result?: any; error?: { code: number; message: string } }
 
 function send(msg: McpResponse): void {
   process.stdout.write(JSON.stringify(msg) + '\n');
@@ -63,7 +63,32 @@ function toolsCall(params: any): { result?: any; error?: { code: number; message
   }
 }
 
-// ─── stdio 主循环 ───
+// ─── 协议核心：处理单个 JSON-RPC 请求 → 返回响应对象（stdio 与 HTTP/SSE 共用）───
+export function handleMcpRequest(req: McpRequest): McpResponse | null {
+  if (req.method === 'initialize') {
+    return { jsonrpc: '2.0', id: req.id ?? null, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'guanwei-mcp', version: '1.3.0' } } };
+  }
+  if (req.method === 'notifications/initialized' || req.method === 'notifications/cancelled') {
+    return null;  // 通知无响应
+  }
+  if (req.method === 'tools/list') {
+    return { jsonrpc: '2.0', id: req.id ?? null, result: toolsList() };
+  }
+  if (req.method === 'tools/call') {
+    const r = toolsCall(req.params);
+    if (r.error) return { jsonrpc: '2.0', id: req.id ?? null, error: r.error };
+    return { jsonrpc: '2.0', id: req.id ?? null, result: r.result };
+  }
+  if (req.method === 'ping') {
+    return { jsonrpc: '2.0', id: req.id ?? null, result: {} };
+  }
+  return { jsonrpc: '2.0', id: req.id ?? null, error: { code: -32601, message: '未知方法: ' + req.method } };
+}
+
+// ─── stdio 主循环（本地 agent：Claude Code / Cursor）───
+// 仅直接运行（npx tsx src/mcp.ts）时启用；被 HTTP 网关 import 时不挂 stdin
+const isDirectRun = process.argv[1] && process.argv[1].endsWith('mcp.ts');
+if (isDirectRun) {
 let buf = '';
 process.stdin.setEncoding('utf-8');
 process.stdin.on('data', (chunk: string) => {
@@ -75,21 +100,9 @@ process.stdin.on('data', (chunk: string) => {
     if (!line) continue;
     let req: McpRequest;
     try { req = JSON.parse(line); } catch { continue; }
-    if (req.method === 'initialize') {
-      send({ jsonrpc: '2.0', id: req.id ?? null, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'guanwei-mcp', version: '1.3.0' } } });
-    } else if (req.method === 'notifications/initialized') {
-      // no response for notifications
-    } else if (req.method === 'tools/list') {
-      send({ jsonrpc: '2.0', id: req.id ?? null, result: toolsList() });
-    } else if (req.method === 'tools/call') {
-      const r = toolsCall(req.params);
-      if (r.error) send({ jsonrpc: '2.0', id: req.id ?? null, error: r.error });
-      else send({ jsonrpc: '2.0', id: req.id ?? null, result: r.result });
-    } else if (req.method === 'ping') {
-      send({ jsonrpc: '2.0', id: req.id ?? null, result: {} });
-    } else {
-      send({ jsonrpc: '2.0', id: req.id ?? null, error: { code: -32601, message: '未知方法: ' + req.method } });
-    }
+    const resp = handleMcpRequest(req);
+    if (resp) send(resp);
   }
 });
 process.stdin.on('end', () => { process.exit(0); });
+}

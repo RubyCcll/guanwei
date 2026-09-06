@@ -91,11 +91,21 @@ AI 层：多 LLM 适配（OpenAI 兼容 / Google 格式，DeepSeek / Gemini / Gr
 
 排盘能力已封装为可被程序调用的服务（与 Web 端共用 `shared/core` 单一算法副本）：
 
-**MCP Server**（Claude Code / Cursor 等 agent 直接调用）：
+**MCP Server**：支持三种传输，本地与国内客户端通吃——
+
+① stdio（Claude Code / Cursor 等本地 agent）：
 
 ```jsonc
 // claude_desktop_config.json
 { "mcpServers": { "guanwei": { "command": "npx", "args": ["tsx", "packages/guanwei-api/src/mcp.ts"], "cwd": "/你的/guanwei路径" } } }
+```
+
+② HTTP / SSE（WorkBuddy / ima / Trae 等国内客户端，填 URL 即可）：
+
+```jsonc
+// WorkBuddy MCP 配置（type 选 sse 或 http 均可）
+{ "mcpServers": { "guanwei": { "type": "http", "url": "http://127.0.0.1:3020/mcp" } } }
+// 先启动服务：cd packages/guanwei-api && npm start  （/mcp 为 Streamable HTTP，/mcp/sse 为旧版 SSE）
 ```
 
 ```text

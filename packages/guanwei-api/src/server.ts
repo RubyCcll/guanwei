@@ -4,6 +4,7 @@
 import express from 'express';
 import chartRouter from './routes/chart.js';
 import artsRouter from './routes/arts.js';
+import { mcpRouter } from './mcp-http.js';
 
 const app = express();
 const PORT = Number(process.env.GUANWEI_API_PORT || 3020);
@@ -25,6 +26,11 @@ app.get('/v1', (_req, res) => {
 
 app.use('/v1/chart', chartRouter);
 app.use('/v1/arts', artsRouter);
+
+// MCP HTTP 传输（国内客户端：WorkBuddy type:"sse"|"http" 等）
+//  - POST /mcp（Streamable HTTP）· GET /mcp（SSE）
+//  - GET /mcp/sse + POST /mcp/messages（旧版 SSE 传输）
+app.use('/mcp', mcpRouter());
 
 // 统一错误处理
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
