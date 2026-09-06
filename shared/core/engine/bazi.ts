@@ -2,7 +2,7 @@
 // 补齐层（2026-08-20）：地支藏干十神 / 旺衰拆解 / 用神喜忌 / 大运流年 / 神煞 / 胎元命宫身宫
 import { GAN, ZHI, WUXING, NAYIN, mod, jiaziIndex } from '../data/ganzhi';
 import { daysSince, monthBranchOf, getJieQiTableExact } from './calendar';
-import { trueSolarTime, shiftedDate } from './trueSolarTime';
+import { trueSolarTime, shiftedDate, isChinaDST } from './trueSolarTime';
 import type { BaziInput, BaziResult } from '../types';
 
 const MONTH_NAMES: Record<number, string> = { 0: '寅月', 1: '卯月', 2: '辰月', 3: '巳月', 4: '午月', 5: '未月', 6: '申月', 7: '酉月', 8: '戌月', 9: '亥月', 10: '子月', 11: '丑月' };
@@ -49,17 +49,32 @@ export function baziCalc(input: BaziInput): BaziResult {
 
   // 1. 真太阳时校正（出生地点 → 经度；仅时辰已知时做；优先用输入精确时刻，缺省用时辰中点）
   let correctedHourIndex = hourUnknown ? -1 : hourIndex;
+  // 出生钟表时刻：th0/tm0 供真太阳时校正（缺省时辰中点 30 分——时辰归属取中，保持原基线）；
+  // stdMin 为「北京标准分钟」供节气定年月与大运距节（节令时刻为北京标准时，DST 期回拨 1 小时）
+  let th0 = 12, tm0 = 0;
+  if (!hourUnknown) {
+    if (input.time) {
+      const p = input.time.split(':').map(Number);
+      th0 = p[0]; tm0 = p[1] ?? 0;
+    } else { th0 = (hourIndex * 2) % 24; tm0 = 30; } // 缺省时辰中点（保持原真太阳校正基线）
+  }
+  // 节气/大运基准时刻：有精确 time 用其分钟；无 time 用时辰起点整点（与旧基线一致，避免中点在节界附近摇摆）
+  let stdMin: number;
+  if (hourUnknown) stdMin = 12 * 60;
+  else if (input.time) stdMin = th0 * 60 + tm0;
+  else stdMin = ((hourIndex * 2) % 24) * 60;
   let trueSolar;
   if (!hourUnknown && input.location) {
-    const [th, tm] = input.time ? input.time.split(':').map(Number) : [(hourIndex * 2) % 24, 30];
-    trueSolar = trueSolarTime(y, m, d, th, tm, input.location.lng);
+    trueSolar = trueSolarTime(y, m, d, th0, tm0, input.location.lng);
     correctedHourIndex = trueSolar.hourIndex;
     if (trueSolar.dateOffset !== 0) {
       [y, m, d] = shiftedDate(y, m, d, trueSolar.dateOffset);
     }
+    if (input.time) stdMin = Math.round(trueSolar.beijingHours * 60); // 回拨后的北京标准时刻（分钟）
+    else stdMin -= isChinaDST(y, m, d) ? 60 : 0;                       // DST 期钟表时→标准时
   }
-  const hour = hourUnknown ? 12 : (correctedHourIndex * 2) % 24;
-  const min = 0;
+  const hour = Math.floor(stdMin / 60);
+  const min = stdMin % 60;
 
   // 2. 年柱（立春为界）
   // 注意：getJieQiTableExact(yy) 返回的是「农历年」节气表，冬至后的立春可能落在公历次年
@@ -90,9 +105,12 @@ export function baziCalc(input: BaziInput): BaziResult {
   const dayGanWx = WUXING[dayGan];
 
   // 5. 时柱（五鼠遁；时辰未知则不排）
+  // 晚子时（钟表 23 点后且校正后仍属子时）：日柱不变，但时柱按「次日日干」起（子时归次日，lunar sect2 口径）
+  const lateZi = !hourUnknown && th0 === 23 && correctedHourIndex === 0;
   let hourGZ = '未知';
   if (!hourUnknown) {
-    const dgIdx = GAN.indexOf(dayGan as any);
+    const wuShuGan = lateZi ? GAN[mod(dIdx + 1, 10)] : dayGan;
+    const dgIdx = GAN.indexOf(wuShuGan as any);
     const hgIdx = mod((dgIdx % 5) * 2 + correctedHourIndex, 10);
     hourGZ = GAN[hgIdx] + ZHI[correctedHourIndex];
   }
@@ -198,7 +216,8 @@ export function baziCalc(input: BaziInput): BaziResult {
   const dayun: BaziResult['dayun'] = [];
   const birthYear = y;
   for (let i = 0; i < 8; i++) {
-    const step = forward ? i : -i;
+    // 起运后第一步即离开月柱：顺排=月柱下一柱，逆排=上一柱（step 从 ±1 起）
+    const step = forward ? i + 1 : -(i + 1);
     const g = GAN[mod(mgIdx2 + step, 10)];
     const z = ZHI[mod(mzIdx2 + step, 12)];
     dayun.push({
@@ -258,8 +277,27 @@ export function baziCalc(input: BaziInput): BaziResult {
   };
   // ─── 13. 胎元 / 命宫 / 身宫 ───
   const taiyuan = GAN[mod(mgIdx2 + 1, 10)] + ZHI[mod(mzIdx2 + 3, 12)];
-  const minggong = hourUnknown ? '未知' : ZHI[mod(2 + mod((mb) - correctedHourIndex, 12), 12)];
-  const shengong = hourUnknown ? '未知' : ZHI[mod(2 + mod((mb) + correctedHourIndex, 12), 12)];
+  // 命宫/身宫（八字节气口径，对照 lunar-typescript EightChar）：
+  //   命宫地支 = 14/26 −（月支寅1起序 + 时支寅1起序）→ 寅1起序
+  //   身宫地支 = 月支寅1起序 + 时支子1起序（>12 减 12）→ 寅1起序
+  //   天干 = 年干五虎遁数至该宫位（同命宫干支法）
+  if (hourUnknown) {
+    var _minggong = '未知', _shengong = '未知';
+  } else {
+    const m1 = mb + 1;                                          // 月支 寅=1..丑=12
+    const t1m = mod(correctedHourIndex - 2, 12) + 1;            // 时支 寅1起序（子=11）
+    const mingSum = m1 + t1m;
+    const mingOff = (mingSum >= 14 ? 26 : 14) - mingSum;        // 命宫 寅1起序 1..12
+    const shenSum = m1 + (correctedHourIndex + 1);              // 时支 子1起序
+    const shenOff = shenSum > 12 ? shenSum - 12 : shenSum;      // 身宫 寅1起序 1..12
+    const ygi = GAN.indexOf(yearGZ[0] as any);                  // 年干 0based
+    const mingGan = GAN[mod((ygi + 1) * 2 + mingOff - 1, 10)];
+    const shenGan = GAN[mod((ygi + 1) * 2 + shenOff - 1, 10)];
+    var _minggong = mingGan + ZHI[mod(mingOff + 1, 12)];        // 寅1起序 → ZHI(子0起) 索引 +2
+    var _shengong = shenGan + ZHI[mod(shenOff + 1, 12)];
+  }
+  const minggong = _minggong as any;
+  const shengong = _shengong as any;
 
   return {
     yearGZ, monthGZ, dayGZ, hourGZ,

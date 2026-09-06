@@ -10,10 +10,11 @@ function chart(month: number, hour: number, opts: any = {}) {
 const Z = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
 
 describe('紫微修正层', () => {
-  it('昼夜判定：卯~申时支(2..7)=昼，酉~寅=夜', () => {
-    expect(chart(1, 2).dayNight).toBe('day');   // 卯
-    expect(chart(1, 7).dayNight).toBe('day');   // 申
-    expect(chart(1, 8).dayNight).toBe('night'); // 酉
+  it('昼夜判定：卯~申时支(3..8)=昼，酉~寅=夜（0=子）', () => {
+    expect(chart(1, 3).dayNight).toBe('day');   // 卯
+    expect(chart(1, 8).dayNight).toBe('day');   // 申
+    expect(chart(1, 9).dayNight).toBe('night'); // 酉
+    expect(chart(1, 2).dayNight).toBe('night'); // 寅（原 2..7 误把寅判昼，已修正）
     expect(chart(1, 1).dayNight).toBe('night'); // 丑
   });
 
@@ -21,7 +22,7 @@ describe('紫微修正层', () => {
     for (let m = 1; m <= 12; m++) {
       const day = chart(m, 3);    // 昼
       const night = chart(m, 9);  // 夜
-      const lv: Record<string, number> = { 陷: 1, 平: 2, 利: 3, 得: 4, 旺: 5, 庙: 6 };
+      const lv: Record<string, number> = { 不: 1, 陷: 1, 平: 2, 利: 3, 得: 4, 旺: 5, 庙: 6 };
       if (day.zwStars['太阳'] !== undefined) {
         expect(lv[day.effBrightness['太阳']]).toBeGreaterThanOrEqual(lv[day.brightness['太阳']]);
       }
