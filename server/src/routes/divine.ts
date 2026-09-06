@@ -1,15 +1,6 @@
 // 排盘路由：登录用户起占 → 后端引擎计算 → SQLite 入库 → 返回 resultRaw + display
 import { Router } from 'express';
-import { baziCalc } from '../../../shared/core/engine/bazi.js';
-import { ziweiCalc } from '../../../shared/core/engine/ziwei.js';
-import { astrologyCalc } from '../../../shared/core/engine/astrology.js';
-import { qimenCalc } from '../../../shared/core/engine/qimen.js';
-import { meihuaCalc } from '../../../shared/core/engine/meihua.js';
-import { liuyaoCalc } from '../../../shared/core/engine/liuyao.js';
-import { liurenCalc } from '../../../shared/core/engine/liuren.js';
-import { xiaoliurenCalc } from '../../../shared/core/engine/xiaoliuren.js';
-import { tarotDraw } from '../../../shared/core/engine/tarot.js';
-import { allTarotSpreads } from '../../../shared/core/data/tarotSpreads.js';
+import { chartCalc } from '../../../shared/core/engine/chart.js';
 import { createDivination, listDivinations, getDivination, deleteDivination } from '../services/divineStore.js';
 import fs from 'fs';
 import path from 'path';
@@ -91,56 +82,9 @@ router.post('/', (req, res) => {
 
   let resultRaw: unknown;
   try {
-    switch (artId) {
-      case 'bazi': {
-        const i = inputs as any;
-        resultRaw = baziCalc({ y: i.y, m: i.m, d: i.d, hourIndex: i.hourIndex, time: i.time, gender: i.gender, location: i.location });
-        break;
-      }
-      case 'ziwei': {
-        const i = inputs as any;
-        resultRaw = ziweiCalc({ ganzhi: i.ganzhi, month: i.month, day: i.day, hour: i.hour, time: i.time, location: i.location, gender: i.gender, birthYear: i.birthYear });
-        break;
-      }
-      case 'astrology': {
-        const i = inputs as any;
-        resultRaw = astrologyCalc(i.y, i.m, i.d, i.hour || 0, i.min || 0, i.lng, i.lat);
-        break;
-      }
-      case 'qimen': {
-        resultRaw = qimenCalc({ datetime: (inputs as any).datetime || new Date() });
-        break;
-      }
-      case 'meihua': {
-        const i = inputs as any;
-        resultRaw = meihuaCalc({ mode: i.mode || 'time', n1: i.n1, n2: i.n2, n3: i.n3, now: i.now ? new Date(i.now) : undefined });
-        break;
-      }
-      case 'liuyao': {
-        const now = new Date();
-        resultRaw = liuyaoCalc(undefined, { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() });
-        break;
-      }
-      case 'liuren': {
-        resultRaw = liurenCalc((inputs as any).datetime || new Date());
-        break;
-      }
-      case 'xiaoliuren': {
-        const i = inputs as any;
-        resultRaw = xiaoliurenCalc(i.mode || 'time', i.m, i.d, i.h, i.n1, i.n2, i.n3);
-        break;
-      }
-      case 'tarot': {
-        const i = inputs as any;
-        const cards = tarotDraw(Math.max(1, i.n || 3));
-        const spread = allTarotSpreads().find((s: any) => s.id === i.spread) || allTarotSpreads()[0];
-        resultRaw = { spread: spread || { id: 'three', name: '圣三角', description: '', positions: [] }, cards };
-        break;
-      }
-      default:
-        return res.status(400).json({ error: '术无此名' });
-    }
+    resultRaw = chartCalc(artId, inputs);
   } catch (e: any) {
+    if (e?.message?.includes('术无此名')) return res.status(400).json({ error: '术无此名' });
     console.error('[divine] 推演异常:', e);
     return res.status(500).json({ error: 'DIVINE_FAILED', message: '推演未应机' });
   }

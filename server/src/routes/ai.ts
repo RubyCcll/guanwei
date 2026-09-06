@@ -8,6 +8,8 @@ import { buildMessages, buildReportMessages, buildStep1Messages, buildStep2Messa
 import { chatOnce, chatStream, activeProvider, providerStatus, lastFinishReason } from '../services/llmProvider.js';
 import { getDivination, attachReport, markAiFailed } from '../services/divineStore.js';
 import { verifyRelatives, fixFamilyRelatives } from '../services/relativesCheck.js';
+import { orchestrateZiweiDeep } from '../services/orchestrator.js';
+import { MINGPAN_TEMPLATE } from '../services/promptBuilder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,7 +48,7 @@ router.get('/providers', (_req, res) => {
 
 // 非流式解读（保底通道）
 router.post('/interpret', async (req, res) => {
-  const { artId, question, divineId, semantic, profile, report, fit, username } = req.body;
+  const { artId, question, divineId, semantic, profile, report, fit, username, orchestrate } = req.body;
   if (!artId) return res.status(400).json({ error: '缺少必要参数' });
   try {
     // 从 SQLite 读排盘数据（v6：不再信任前端直传 resultRaw）
@@ -60,6 +62,23 @@ router.post('/interpret', async (req, res) => {
       recProfile = rec.profile;
     } else {
       return res.status(400).json({ error: 'DIVINE_REQUIRED', message: '请先起占（divineId 缺失）' });
+    }
+    // 真·多 Agent 编排模式（v1：紫微深度三步链式）
+    if (orchestrate === 'ziwei-deep' && artId === 'ziwei') {
+      const { full } = await orchestrateZiweiDeep(resultRaw, question, MINGPAN_TEMPLATE, (recProfile as any)?.gender || (profile as any)?.gender);
+      const parsed2 = parseReport(full, 'mingpan');
+      const relErrs2 = verifyRelatives('ziwei', resultRaw, parsed2);
+      if (relErrs2.length && relErrs2.length <= 6) {
+        console.warn('[ai] 六亲表述矛盾，定向修正:', relErrs2.join('；'));
+        const fixed2 = await fixFamilyRelatives('ziwei', resultRaw, parsed2, relErrs2);
+        if (fixed2) parsed2.family = fixed2 as any;
+      }
+      if (parsed2.quality === 'ok') {
+        attachReport(divineId, parsed2, 'ok');
+        return res.json({ provider: activeProvider()?.id, report: parsed2, sections: parseSections(full), orchestrated: true });
+      }
+      markAiFailed(divineId, 'ziwei', 'mingpan', '编排质量未达标', full.slice(0, 4000));
+      return res.status(502).json({ error: 'AI_REPORT_INVALID', message: 'AI 输出不符合报告结构，请重试' });
     }
     // 统一报告模式：两步管线（Step1 盘面解析 → Step2 深度报告），Step1 失败降级单步
     const kind = ['bazi', 'ziwei', 'astrology'].includes(artId) ? 'mingpan' : 'zhanwen';

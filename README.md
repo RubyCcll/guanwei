@@ -87,6 +87,33 @@ AI 层：多 LLM 适配（OpenAI 兼容 / Google 格式，DeepSeek / Gemini / Gr
 ③ 历史：GET /api/divine?username= → 档案管理页列表/详情/删除
 ```
 
+## 🤖 开放分发（v1.3.0 · 程序化调用排盘）
+
+排盘能力已封装为可被程序调用的服务（与 Web 端共用 `shared/core` 单一算法副本）：
+
+**MCP Server**（Claude Code / Cursor 等 agent 直接调用）：
+
+```jsonc
+// claude_desktop_config.json
+{ "mcpServers": { "guanwei": { "command": "npx", "args": ["tsx", "packages/guanwei-api/src/mcp.ts"], "cwd": "/你的/guanwei路径" } } }
+```
+
+```text
+agent：用观微排一个 1993-01-23 寅时的八字
+→ 工具 guanwei_chart(art: "bazi", inputs: {...}) → 完整盘面
+```
+
+**REST API**（`packages/guanwei-api`，免费无 Key）：
+
+```bash
+cd packages/guanwei-api && npm start          # http://127.0.0.1:3020/v1
+curl -X POST http://127.0.0.1:3020/v1/chart -H "Content-Type: application/json" \
+  -d '{"art":"liuren","inputs":{"datetime":"2026-08-29T12:00:00"}}'
+curl http://127.0.0.1:3020/v1/arts             # 九术能力清单 + 参数 schema
+```
+
+> 排盘免费（纯计算零 token）；协议风格与未来托管 API 一致（/v1、统一错误码），本地自部署与第三方集成同源。
+
 ## 🚀 快速开始（一行命令）
 
 ### ⚡ 方式一：npm 一行安装（推荐，国内几秒装完）
