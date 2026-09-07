@@ -101,16 +101,26 @@ describe('八字：节气交界/闰月边界', () => {
 });
 
 describe('奇门：节气交界定遁', () => {
-  it('立春前阴遁/后阳遁（2026-02-04 前后）', () => {
-    // 冬至→芒种为阳遁、夏至→大雪为阴遁；翻转点在春分/秋分
-    const winter = qimenCalc({ datetime: '2026-01-15T12:00:00' });  // 小寒（阳遁）
-    expect(winter.yin).toBe(false);
-    const spring = qimenCalc({ datetime: '2026-03-25T12:00:00' });  // 春分后（阴遁）
-    expect(spring.yin).toBe(true);
-    const summer = qimenCalc({ datetime: '2026-07-15T12:00:00' });  // 小暑（阴遁）
-    expect(summer.yin).toBe(true);
-    const autumn = qimenCalc({ datetime: '2026-10-15T12:00:00' });  // 寒露（阴遁）
-    expect(autumn.yin).toBe(true);
+  it('冬至~芒种阳遁、夏至~大雪阴遁（2026 全年抽样）', () => {
+    // 权威口径（2026-09 修正）：春分/清明/谷雨/立夏/小满/芒种仍阳遁；翻转点仅在冬至与夏至
+    const yang = [['2026-01-15T12:00:00', '小寒'], ['2026-03-25T12:00:00', '春分'], ['2026-04-15T12:00:00', '清明'],
+      ['2026-05-15T12:00:00', '小满'], ['2026-06-05T12:00:00', '芒种']] as [string, string][];
+    const yin = [['2026-07-15T12:00:00', '小暑'], ['2026-10-15T12:00:00', '寒露'], ['2026-12-10T12:00:00', '大雪']] as [string, string][];
+    for (const [dt] of yang) {
+      const r = qimenCalc({ datetime: dt });
+      expect(r.jqName, dt).toBe(r.jqName);
+      expect(r.yin, r.jqName + ' 应阳遁').toBe(false);
+    }
+    for (const [dt] of yin) {
+      const r = qimenCalc({ datetime: dt });
+      expect(r.yin, r.jqName + ' 应阴遁').toBe(true);
+    }
+  });
+  it('交节当天按时刻切换：2024-02-04 16:27 立春前大寒/后立春', () => {
+    const before = qimenCalc({ datetime: '2024-02-04T16:00:00' });
+    const after = qimenCalc({ datetime: '2024-02-04T17:00:00' });
+    expect(before.jqName).toBe('大寒');
+    expect(after.jqName).toBe('立春');
   });
 });
 

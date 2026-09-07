@@ -101,12 +101,12 @@ export interface QimenResult {
   yin: boolean; ju: number; jqName: string;
   dayGZ: string; hourGZ: string;
   xunShou: string; xunshouName: string;
-  zfStar: string; zsMen: string; zfPalace: number;
+  zfStar: string; zsMen: string; zfPalace: number;   // 值符星/值使门/值符转后落宫（入中寄坤=2）
   pan: Record<number, { yi: string; men: string; star: string }>;
-  // ─── 补齐层（2026-08-20）───
-  zsPalace: number;              // 值使门落宫（时干加临）
-  tianYi: Record<number, string>; // 天盘奇仪（暗干）
-  shen: Record<number, string>;   // 八神布宫
+  // ─── 补齐层（2026-08-20；2026-09 起转盘五层对齐拆补权威口径）───
+  zsPalace: number;              // 值使门飞落宫（入中寄坤=2）
+  tianYi: Record<number, string>; // 天盘奇仪（地盘旋转，符首→时干宫；中宫原地盘干）
+  shen: Record<number, string>;   // 八神布宫（阳顺阴逆，值符神落时干宫；阳用勾陈朱雀、阴用白虎玄武）
 }
 
 // 梅花输入输出
