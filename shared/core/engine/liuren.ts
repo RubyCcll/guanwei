@@ -250,7 +250,7 @@ export function liurenCalc(dt: string | Date): LiurenResult {
     }
   }
   const jiangIdx = ZHI.indexOf(jiang as any);
-  const jqName = currentJieqiNameExact(y, m, day);
+  const jqName = currentJieqiNameExact(y, m, day, h);
   /* 天盘：月将加时顺布 */
   const tianpan: Record<number, string> = {};
   for (let i = 0; i < 12; i++) tianpan[mod(hourIndex + i, 12)] = ZHI[mod(jiangIdx + i, 12)];

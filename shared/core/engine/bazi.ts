@@ -1,7 +1,7 @@
 // 四柱八字：真太阳时校正 + 精确节气定年柱月柱 + 十神强弱
 // 补齐层（2026-08-20）：地支藏干十神 / 旺衰拆解 / 用神喜忌 / 大运流年 / 神煞 / 胎元命宫身宫
 import { GAN, ZHI, WUXING, NAYIN, mod, jiaziIndex } from '../data/ganzhi';
-import { daysSince, monthBranchOf, getJieQiTableExact } from './calendar';
+import { daysSince, monthBranchOf, getJieQiTableExact, beijingMs } from './calendar';
 import { trueSolarTime, shiftedDate, isChinaDST } from './trueSolarTime';
 import type { BaziInput, BaziResult } from '../types';
 
@@ -79,7 +79,7 @@ export function baziCalc(input: BaziInput): BaziResult {
   // 2. 年柱（立春为界）
   // 注意：getJieQiTableExact(yy) 返回的是「农历年」节气表，冬至后的立春可能落在公历次年
   // （如 2023 表中含 2024-02-04 立春）——取立春发生的公历年份定年柱，不能用表格年份 yy
-  const t = new Date(y, m - 1, d, hour, min).getTime();
+  const t = beijingMs(y, m, d, hour, min);
   let lichunBest = -Infinity;
   let lichunYear = y - 1;
   for (const yy of [y - 1, y, y + 1]) {

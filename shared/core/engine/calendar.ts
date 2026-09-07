@@ -54,15 +54,22 @@ export function getJieQiTableExact(year: number): JieQiTime[] {
   return out;
 }
 
+// 北京时间 → 绝对毫秒（固定 UTC+8，显式构造；避免 new Date(y,m,d,h..) 被 ICU 时区库
+// 在 1986-1991 夏令时窗口按钟表时(UTC+9)解释而偏 1 小时）
+export function beijingMs(y: number, m: number, d: number, hour = 12, min = 0): number {
+  return Date.UTC(y, m - 1, d, hour, min) - 8 * 3600 * 1000;
+}
+
 // 当天是否为某节气（精确）
 export function getJieQiNameExact(y: number, m: number, d: number): string | null {
   const solar = Solar.fromYmdHms(y, m, d, 12, 0, 0);
   return solar.getLunar().getJieQi() || null;
 }
 
-// 当前所处节气（精确：取该时刻之前最近的节气，24 节气皆可）
-export function currentJieqiNameExact(y: number, m: number, d: number): string {
-  const t = new Date(y, m - 1, d, 12, 0, 0).getTime();
+// 当前所处节气（精确：取该时刻之前最近的节气，24 节气皆可；缺省正午）
+// （2026-09：增加 hour/min——原固定 12:00 使交节当天下午/晚上仍判旧节，奇门/六壬会排错）
+export function currentJieqiNameExact(y: number, m: number, d: number, hour = 12, min = 0): string {
+  const t = beijingMs(y, m, d, hour, min);
   let best: { name: string; time: number } | null = null;
   for (const yy of [y - 1, y, y + 1]) {
     for (const jq of getJieQiTableExact(yy)) {
@@ -81,7 +88,7 @@ export const JIE_BRANCH: Record<string, number> = {
 
 // 判断给定时刻位于哪个「节」之后 → 返回月支（0=寅 正月起）
 export function monthBranchOf(y: number, m: number, d: number, hour: number, min = 0): number {
-  const t = new Date(y, m - 1, d, hour, min).getTime();
+  const t = beijingMs(y, m, d, hour, min);
   // 收集 y-1/y/y+1 三年的节时刻，取 t 之前最近的
   let best: { name: string; time: number } | null = null;
   for (const yy of [y - 1, y, y + 1]) {
