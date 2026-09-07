@@ -10,6 +10,8 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TZ: Asia/Shanghai   # 历法引擎按北京钟表语义，避免 runner UTC 时区导致月将/节气判定漂移
     steps:
       - name: Checkout
         uses: actions/checkout@v5

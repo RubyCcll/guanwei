@@ -2,7 +2,7 @@
 // 九宗门：贼克（元首/始入/重审/知一）→ 比用 → 涉害 → 遥克（蒿矢/弹射）→ 昴星（虎视/冬蛇掩目）→ 别责 → 八专 → 返吟（取驿马）→ 伏吟（取刑）
 import { GAN, ZHI, WUXING, mod } from '../data/ganzhi';
 import { LR_JIANGS, LR_GANJI } from '../data/liuren';
-import { daysSince, currentJieqiNameExact, getJieQiTableExact } from './calendar';
+import { daysSince, currentJieqiNameExact, getJieQiTableExact, beijingMs } from './calendar';
 import type { LiurenResult } from '../types';
 
 // ─── 九宗门辅助表 ───
@@ -234,7 +234,8 @@ export function liurenCalc(dt: string | Date): LiurenResult {
     雨水: '亥', 春分: '戌', 谷雨: '酉', 小满: '申', 夏至: '未', 大暑: '午',
     处暑: '巳', 秋分: '辰', 霜降: '卯', 小雪: '寅', 冬至: '丑', 大寒: '子',
   };
-  const _t = d.getTime();
+  // 北京钟表时刻（字面组件 +08:00）：与节气时刻同基准，进程时区无关（CI/容器 TZ=UTC 亦正确）
+  const _t = beijingMs(y, m, day, h);
   let jiang = '丑';
   {
     const jqTimes: { name: string; time: number }[] = [];
