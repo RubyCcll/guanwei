@@ -43,7 +43,13 @@ export function getJieQiTableExact(year: number): JieQiTime[] {
   const out: JieQiTime[] = [];
   for (const key of Object.keys(table)) {
     const s = table[key];
-    out.push({ name: JQ_KEY_CN[key] || key, time: new Date(s.getYear(), s.getMonth() - 1, s.getDay(), s.getHour(), s.getMinute(), s.getSecond()) });
+    // lunar 节气时刻为北京标准时（固定 UTC+8，无夏令时概念）。
+    // 必须用显式 +08:00 构造 Date：若用 new Date(y,m,d,h,...) 本地构造，
+    // ICU 时区库会把 1986-1991 夏令时窗口的时刻误按钟表时(UTC+9)解释，系统性早 1 小时
+    out.push({
+      name: JQ_KEY_CN[key] || key,
+      time: new Date(s.toYmdHms().replace(' ', 'T') + '+08:00'),
+    });
   }
   return out;
 }
