@@ -1,8 +1,8 @@
 // 大六壬：月将加时（中气定将）· 四课三传（九宗门真实起法）
 // 九宗门：贼克（元首/始入/重审/知一）→ 比用 → 涉害 → 遥克（蒿矢/弹射）→ 昴星（虎视/冬蛇掩目）→ 别责 → 八专 → 返吟（取驿马）→ 伏吟（取刑）
 import { GAN, ZHI, WUXING, mod } from '../data/ganzhi';
-import { LR_JIANGS, LR_JIANG_SUN, LR_GANJI } from '../data/liuren';
-import { daysSince, currentJieqiNameExact } from './calendar';
+import { LR_JIANGS, LR_GANJI } from '../data/liuren';
+import { daysSince, currentJieqiNameExact, getJieQiTableExact } from './calendar';
 import type { LiurenResult } from '../types';
 
 // ─── 九宗门辅助表 ───
@@ -226,14 +226,27 @@ export function liurenCalc(dt: string | Date): LiurenResult {
   const dgIdx = GAN.indexOf(dayGZ[0] as any);
   const hgIdx = mod((dgIdx % 5) * 2 + hourIndex, 10);
   const hourGZ = GAN[hgIdx] + ZHI[hourIndex];
-  /* 月将：中气定将（太阳过宫）；1/1-1/19 属上年冬至后 → 丑将，1/20 大寒后 → 子将 */
-  const v = m * 100 + day;
+  /* 月将：中气定将（太阳过宫）。
+     （2026-09 修正：原固定日期表（2/19 雨水…）在个别年份与实际中气时刻差 ±1 天，
+      现改为按 lunar-typescript 精确中气时刻定将：自某中气起用该将，至下一中气前不变；
+      1 月初落在上年冬至（丑将）后自然归丑将，无需特判） */
+  const JIANG_BY_JQ: Record<string, string> = {
+    雨水: '亥', 春分: '戌', 谷雨: '酉', 小满: '申', 夏至: '未', 大暑: '午',
+    处暑: '巳', 秋分: '辰', 霜降: '卯', 小雪: '寅', 冬至: '丑', 大寒: '子',
+  };
+  const _t = d.getTime();
   let jiang = '丑';
-  if (v >= 120 && v < 219) jiang = '子';
-  else if (v >= 219) {
-    for (let i = LR_JIANG_SUN.length - 2; i >= 0; i--) {
-      const [, jm, jd2, jz] = LR_JIANG_SUN[i];
-      if (v >= jm * 100 + jd2) { jiang = jz; break; }
+  {
+    const jqTimes: { name: string; time: number }[] = [];
+    for (const yy of [y - 1, y, y + 1]) {
+      for (const jq of getJieQiTableExact(yy)) {
+        if (JIANG_BY_JQ[jq.name]) jqTimes.push({ name: jq.name, time: jq.time.getTime() });
+      }
+    }
+    jqTimes.sort((a, b) => a.time - b.time);
+    for (const j of jqTimes) {
+      if (j.time <= _t) jiang = JIANG_BY_JQ[j.name];
+      else break;
     }
   }
   const jiangIdx = ZHI.indexOf(jiang as any);
