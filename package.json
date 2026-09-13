@@ -14,7 +14,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^6.1.1",
     "astronomy-engine": "^2.1.19",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -32,7 +32,7 @@
     "@types/node": "^22.15.30",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "eslint": "^9.25.0",
