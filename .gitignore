@@ -63,3 +63,6 @@ docs/research-*.md
 docs/guanwei-*-2026-*.md
 .npm-cache
 docs/week-plan-*.md
+
+# 本地星历对照测试 venv（pyswisseph，CI 用系统 python）
+.swe-venv/

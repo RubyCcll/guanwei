@@ -1,6 +1,6 @@
 {
   "name": "guanwei-api",
-  "version": "0.1.0",
+  "version": "1.3.3",
   "private": true,
   "type": "module",
   "description": "观微排盘 API（/v1 · 开放分发，复用 shared/core 单一算法副本）",
@@ -14,7 +14,10 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "astronomy-engine": "^2.1.19",
     "express": "^4.18.2",
+    "iztro": "2.6.0",
+    "lunar-typescript": "^1.8.6",
     "tsx": "^4.7.0"
   },
   "bin": {

@@ -1,12 +1,17 @@
 // 节气时刻 vs Swiss Ephemeris 太阳视黄经过宫（天文事实标准）交叉验证
 // 覆盖：lunar-typescript 节气表（bazi 年/月柱、奇门遁法、六壬月将全部依赖此表）的地基精度
 // 24 节气 = 太阳视黄经到达 315°(立春) 起每 15°；对照 swiss 二分求得的过宫时刻，容差 90 秒
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'child_process';
 import { existsSync } from 'fs';
 import { getJieQiTableExact } from '../shared/core/engine/calendar';
 
-const PY = process.env.SWE_PYTHON || '/tmp/swe-venv/bin/python';
+// python 解释器探测：SWE_PYTHON → 项目内 .swe-venv → /tmp venv → 系统 python3
+const PY: string = [
+  process.env.SWE_PYTHON,
+  require('path').join(process.cwd(), '.swe-venv/bin/python'),
+  '/tmp/swe-venv/bin/python',
+].filter(Boolean).find((p: string) => existsSync(p)) || 'python3';
 const SCRIPT = require('path').join(process.cwd(), 'tests/helpers/swe_ephemeris.py');
 
 // 24 节气：太阳黄经度数与近似日期（bracket 中心）
@@ -20,19 +25,16 @@ const JQ: [string, number, string][] = [
 ];
 const YEARS = [1991, 2024, 2026];
 
-let swe: string | null = null;
-beforeAll(() => {
-  if (!existsSync(PY)) return;
-  try {
-    swe = execFileSync(PY, ['-c', 'import swisseph; print(swisseph.version)'], { encoding: 'utf8', timeout: 15000 }).trim();
-  } catch (e: any) {
-    console.warn('[jieqi-astro] pyswisseph 不可用，整组跳过：', String(e.message || e).slice(0, 120));
-  }
-});
+// 模块级探测：无 pyswisseph 时显式 skip（不再静默 return「假通过」——2026-09 修 P1-3）
+const HAS_SWE: boolean = (() => {
+  if (!existsSync(PY)) return false;
+  try { execFileSync(PY, ['-c', 'import swisseph'], { encoding: 'utf8', timeout: 15000 }); return true; }
+  catch { return false; }
+})();
+if (!HAS_SWE) console.warn('[jieqi-astro] pyswisseph 不可用（' + PY + '）→ 本组显式 skip；CI 会安装以保证真跑');
 
 describe('节气时刻 vs Swiss Ephemeris 太阳过宫（天文地基）', () => {
-  it('3 年 × 24 节气时刻差 ≤90 秒', () => {
-    if (!swe) { console.warn('SKIP: 无 pyswisseph'); return; }
+  it.skipIf(!HAS_SWE)('3 年 × 24 节气时刻差 ≤90 秒', () => {
     const targets = [];
     for (const y of YEARS) {
       for (const [name, deg, approx] of JQ) targets.push({ name, deg, approx, y });

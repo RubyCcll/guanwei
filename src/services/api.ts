@@ -264,7 +264,24 @@ export async function apiDivine(username: string, artId: string, inputs: unknown
     try { const e = await res.json(); msg = e.message || e.error || msg; } catch { /* ignore */ }
     throw new Error(msg);
   }
-  return res.json();
+  const data = await res.json();
+  // L-NEW1 闭环：后端在「本次新建占位账号」时下发 claimToken（仅此一次），
+  // 保存到本地，供之后在 app 内注册时升级该占位账号（否则注册接口拒绝、拿不到云同步 token）
+  if (data?.claimToken) saveClaimToken(username, String(data.claimToken));
+  return data;
+}
+
+const CLAIM_KEY = (name: string) => 'guanwei_claim_' + name;
+
+/** 保存/读取占位账号认领凭据（仅本地持有，随注册一次性使用） */
+export function saveClaimToken(username: string, token: string): void {
+  try { localStorage.setItem(CLAIM_KEY(username), token); } catch { /* ignore */ }
+}
+export function claimTokenOf(username: string): string {
+  try { return localStorage.getItem(CLAIM_KEY(username)) || ''; } catch { return ''; }
+}
+export function clearClaimToken(username: string): void {
+  try { localStorage.removeItem(CLAIM_KEY(username)); } catch { /* ignore */ }
 }
 
 export interface DivineHistoryItem {

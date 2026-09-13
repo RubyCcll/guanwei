@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 20
     env:
       TZ: Asia/Shanghai   # 历法引擎按北京钟表语义，避免 runner UTC 时区导致月将/节气判定漂移
+      SWE_PYTHON: python3 # 星历对照测试用系统 python（已装 pyswisseph）
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -21,6 +22,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Setup Python (Swiss Ephemeris 对照测试)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyswisseph (星历/节气交叉验证)
+        run: python3 -m pip install --quiet pyswisseph
+        env:
+          SWE_PYTHON: python3
 
       - name: Install root dependencies
         run: npm ci

@@ -8,21 +8,31 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = path.join(__dirname, '..', 'data', 'db.json');
+// 用户档案 JSON 库：默认 server/src/data/db.json；可用 GUANWEI_USERS_DB 指向临时文件（测试/多实例隔离）
+const DB_FILE = process.env.GUANWEI_USERS_DB || path.join(__dirname, '..', 'data', 'db.json');
+
+// 读取用户库：文件/目录不存在 → 视为空库（懒建档会自行创建，避免干净实例首次起占 401）
+function loadUsersDb(): any {
+  try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')); }
+  catch { return { users: [] }; }
+}
 
 const router = Router();
 const MINGPAN_ARTS = ['bazi', 'ziwei', 'astrology'];
 
-// 宽松建档：前端本地注册的用户在此同步建档（与 users.ts upsert 同策略；建档即发 claimToken 防抢占）
-// 返回 null=失败；否则 { existed: 是否已存在, claimToken: 该账号当前 token（新建时返回，供前端保存用于后续注册升级）}
+// 宽松建档：前端本地注册的用户在此同步建档（与 users.ts upsert 同策略；新建时发 claimToken 防抢占）
+// 返回 null=失败；否则 { existed, claimToken }
+// 安全（2026-09 修 P0-1）：claimToken 只在「本次新建」时返回，绝不回吐已存在账号的 token——
+// 否则任何人只要知道 username 即可取走占位账号凭据并 register 抢占（含档案/起占历史）。
 function ensureUser(username: string): { existed: boolean; claimToken: string } | null {
   if (!username || typeof username !== 'string') return null;
   try {
-    const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+    const db = loadUsersDb();
     const exist = db.users.find((u: any) => u.username === username);
-    if (exist) return { existed: true, claimToken: exist.token || '' };
+    if (exist) return { existed: true, claimToken: '' };
     const token = crypto.randomBytes(32).toString('hex');
     db.users.push({ username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [], token, tokenExpires: Date.now() + 30 * 24 * 3600 * 1000 });
+    fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
     console.log('[divine] 自动建档:', username);
     return { existed: false, claimToken: token };
@@ -37,9 +47,12 @@ function authedUsername(req: any): string | null {
   const tk = String(req.headers['x-guanwei-token'] || '');
   if (!tk) return null;
   try {
-    const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+    const db = loadUsersDb();
     const user = db.users.find((u: any) => u.token && u.token.length === tk.length && crypto.timingSafeEqual(Buffer.from(u.token), Buffer.from(tk)));
-    return user ? user.username : null;
+    if (!user) return null;
+    // 安全（2026-09 修 P1-2）：与 users.ts tokenMatches 同口径校验过期——过期 token 在占卜链路同样失效
+    if (user.tokenExpires && Date.now() > user.tokenExpires) return null;
+    return user.username;
   } catch { return null; }
 }
 
@@ -55,8 +68,7 @@ function resolveOwner(req: any, res: any, fallbackUsername: string): { owner: st
   if (!owner) { res.status(401).json({ error: 'UNAUTHORIZED', message: '请先入馆（登录）' }); return null; }
   let user: any = null;
   try {
-    const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
-    user = db.users.find((u: any) => u.username === owner) || null;
+    user = loadUsersDb().users.find((u: any) => u.username === owner) || null;
   } catch { /* 读失败按占位处理 */ }
   const isPlaceholder = !user || !user.passHash;
   if (!authed && !isPlaceholder) {
@@ -77,7 +89,7 @@ router.post('/', (req, res) => {
   if (!ensured) {
     return res.status(401).json({ error: 'UNAUTHORIZED', message: '请先入馆（登录）再起占' });
   }
-  const claimToken = ensured.claimToken;  // 新建占位账号时返回，供前端保存（L-NEW1）
+  const claimToken = ensured.claimToken;  // 仅「本次新建」时非空（P0-1）
   if (!artId || !inputs) return res.status(400).json({ error: '缺少必要参数' });
 
   let resultRaw: unknown;
@@ -101,8 +113,8 @@ router.post('/', (req, res) => {
   const authed = authedUsername(req);
   res.json({
     ok: true, divineId: rec.id, resultRaw, display: rec.display,
-    // L-NEW1：请求未带 token（本地占位流程）→ 返回 claimToken，前端保存后注册可升级；带 token 则无需
-    claimToken: authed ? undefined : ensured.claimToken,
+    // L-NEW1：仅未鉴权 + 本次新建占位账号时返回 claimToken（前端保存后注册可升级）；已存在账号一律不回吐
+    claimToken: (!authed && !ensured.existed && claimToken) ? claimToken : undefined,
   });
 });
 

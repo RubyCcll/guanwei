@@ -1,6 +1,7 @@
 // 本地用户体系（演示级）：注册/登录/会话/出生档案
 // 注意：仅本地存储（localStorage），密码为演示级哈希，不适用于生产环境
 import type { GeoLocation } from '@core/types';
+import { claimTokenOf, clearClaimToken } from '../services/api';
 
 export interface UserProfile {
   birthDate: string;          // YYYY-MM-DD（公历）
@@ -142,13 +143,16 @@ async function fetchServerToken(username: string, password: string): Promise<voi
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
-      // 后端无此用户 → 注册（自动建档即可；注册接口对已有用户返回 400）
+      // 后端无此用户 → 注册；若该名号已被「起占自动建档」占位，须携带建档时下发的 claimToken 方可升级
+      // （claimToken 由起占响应下发并由 services/api 落地本地，见 L-NEW1 闭环）
+      const claimToken = claimTokenOf(username);
       res = await fetch(API + '/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, ...(claimToken ? { claimToken } : {}) }),
       });
       if (!res.ok) return;
+      clearClaimToken(username);   // 一次性凭据，成功升级后即弃
     }
     const data = await res.json();
     if (data.token) {

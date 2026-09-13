@@ -6,7 +6,8 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = path.join(__dirname, '..', 'data', 'db.json');
+// 用户档案 JSON 库：默认 server/src/data/db.json；可用 GUANWEI_USERS_DB 指向临时文件（测试/多实例隔离）
+const DB_FILE = process.env.GUANWEI_USERS_DB || path.join(__dirname, '..', 'data', 'db.json');
 
 function scryptAsync(pw: string, salt: Buffer, keylen: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {

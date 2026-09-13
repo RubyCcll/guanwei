@@ -15,6 +15,22 @@ services:
       - guanwei-data:/app/server/src/data
     restart: unless-stopped
 
+  # 开放排盘 API（REST /v1 + MCP）：docker compose --profile api up -d
+  # 默认只应在本机/内网使用；如需公网暴露，请自行加反代与限流（服务内置 per-IP 限流兜底）
+  api:
+    profiles: ["api"]
+    image: ghcr.io/rubyccll/guanwei-guanwei-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    command: ["npx", "tsx", "packages/guanwei-api/src/server.ts"]
+    environment:
+      GUANWEI_API_HOST: 0.0.0.0
+      GUANWEI_API_PORT: 3020
+    ports:
+      - "${OPEN_API_PORT:-3020}:3020"
+    restart: unless-stopped
+
   web:
     image: ghcr.io/rubyccll/guanwei-guanwei-web:latest
     build:
