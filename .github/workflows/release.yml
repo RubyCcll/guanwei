@@ -5,9 +5,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: {}   # 支持手动重跑（如：发布环节补跑，无需重打 tag）
 
 permissions:
   contents: write
+  id-token: write          # npm Trusted Publishing（OIDC）：无需 token/OTP
 
 jobs:
   release:
@@ -48,6 +50,15 @@ jobs:
 
       - name: Run tests
         run: npx vitest run
+      - name: Upgrade npm (Trusted Publishing 需 npm >= 11.5.1)
+        run: npm install -g npm@latest
+
+      # npm Trusted Publishing：凭 GitHub OIDC 直接发布，免 token/免 2FA 动态码，并自动附 provenance 签名
+      # 前置（npm 网站一次性配置）：包 guanwei → Settings → Trusted Publisher → GitHub Actions
+      #   Organization: RubyCcll   Repository: guanwei   Workflow: release.yml
+      - name: Publish to npm (OIDC)
+        run: npm publish --access public --provenance
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
