@@ -123,6 +123,10 @@ curl http://127.0.0.1:3020/v1/arts             # 九术能力清单 + 参数 sch
 ```
 
 > 排盘免费（纯计算零 token）；协议风格与未来托管 API 一致（/v1、统一错误码），本地自部署与第三方集成同源。
+>
+> 安全默认：服务只绑 `127.0.0.1` 并内置 per-IP 限流（默认 120 次/分，`GUANWEI_API_RATE_MAX` 可调）、SSE 连接上限与闲置回收。
+> 如需公网/局域网暴露：`GUANWEI_API_HOST=0.0.0.0 npm start`，并请自行加反向代理与更严格的网关限流。
+> Docker 用户可用 `docker compose --profile api up -d` 启动该服务（容器内自动置 `GUANWEI_API_HOST=0.0.0.0`）。
 
 ## 🚀 快速开始（一行命令）
 
@@ -184,7 +188,7 @@ guanwei start
 
 镜像：`ghcr.io/rubyccll/guanwei-guanwei-web` / `guanwei-guanwei-backend`；端口冲突时 `WEB_PORT=5180 API_PORT=3020 docker compose up -d` 覆盖。也可直接 `docker pull ghcr.io/rubyccll/guanwei-guanwei-web:latest`。
 
-#### 方式六：本地 Node.js（≥ 22.5，需 node:sqlite 内置支持）
+#### 方式六：本地 Node.js（≥ 22.13.0，需 node:sqlite 内置支持）
 
 ```bash
 ./scripts/setup.sh                    # 交互式：选服务商 + 输入 Key
