@@ -54,7 +54,12 @@ fi
 
 echo "3️⃣  提交 + 打 tag + 推送 git"
 git add package.json package-lock.json server/package.json server/package-lock.json CHANGELOG.md
-git commit -m "chore: 版本升级 ${NEW_VER}"
+# 版本号/CHANGELOG 已在之前提交中就位时，此处无暂存差异——跳过提交，避免 set -e 中断发版
+if git diff --cached --quiet; then
+  echo "   ℹ️  版本文件无变化（已在历史提交中就位），跳过版本提交"
+else
+  git commit -m "chore: 版本升级 ${NEW_VER}"
+fi
 # 提交后再次校验：确保 tag 一定落在版本号已落地的 commit 上
 HEAD_VER="$(node -e "console.log(require('./package.json').version)")"
 if [[ "$HEAD_VER" != "$NEW_VER" ]]; then
