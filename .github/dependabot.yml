@@ -11,6 +11,17 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      # types 必须与运行时 Node 大版本匹配（项目 Node 22；26.x 类型会引入运行时并不存在的 API）
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # 已实测会打断构建/lint 的 major：待专项适配后再放开（见 PR #23/#24/#25）
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "lucide-react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "npm"
     directory: "/server"
     schedule:
@@ -21,6 +32,9 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
