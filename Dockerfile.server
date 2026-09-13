@@ -10,5 +10,7 @@ RUN cd server && npm ci --no-fund --no-audit
 # 3. 源码（.dockerignore 排除 node_modules/.env 等）
 COPY . .
 WORKDIR /app/server
+ENV HOST=0.0.0.0
+ENV PORT=3018
 EXPOSE 3018
 CMD ["npx", "tsx", "src/index.ts"]

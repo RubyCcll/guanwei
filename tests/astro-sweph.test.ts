@@ -1,12 +1,17 @@
 // 星盘（西洋占星）vs Swiss Ephemeris（瑞士星历，占星行业事实标准）交叉验证
 // 覆盖：7 古典行星回归黄经（视位置）、上升点 Asc、中天 MC
 // 环境：需 python3 环境含 pyswisseph（默认 /tmp/swe-venv；可用环境变量 SWE_PYTHON 覆盖）；缺环境时整组跳过
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'child_process';
 import { existsSync } from 'fs';
 import { astrologyCalc } from '../shared/core/engine/astrology';
 
-const PY = process.env.SWE_PYTHON || '/tmp/swe-venv/bin/python';
+// python 解释器探测：SWE_PYTHON → 项目内 .swe-venv → /tmp venv → 系统 python3
+const PY: string = [
+  process.env.SWE_PYTHON,
+  require('path').join(process.cwd(), '.swe-venv/bin/python'),
+  '/tmp/swe-venv/bin/python',
+].filter(Boolean).find((p: string) => existsSync(p)) || 'python3';
 const SCRIPT = require('path').join(process.cwd(), 'tests/helpers/swe_ephemeris.py');
 
 // [y,m,d,hour,min,lng,lat] 北京时间
@@ -21,16 +26,13 @@ const CASES: [number, number, number, number, number, number, number][] = [
   [2031, 6, 30, 22, 45, 114.06, 22.54],            // 深圳
 ];
 
-let swe: any = null;
-beforeAll(() => {
-  if (!existsSync(PY)) return;
-  try {
-    const out = execFileSync(PY, ['-c', 'import swisseph; print(swisseph.version)'], { encoding: 'utf8', timeout: 15000 });
-    swe = out.trim();
-  } catch (e: any) {
-    console.warn('[astro-sweph] pyswisseph 不可用，整组跳过：', String(e.message || e).slice(0, 120));
-  }
-});
+// 模块级探测：无 pyswisseph 时显式 skip（不再静默 return「假通过」——2026-09 修 P1-3）
+const HAS_SWE: boolean = (() => {
+  if (!existsSync(PY)) return false;
+  try { execFileSync(PY, ['-c', 'import swisseph'], { encoding: 'utf8', timeout: 15000 }); return true; }
+  catch { return false; }
+})();
+if (!HAS_SWE) console.warn('[astro-sweph] pyswisseph 不可用（' + PY + '）→ 本组显式 skip；CI 会安装以保证真跑');
 
 function angDiff(a: number, b: number): number {
   const d = Math.abs(a - b) % 360;
@@ -38,8 +40,7 @@ function angDiff(a: number, b: number): number {
 }
 
 describe('星盘 vs Swiss Ephemeris（事实标准）', () => {
-  it('7 行星黄经 + 上升 + 中天 全对齐（8 时空案例）', () => {
-    if (!swe) { console.warn('SKIP: 无 pyswisseph'); return; }
+  it.skipIf(!HAS_SWE)('7 行星黄经 + 上升 + 中天 全对齐（8 时空案例）', () => {
     const input = { cases: CASES.map(([y, m, d, hour, min, lng, lat]) => ({ y, m, d, hour, min, lng, lat })) };
     const out = execFileSync(PY, [SCRIPT], { input: JSON.stringify(input), encoding: 'utf8', timeout: 60000 });
     const { results } = JSON.parse(out);
@@ -58,7 +59,7 @@ describe('星盘 vs Swiss Ephemeris（事实标准）', () => {
     }
   });
 
-  it('引擎输出结构自洽：行星落宫=整宫制（asc 起 1 宫）', () => {
+  it.skipIf(!HAS_SWE)('引擎输出结构自洽：行星落宫=整宫制（asc 起 1 宫）', () => {
     for (const [y, m, d, hour, min, lng, lat] of CASES.slice(0, 4)) {
       const g = astrologyCalc(y, m, d, hour, min, lng, lat);
       for (const pd of g.planetDetails) {

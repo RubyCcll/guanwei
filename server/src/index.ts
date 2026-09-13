@@ -49,13 +49,17 @@ import hourRouter from './routes/hour.js';
 
 const app = express();
 const PORT = process.env.PORT || 3018;
+// 默认只绑本机（个人自托管场景）；容器/局域网部署用 HOST=0.0.0.0 显式放开
+const HOST = process.env.HOST || '127.0.0.1';
 
 app.use(cors());
 app.use(express.json());
 
-// ─── 限流（防 BYOK Key 被刷爆 / 无限建占刷库）：per-IP 令牌桶 ───
+// ─── 限流（防 BYOK Key 被刷爆 / 无限建占刷库）：per-IP + per-路由组 令牌桶 ───
 // /api/ai：每分钟 30 次（AI 烧 token，重点防护）
 // /api/divine 写：每分钟 60 次（防无限建占刷 SQLite）
+// 2026-09 修 P1-1：桶键含路由组——原实现单 Map 仅按 IP 计数，
+// 用户连续起占 31 次会把首个 AI 解读请求顶成 429（跨路由互相误伤）
 const AI_RATE_LIMIT = { windowMs: 60_000, max: 30 };
 const DIVINE_RATE_LIMIT = { windowMs: 60_000, max: 60 };
 const hits = new Map<string, { count: number; resetAt: number }>();
@@ -65,13 +69,14 @@ setInterval(() => {
   for (const [k, v] of hits) if (now > v.resetAt) hits.delete(k);
 }, 10 * 60 * 1000).unref();
 
-function rateLimit(limit: { windowMs: number; max: number }) {
+function rateLimit(group: string, limit: { windowMs: number; max: number }) {
   return (req: any, res: any, next: any) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const key = group + ':' + ip;
     const now = Date.now();
-    const rec = hits.get(ip);
+    const rec = hits.get(key);
     if (!rec || now > rec.resetAt) {
-      hits.set(ip, { count: 1, resetAt: now + limit.windowMs });
+      hits.set(key, { count: 1, resetAt: now + limit.windowMs });
       return next();
     }
     rec.count++;
@@ -81,10 +86,10 @@ function rateLimit(limit: { windowMs: number; max: number }) {
     next();
   };
 }
-app.use('/api/ai', rateLimit(AI_RATE_LIMIT));
+app.use('/api/ai', rateLimit('ai', AI_RATE_LIMIT));
 app.use('/api/divine', (req, res, next) => {
   if (req.method === 'GET') return next();  // 读操作不限制
-  return rateLimit(DIVINE_RATE_LIMIT)(req, res, next);
+  return rateLimit('divine', DIVINE_RATE_LIMIT)(req, res, next);
 });
 
 // 请求日志（联调排查用）
@@ -115,7 +120,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/divine', divineRouter);
 app.use('/api', hourRouter);
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), HOST, () => {
   console.log(`
   🎴 观微后端服务已启动
   

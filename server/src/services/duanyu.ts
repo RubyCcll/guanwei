@@ -11,9 +11,9 @@ function extractKeywords(artId: string, resultRaw: unknown): string[] {
     case 'bazi':
       // 月令/格局/用神/调候/旺衰
       if (r.monthZhi) kws.push('月令');
-      if (r.geju) kws.push('格局', String(r.geju));
-      if (r.yongshen) kws.push('用神', String(r.yongshen));
-      if (r.strength) kws.push(r.strength === '身强' ? '旺衰' : '旺衰');
+      if (r.geju) kws.push('格局', String(r.geju?.name || ''));            // geju 为对象，须取名（原 String(obj) 恒为 [object Object]）
+      if (r.yongshen) kws.push('用神', String(r.yongshen?.wx || r.yongshen?.shishen || ''));
+      if (r.strength) kws.push('旺衰', String(r.strength));                 // 原三元两分支同值（死代码）
       if (r.tiaohou) kws.push('调候');
       break;
     case 'liuyao':
