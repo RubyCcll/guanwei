@@ -50,6 +50,10 @@ server/scripts/eval/reports/
 # ===== 测试临时文件 =====
 tmp-test-*
 # ===== 发文/内容产出（仅本地，不入库） =====
+# ─── 内部区（对外不可见）：全部内部文档/监控/规划统一放 internal/，整目录忽略 ───
+/internal/
+
+# 历史路径（保留以防旧命名回流；新文档请一律放 internal/docs/）
 docs/zhihu-*.md
 docs/juejin-*.md
 docs/xiaohongshu-*.md

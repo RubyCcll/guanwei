@@ -240,24 +240,40 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 ├── server/
 │   ├── src/
 │   │   ├── routes/      # divine（排盘）/ ai（解读）/ users / hour（时辰反推）
-│   │   └── services/    # promptBuilder / llmProvider / divineStore / hourInference / relativesCheck / sixRelatives
-│   ├── data/            # SQLite 与用户数据（gitignore）
+│   │   └── services/    # promptBuilder / llmProvider / divineStore / dataDir / auth / usersDb
 │   └── .env.example
 ├── shared/core/         # 前后端共用引擎（排盘算法/数据，单一副本）
-├── scripts/             # setup.sh（一键配置）/ guanwei（CLI）/ release.sh（发版）/ setup.bat（Windows）
+├── packages/guanwei-api/# 开放 API（REST /v1 + MCP）
+├── scripts/             # setup.sh / guanwei（CLI）/ release.sh / preflight-release.sh / check-*.mjs
 ├── deploy/              # nginx 配置（Docker 部署）
 ├── .devcontainer/       # GitHub Codespaces 模板
 ├── Dockerfile.web / Dockerfile.server / docker-compose.yml
-├── docs/                # 开源素材（banner/截图/GIF/示例报告）
+├── docs/assets/         # 对外素材（banner/截图/GIF/示例报告）
+├── internal/            # 内部文档（规划/监控/SOP/草稿）——**仅本地，git 忽略，永不公开**
 └── tests/               # 测试（含回归集）
 ```
 
+### 公开区 / 内部区约定（重要）
+
+| 区域 | 位置 | 是否公开 |
+|---|---|---|
+| 源码与测试 | `src/` `server/src/` `shared/` `packages/` `tests/` `scripts/` | 公开（git + npm 包） |
+| 对外素材 | `docs/assets/` | 公开（仅 GitHub 展示，不进 npm 包） |
+| 内部文档 | `internal/` | **仅本地**（git 全目录忽略；请勿把内部内容放进公开区） |
+| 运行时数据 | `~/.guanwei/data`（`GUANWEI_DATA_DIR` 可覆盖） | **永不公开**（物理隔离于项目树之外） |
+
+发布前自检：`./scripts/preflight-release.sh` —— 依次校验仓库边界、npm 包内容（文件名 + 内容级扫描）、类型、全量测试、版本一致性；CI 与 release 流水线同样内置边界与包内容守卫。
+
 ## 🔐 安全说明
-- 所有密钥仅存于本地 `server/.env`（已 gitignore），仓库只提供 `.env.example` 模板；Docker 镜像构建已排除 `.env`（.dockerignore）
-- 密码哈希使用 **scrypt（带随机盐）**，登录时兼容升级存量旧哈希
+- **鉴权**：已内置 token 鉴权（`X-Guanwei-Token`，30 天滚动过期）+ scrypt（随机盐）密码哈希；档案/记录/详情接口均校验归属，归属不符统一 404（不泄露资源存在性）
+- **默认最小暴露**：后端默认只绑 `127.0.0.1`（容器/局域网用 `HOST=0.0.0.0` 显式放开）；开放 API 默认只绑本机并内置 per-IP 限流；CORS 默认仅本机来源
+- **限流**：`/api/ai` 30/分、起占 60/分、登录/注册 10/分、其余计算端点 120/分（`GUANWEI_RATE_*` 可调）；反代下通过 `trust proxy` 取真实客户端 IP
+- **密钥**：仅存于本地 `server/.env`（已 gitignore），仓库只提供 `.env.example` 模板；Docker 构建排除 `.env`；发布流水线有内容级扫描（密钥形态命中即拒绝发布）
+- **数据隔离**：运行时数据（用户档案 + 占卜记录）默认在 `~/.guanwei/data`，位于项目树之外——npm/Docker 构建上下文物理上取不到；`scripts/check-boundary.mjs` 与 `scripts/check-package.mjs` 在 CI/发布前双重把关
+- **隐私**：出生信息与人生经历会发送给所配置的 LLM 服务商用于生成解读；如需完全离线，请仅使用本地排盘能力（不调用 `/api/ai/*`）
 - AI 报告质量门槛：结构评分不达标不入库，自动留档供改进提示词
 - 测试数据全部虚构/匿名化，不含真实用户隐私；真实案例仅存本地（git 忽略）
-- ⚠️ **部署边界（务必知晓）**：本项目定位为「本地/内网自部署」工具，**未内置登录鉴权体系**——用户身份仅靠传入的 username 区分，知道用户名即可读取该用户档案（`GET /:username/profile` 无口令校验）。**请勿直接暴露到公网**；如需公网访问，必须在前面架设反向代理 + 网关鉴权（如 Nginx basic auth / Authelia / Cloudflare Access 等），或在应用层另行加固。
+- ⚠️ **部署边界**：默认配置面向「本地/内网自部署」。若需公网访问，请在前置反向代理上加网关鉴权（Nginx basic auth / Authelia / Cloudflare Access 等），并显式设置 `GUANWEI_ALLOWED_ORIGINS` 与更严格限流。
 
 ## 📄 示例输出
 

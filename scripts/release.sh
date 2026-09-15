@@ -4,7 +4,7 @@
 # 用法：./scripts/release.sh 1.1.2            仅 git 发版（tag 触发 CI/Release/镜像）
 #       ./scripts/release.sh 1.1.2 --npm      额外发布 npm 包（需先配置 npm 登录）
 # 要求：工作区无未提交改动；CHANGELOG.md 已写好本次版本条目
-# 详见（本地文档，不入库）：docs/RELEASE-SOP.md（发版 SOP 详情/踩坑记录）
+# 详见（本地文档，不入库）：internal/docs/RELEASE-SOP.md（发版 SOP 详情/踩坑记录）
 # ============================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -75,7 +75,7 @@ echo "   ✅ 已推送——CI / Release / 镜像 / Pages 将自动执行"
 if [[ "$DO_NPM" == "1" ]]; then
   echo "4️⃣  发布 npm（registry 必须是官方源，本机默认 npmmirror 需显式指定）..."
   # 用本地缓存避免 ~/.npm 写入受限；发布失败不中断后续提示
-  npm publish --registry https://registry.npmjs.org --cache ./.npm-cache || echo "   ⚠️  npm publish 失败——按 docs/RELEASE-SOP.md 第四节排查（2FA/权限/registry）"
+  npm publish --registry https://registry.npmjs.org --cache ./.npm-cache || echo "   ⚠️  npm publish 失败——按 internal/docs/RELEASE-SOP.md 第四节排查（2FA/权限/registry）"
   rm -rf .npm-cache
   echo "5️⃣  验证线上版本..."
   npm view guanwei version --registry https://registry.npmjs.org --cache ./.npm-cache 2>/dev/null || true

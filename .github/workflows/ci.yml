@@ -69,6 +69,9 @@ jobs:
         run: |
           kill $(cat /tmp/backend.pid) 2>/dev/null || true
 
+      - name: Repo boundary guard（公开区/内部区/打包区边界）
+        run: node scripts/check-boundary.mjs
+
       - name: Package content guard（硬门槛：不得含运行时数据/密钥）
         run: node scripts/check-package.mjs
 

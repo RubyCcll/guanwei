@@ -4,18 +4,21 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "1/4 包内容守卫（文件名 + 内容级扫描，拒绝任何运行时数据/密钥）..."
+echo "1/5 仓库边界守卫（公开区不得含内部内容；打包区须为公开区子集）..."
+node scripts/check-boundary.mjs
+
+echo "2/5 包内容守卫（文件名 + 内容级扫描，拒绝任何运行时数据/密钥）..."
 node scripts/check-package.mjs
 
-echo "2/4 类型检查..."
+echo "3/5 类型检查..."
 npx tsc --noEmit
 (cd server && npx tsc --noEmit)
 
-echo "3/4 全量测试..."
+echo "4/5 全量测试..."
 npx vitest run --reporter=dot >/tmp/gw-preflight-test.log 2>&1 || { echo "✗ 测试未通过，见 /tmp/gw-preflight-test.log"; tail -20 /tmp/gw-preflight-test.log; exit 1; }
 grep -E "Test Files|Tests " /tmp/gw-preflight-test.log | tail -2
 
-echo "4/4 版本一致性..."
+echo "5/5 版本一致性..."
 V=$(node -e "console.log(require('./package.json').version)")
 for f in server/package.json packages/guanwei-api/package.json package-lock.json server/package-lock.json; do
   Vf=$(node -e "const d=require('./$f');console.log(d.version||d.packages?.['']?.version||'?')")
