@@ -48,6 +48,9 @@
 - **P1-3 星历测试假通过**：`astro-sweph`/`jieqi-astro` 缺 pyswisseph 时由静默 `return` 改为显式 `it.skipIf`（vitest 标记 skipped）；CI 增 `setup-python` + `pip install pyswisseph` 使对照测试真跑
 - **P2-1 干净实例首占 401**：`ensureUser` 写库前补 `mkdirSync`，文件/目录不存在时按空库处理（原未鉴权首次起占直接 401）
 - **P2-2 版本对齐**：根/server/`packages/guanwei-api` 统一 1.3.3；MCP `serverInfo.version` 同步
+- **发布内容守卫**：`files` 白名单收窄至公开源码（排除 `server/src` 通配）；运行时数据默认目录迁至 `~/.guanwei/data`（项目树之外，构建上下文物理取不到）；新增 `scripts/check-package.mjs`（文件名 + 内容级双检，命中 `.env`/`*.db`/密钥形态即拒绝发布）与 `scripts/check-boundary.mjs`（公开区/内部区/打包区边界），接入 CI 与 release 流水线；本地发版自检 `scripts/preflight-release.sh`
+- **内部区隔离**：内部文档（规划/监控/审计/SOP）迁入 `internal/`（整目录 gitignore），`docs/` 仅保留对外素材
+- **npm 历史版本处理**：1.1.1–1.3.2 因含运行时数据文件已在 npm 标记 **deprecated**；修复版 **1.3.4** 已发布（包内容审计：0 数据文件 / 0 密钥）
 - 其它：支持 `GUANWEI_USERS_DB` 指定用户库（测试/多实例隔离）；`duanyu` 关键词提取修死代码与 `[object Object]` 无效关键词；`guanwei-api` 补齐间接依赖声明（原仅声明 express/tsx，独立安装必崩）
 
 ### 🧪 测试

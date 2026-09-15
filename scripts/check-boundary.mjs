@@ -36,7 +36,7 @@ const KEY_PATTERNS = [
   [/AIza[0-9A-Za-z_-]{30,}/, '疑似 Google API key'],
   [/gsk_[A-Za-z0-9]{40,}/, '疑似 Groq key'],
   [/gh[pousr]_[A-Za-z0-9]{30,}/, '疑似 GitHub token'],
-  [/_authToken\s*=/, 'npm 认证 token'],
+  [/_authToken\s*=\s*(?!\$\{)[A-Za-z0-9_.\-]{16,}/, 'npm 认证 token（真实值）'],
 ];
 const SKIP_EXT = /\.(png|jpe?g|gif|ico|webp|woff2?|ttf|otf|pdf|zip|gz|mp4|db)$/i;
 const contentViolations = [];

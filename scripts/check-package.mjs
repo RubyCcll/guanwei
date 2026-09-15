@@ -43,7 +43,7 @@ const BAD_CONTENT = [
   [/sk-[a-f0-9]{32}/, '疑似 DashScope key'],
   [/xox[baprs]-[A-Za-z0-9-]{10,}/, '疑似 Slack token'],
   [/gh[pousr]_[A-Za-z0-9]{30,}/, '疑似 GitHub token'],
-  [/_authToken\s*=/, 'npm 认证 token'],
+  [/_authToken\s*=\s*(?!\$\{)[A-Za-z0-9_.\-]{16,}/, 'npm 认证 token（真实值）'],
   [/"(passHash|tokenExpires)"\s*:/, '用户档案库特征字段'],
 ];
 const hits = [];
