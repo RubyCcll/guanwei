@@ -23,5 +23,6 @@ COPY --from=build /app ./
 COPY deploy/nginx-single.conf /etc/nginx/http.d/default.conf
 COPY deploy/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+ENV GUANWEI_DATA_DIR=/app/data
 EXPOSE 80
 ENTRYPOINT ["/entrypoint.sh"]

@@ -12,7 +12,7 @@ services:
     ports:
       - "${API_PORT:-3018}:3018"
     volumes:
-      - guanwei-data:/app/server/data
+      - guanwei-data:/app/data
     restart: unless-stopped
 
   # 开放排盘 API（REST /v1 + MCP）：docker compose --profile api up -d

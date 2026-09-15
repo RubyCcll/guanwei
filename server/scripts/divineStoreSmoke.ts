@@ -1,9 +1,10 @@
 // divineStore 冒烟测试（tsx 直跑）
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TMP = path.join(__dirname, '..', 'data', 'test-guanwei.db');
+const TMP = path.join(os.tmpdir(), 'guanwei-smoke-' + process.pid + '.db');
 process.env.GUANWEI_DB_FILE = TMP;
 try { fs.unlinkSync(TMP); } catch {}
 

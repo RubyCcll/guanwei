@@ -43,6 +43,7 @@ import aiRouter from './routes/ai.js';
 import usersRouter from './routes/users.js';
 import divineRouter from './routes/divine.js';
 import hourRouter from './routes/hour.js';
+import { DATA_DIR } from './services/dataDir.js';
 
 const app = express();
 const PORT = process.env.PORT || 3018;
@@ -134,8 +135,7 @@ app.get('/api', (_req, res) => {
 app.get('/api/health', (_req, res) => {
   // 轻量自检：数据目录可写 + LLM 配置状态（不含敏感值）
   let dataDirOk = true;
-  try { fs.accessSync(path.dirname(process.env.GUANWEI_USERS_DB || path.join(__dirname, '..', 'data')), fs.constants.W_OK); }
-  catch { dataDirOk = false; }
+  try { fs.accessSync(DATA_DIR, fs.constants.W_OK); } catch { dataDirOk = false; }
   res.json({ status: dataDirOk ? 'ok' : 'degraded', dataDir: dataDirOk ? 'ok' : 'readonly', timestamp: Date.now() });
 });
 

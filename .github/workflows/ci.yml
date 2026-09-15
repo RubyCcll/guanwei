@@ -69,16 +69,8 @@ jobs:
         run: |
           kill $(cat /tmp/backend.pid) 2>/dev/null || true
 
-      - name: Package content guard（不得含运行时数据/密钥）
-        run: |
-          npm pack --dry-run --json --ignore-scripts > /tmp/pack.json 2>/dev/null
-          node -e "
-          const d = require('/tmp/pack.json')[0];
-          const paths = d.files.map(f => f.path);
-          const bad = paths.filter(p => /(^|\/)(db\.json|guanwei\.db|\.env|\.env\..*)$/.test(p) || p.includes('server/src/data/') || p.includes('server/data/'));
-          if (bad.length) { console.error('❌ npm 包含敏感文件：', bad); process.exit(1); }
-          console.log('✅ 包内容干净：' + paths.length + ' 个文件');
-          "
+      - name: Package content guard（硬门槛：不得含运行时数据/密钥）
+        run: node scripts/check-package.mjs
 
       - name: Build frontend
         run: npm run build
