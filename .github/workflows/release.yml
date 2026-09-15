@@ -53,6 +53,13 @@ jobs:
       - name: Package content guard（硬门槛：不得含运行时数据/密钥）
         run: node scripts/check-package.mjs
 
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
       - name: Upgrade npm (Trusted Publishing 需 npm >= 11.5.1)
         run: npm install -g npm@latest
 
@@ -62,9 +69,3 @@ jobs:
       - name: Publish to npm (OIDC)
         run: npm publish --access public --provenance
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          draft: false
-          prerelease: false
