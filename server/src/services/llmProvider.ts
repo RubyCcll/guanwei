@@ -72,7 +72,7 @@ async function callOpenAI(cfg: ProviderConfig, messages: ChatMessage[], stream: 
 
 async function callGoogle(cfg: ProviderConfig, messages: ChatMessage[], stream: boolean): Promise<Response> {
   const model = process.env[cfg.modelEnv || ''] || cfg.defaultModel;
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env[cfg.keyEnv]}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   // 合并 messages 为 Google 格式：system → systemInstruction，其余 → contents
   const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
   const contents = messages.filter(m => m.role !== 'system').map(m => ({
@@ -81,7 +81,8 @@ async function callGoogle(cfg: ProviderConfig, messages: ChatMessage[], stream: 
   }));
   return fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // API Key 用 header 传递（原 ?key= 会进入 URL、代理日志与错误对象）
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': String(process.env[cfg.keyEnv] || '') },
     body: JSON.stringify({
       systemInstruction: system ? { parts: [{ text: system }] } : undefined,
       contents,
@@ -99,7 +100,7 @@ async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
       return await fn();
     } catch (e: any) {
       lastErr = e;
-      if (!/AI_HTTP_(429|5\d\d|400)/.test(e.message || '')) throw e;
+      if (!/AI_HTTP_(429|5\d\d)/.test(e.message || '')) throw e;   // 400 属请求体错误，重试必然再失败
       if (attempt < 2) {
         console.warn('[llm] ' + label + ' 第 ' + (attempt + 1) + ' 次失败(' + e.message + ')，重试…');
         await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));

@@ -1,8 +1,8 @@
 // AI 解读路由：/api/ai/interpret（非流式）+ /api/ai/interpret/stream（SSE）
 import { Router } from 'express';
-import fs from 'fs';
+import { resolveTokenUser, allowAnonymous } from '../services/auth.js';
+import { readUsersDb } from '../services/usersDb.js';
 import path from 'path';
-import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { buildMessages, buildReportMessages, buildStep1Messages, buildStep2Messages } from '../services/promptBuilder.js';
 import { chatOnce, chatStream, activeProvider, providerStatus, lastFinishReason } from '../services/llmProvider.js';
@@ -13,29 +13,23 @@ import { MINGPAN_TEMPLATE } from '../services/promptBuilder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// 请求 token → 用户名（与 divine.ts 同策略：有 token 以 token 为准，防 body 自报他人名）
+// 请求 token → 用户名（统一走 services/auth：含 tokenExpires 校验，2026-09 修 P1-1）
 function authedUsername(req: any): string | null {
-  const tk = String(req.headers['x-guanwei-token'] || '');
-  if (!tk) return null;
-  try {
-    const db = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'db.json'), 'utf-8'));
-    const user = db.users.find((u: any) => u.token && u.token.length === tk.length && crypto.timingSafeEqual(Buffer.from(u.token), Buffer.from(tk)));
-    return user ? user.username : null;
-  } catch { return null; }
+  return resolveTokenUser(req)?.username ?? null;
 }
 
 
-// 解读归属校验（与 divine.resolveOwner 同策略）：正式账号须本人 token，占位账号兼容无 token
+// 解读归属校验：正式账号须本人 token；占位账号仅限「可信内网来源」无 token 访问
+// （2026-09 修 P0-2：原实现 catch 分支 fail-open，读库失败即放行，配合无鉴权建档可跨用户读档案/耗 AI 额度）
 function canReadChart(req: any, recUsername: string, fallbackUsername: string): boolean {
   const authed = authedUsername(req);
   if (authed) return authed === recUsername;
-  // 无 token：仅当目标是占位账号（未正式注册）时允许 fallback username
-  if (fallbackUsername && fallbackUsername !== recUsername) return false;
+  if (!allowAnonymous(req)) return false;                       // 公网来源必须带 token
+  if (fallbackUsername && fallbackUsername !== recUsername) return false;  // 不得自报他人名号
   try {
-    const db = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'db.json'), 'utf-8'));
-    const user = db.users.find((u: any) => u.username === recUsername);
-    return !user || !user.passHash;  // 占位账号放行
-  } catch { return true; }
+    const user = readUsersDb().users.find((u: any) => u.username === recUsername);
+    return !user || !user.passHash;                             // 占位账号放行（内网）
+  } catch { return false; }                                     // 读库失败一律拒绝（不再 fail-open）
 }
 
 // 非流式：token 优先归属

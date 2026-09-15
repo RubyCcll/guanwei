@@ -1,12 +1,14 @@
 // 占卜数据存储（SQLite）：起占记录 / AI 报告 / 失败留档 / 占卜历史
 // 依赖：node:sqlite（Node 22 内置，零依赖）
 import { DatabaseSync } from 'node:sqlite';
+import { DIVINE_DB } from './dataDir.js';
 import fs from 'fs';
+import { randomUUID } from 'node:crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = process.env.GUANWEI_DB_FILE || path.join(__dirname, '..', 'data', 'guanwei.db');
+const DB_FILE = DIVINE_DB;
 
 let db: DatabaseSync | null = null;
 
@@ -104,7 +106,8 @@ function toRecord(row: any): DivineRecord {
 export function createDivination(args: CreateDivinationArgs): DivineRecord {
   const d = getDb();
   const now = Date.now();
-  const id = 'd_' + now + '_' + Math.random().toString(36).slice(2, 7);
+  // 原 Date.now()+Math.random() 可枚举（配合 403/404 差异可探测记录存在性）→ 改 CSPRNG UUID
+  const id = 'd_' + now + '_' + randomUUID();
   const display = args.display !== undefined ? args.display : args.resultRaw;
   d.prepare(`INSERT INTO divinations
     (id, username, art_id, kind, question, profile_id, profile_json, params_json, result_raw_json, display_json, status, created_at, updated_at)

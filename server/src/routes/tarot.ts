@@ -21,7 +21,12 @@ router.post('/draw', (req, res) => {
   let spread: Spread | undefined;
   
   if (customSpread) {
-    spread = customSpread;
+    // 自定义牌阵限长（2026-09 修 P0-5）：原实现按 positions.length 无上限循环，可被 10 万项拖死
+    const pos = Array.isArray(customSpread?.positions) ? customSpread.positions : [];
+    if (pos.length === 0 || pos.length > 20) {
+      return res.status(400).json({ error: 'BAD_SPREAD', message: '自定义牌阵位数为 1-20' });
+    }
+    spread = { ...customSpread, positions: pos.slice(0, 20) } as Spread;
   } else {
     spread = defaultSpreads.find(s => s.id === spreadId);
   }
@@ -41,10 +46,17 @@ router.post('/interpret', (req, res) => {
     return res.status(400).json({ error: '缺少必要参数' });
   }
   
+  // 抽牌/解读入参限长（同上）
+  if (!Array.isArray(cards) || cards.length === 0 || cards.length > 20) {
+    return res.status(400).json({ error: 'BAD_CARDS', message: '牌数需为 1-20' });
+  }
+  if (String(question).length > 300) {
+    return res.status(400).json({ error: 'BAD_QUESTION', message: '所问之事请控制在 300 字以内' });
+  }
   const result = generateInterpretation(
-    cards,
-    spread,
-    question,
+    cards.slice(0, 20),
+    { ...spread, positions: (spread.positions || []).slice(0, 20) },
+    String(question).slice(0, 300),
     category as QuestionCategory
   );
   
@@ -69,13 +81,22 @@ router.post('/interpret/stream', (req, res) => {
     return res.status(400).json({ error: '缺少必要参数' });
   }
   
+  // 抽牌/解读入参限长（同上）
+  if (!Array.isArray(cards) || cards.length === 0 || cards.length > 20) {
+    return res.status(400).json({ error: 'BAD_CARDS', message: '牌数需为 1-20' });
+  }
+  if (String(question).length > 300) {
+    return res.status(400).json({ error: 'BAD_QUESTION', message: '所问之事请控制在 300 字以内' });
+  }
   const result = generateInterpretation(
-    cards,
-    spread,
-    question,
+    cards.slice(0, 20),
+    { ...spread, positions: (spread.positions || []).slice(0, 20) },
+    String(question).slice(0, 300),
     category as QuestionCategory
   );
   
+  let closed = false;
+  req.on('close', () => { closed = true; });   // 客户端断开 → 停止逐字推送（修 P3-2）
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -83,6 +104,7 @@ router.post('/interpret/stream', (req, res) => {
   let sectionIndex = 0;
   
   const sendSection = () => {
+    if (closed) return;                              // 客户端已断开：停止计时器链
     if (sectionIndex >= result.sections.length) {
       res.write('event: done\n');
       res.write('data: [DONE]\n\n');
@@ -95,6 +117,7 @@ router.post('/interpret/stream', (req, res) => {
     let charIndex = 0;
     
     const typeChar = () => {
+      if (closed) return;                            // 同上
       if (charIndex >= chars.length) {
         sectionIndex++;
         setTimeout(sendSection, 300);

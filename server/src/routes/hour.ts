@@ -12,6 +12,10 @@ router.post('/hour-infer', (req, res) => {
   if (!Array.isArray(events) || events.length === 0) {
     return res.status(400).json({ error: '请至少提供一条关键人生事件' });
   }
+  // 条数上限（2026-09 修 P2-7）：每条事件会触发 12 候选 × baziCalc，原无上限可被放大
+  if (events.length > 50) {
+    return res.status(400).json({ error: 'TOO_MANY_EVENTS', message: '关键事件请控制在 50 条以内' });
+  }
   const cleanEvents: HourInferEvent[] = events
     .map((e: any) => ({
       year: Number(e?.year),

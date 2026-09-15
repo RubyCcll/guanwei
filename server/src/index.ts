@@ -18,11 +18,8 @@ import { fileURLToPath } from 'url';
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;        // 非法键名 → 跳过
       if (process.env[key] !== undefined) continue;               // 环境变量优先，不覆盖
       let val = line.slice(eq + 1).trim();
-      // 行内注释剥离（引号外的 # 视为注释起点）
-      if (!val.startsWith('"') && !val.startsWith("'")) {
-        const hash = val.indexOf(' #');
-        if (hash >= 0) val = val.slice(0, hash);
-      }
+      // 注：仅支持「整行注释」（行首 #）。不做行内注释剥离——API Key 可能含「 #」，
+      // 原实现会把密钥截断且仍报「已配置」，故障延后到运行期 401（2026-09 修 P1-5）
       // 引号包裹 → 整体剥引号 + 处理转义（仅双引号内做转义展开）
       const q = val.startsWith('"') ? '"' : val.startsWith("'") ? "'" : null;
       if (q && val.endsWith(q) && val.length >= 2) {
@@ -51,8 +48,22 @@ const app = express();
 const PORT = process.env.PORT || 3018;
 // 默认只绑本机（个人自托管场景）；容器/局域网部署用 HOST=0.0.0.0 显式放开
 const HOST = process.env.HOST || '127.0.0.1';
+// 反代（nginx/Docker）后取真实客户端 IP：否则限流键恒为网关地址，退化为全站单桶（2026-09 修 P1-2）
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
-app.use(cors());
+// CORS：默认仅同源/本机（原 `cors()` 全开，配合匿名占位账号放行可被任意站点跨源读取，2026-09 修 P2-1）
+// 需要放开时设 GUANWEI_ALLOWED_ORIGINS=https://a.com,https://b.com
+const ALLOWED = (process.env.GUANWEI_ALLOWED_ORIGINS || '').split(',').map(x => x.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin: string | undefined, cb: (e: Error | null, ok?: boolean) => void) {
+    if (!origin) return cb(null, true);                       // 同源/服务端调用
+    if (ALLOWED.length === 0) {
+      const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin);
+      return cb(null, local);                                  // 未配置 → 仅本机前端
+    }
+    return cb(null, ALLOWED.includes(origin));
+  },
+}));
 app.use(express.json());
 
 // ─── 限流（防 BYOK Key 被刷爆 / 无限建占刷库）：per-IP + per-路由组 令牌桶 ───
@@ -60,8 +71,9 @@ app.use(express.json());
 // /api/divine 写：每分钟 60 次（防无限建占刷 SQLite）
 // 2026-09 修 P1-1：桶键含路由组——原实现单 Map 仅按 IP 计数，
 // 用户连续起占 31 次会把首个 AI 解读请求顶成 429（跨路由互相误伤）
-const AI_RATE_LIMIT = { windowMs: 60_000, max: 30 };
-const DIVINE_RATE_LIMIT = { windowMs: 60_000, max: 60 };
+const RATE_ENV = (k: string, d: number) => Number(process.env[k] || d);
+const AI_RATE_LIMIT = { windowMs: 60_000, max: RATE_ENV('GUANWEI_RATE_AI', 30) };
+const DIVINE_RATE_LIMIT = { windowMs: 60_000, max: RATE_ENV('GUANWEI_RATE_DIVINE', 60) };
 const hits = new Map<string, { count: number; resetAt: number }>();
 // 定期清理过期桶（防内存泄漏，M-NEW3）
 setInterval(() => {
@@ -91,6 +103,15 @@ app.use('/api/divine', (req, res, next) => {
   if (req.method === 'GET') return next();  // 读操作不限制
   return rateLimit('divine', DIVINE_RATE_LIMIT)(req, res, next);
 });
+// 登录/注册：更严阈值（防口令爆破与脚本化抢注，2026-09 修 P1-3）
+const AUTH_RATE_LIMIT = { windowMs: 60_000, max: RATE_ENV('GUANWEI_RATE_AUTH', 10) };
+const GENERIC_LIMIT = { windowMs: 60_000, max: RATE_ENV('GUANWEI_RATE_GENERIC', 120) };
+app.use('/api/users/login', rateLimit('login', AUTH_RATE_LIMIT));
+app.use('/api/users/register', rateLimit('register', AUTH_RATE_LIMIT));
+app.use('/api/users', rateLimit('users', GENERIC_LIMIT));
+// 其余匿名计算端点（原不在任何桶内 → 可被无上限刷，2026-09 修 P0-5/P2-7）
+app.use('/api/tarot', rateLimit('tarot', GENERIC_LIMIT));
+app.use('/api/hour', rateLimit('hour', GENERIC_LIMIT));
 
 // 请求日志（联调排查用）
 app.use((req, res, next) => {
@@ -111,7 +132,11 @@ app.get('/api', (_req, res) => {
 });
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: Date.now() });
+  // 轻量自检：数据目录可写 + LLM 配置状态（不含敏感值）
+  let dataDirOk = true;
+  try { fs.accessSync(path.dirname(process.env.GUANWEI_USERS_DB || path.join(__dirname, '..', 'data')), fs.constants.W_OK); }
+  catch { dataDirOk = false; }
+  res.json({ status: dataDirOk ? 'ok' : 'degraded', dataDir: dataDirOk ? 'ok' : 'readonly', timestamp: Date.now() });
 });
 
 app.use('/api/tarot', tarotRouter);
@@ -119,6 +144,18 @@ app.use('/api/ai', aiRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/divine', divineRouter);
 app.use('/api', hourRouter);
+
+// 统一错误处理（2026-09 修 P1-1）：JSON 解析失败/未捕获异常一律返回 JSON，
+// 且不把堆栈与绝对路径回给客户端（原实现由 Express 默认处理器返回 HTML 堆栈页）
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = err?.status || err?.statusCode || 500;
+  const isJsonErr = err?.type === 'entity.parse.failed';
+  if (status >= 500) console.error('[server] 未处理异常:', err?.message || err);
+  res.status(status).json({
+    error: isJsonErr ? 'BAD_JSON' : (err?.code || 'INTERNAL'),
+    message: isJsonErr ? '请求体不是合法 JSON' : (status >= 500 ? '服务暂时不可用' : (err?.message || '请求有误')),
+  });
+});
 
 app.listen(Number(PORT), HOST, () => {
   console.log(`

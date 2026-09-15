@@ -62,7 +62,11 @@
   "files": [
     "dist",
     "src",
-    "server/src",
+    "server/src/index.ts",
+    "server/src/routes",
+    "server/src/services",
+    "server/src/types",
+    "server/package.json",
     "shared",
     "packages",
     "scripts",
