@@ -175,7 +175,7 @@ export function baziCalc(input: BaziInput): BaziResult {
   // 调候：按季节（月支）
   const season = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'].indexOf(monthGZ[1]);
   let tiaohou = '';
-  if (season >= 9 || season <= 0) tiaohou = '冬月寒凝，宜火调候（丙丁）';
+  if (season >= 9) tiaohou = '冬月寒凝，宜火调候（丙丁）';   // 亥子丑（原 `|| season <= 0` 误吞寅月，致春月分支永不可达）
   else if (season >= 3 && season <= 5) tiaohou = '夏月炎燥，宜水调候（壬癸）';
   else if (season >= 0 && season <= 2) tiaohou = '春月木旺，宜火泄秀或金制衡';
   else tiaohou = '秋月金旺，宜火炼金或水泄秀';
@@ -232,7 +232,20 @@ export function baziCalc(input: BaziInput): BaziResult {
   }
 
   // ─── 11. 流年（当前年）───
-  const nowYear = new Date().getFullYear();
+  // 流年以立春为界（2026-09 修 P2）：1/1~立春之间仍属上一年干支
+  const nowT = Date.now();
+  let nowYear = new Date().getFullYear();
+  {
+    let best = -Infinity, bestYear = nowYear;
+    for (const yy of [nowYear - 1, nowYear, nowYear + 1]) {
+      for (const jq of getJieQiTableExact(yy)) {
+        if (jq.name !== '立春') continue;
+        const tt = jq.time.getTime();
+        if (tt <= nowT && tt > best) { best = tt; bestYear = jq.time.getFullYear(); }
+      }
+    }
+    nowYear = bestYear;
+  }
   const liuIdx = jiaziIndex(nowYear);
   const liuGZ = GAN[liuIdx % 10] + ZHI[liuIdx % 12];
   const liunian = {

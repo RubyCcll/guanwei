@@ -217,8 +217,12 @@ export function jiuzongmen(tianpan: Record<number, string>, ganJi: string, dayZh
 
 export function liurenCalc(dt: string | Date): LiurenResult {
   const d = dt instanceof Date ? dt : new Date(dt);
-  const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
   const h = d.getHours();
+  // 原始日：节气/月将基准（不随夜子时前移）
+  const jy = d.getFullYear(), jm = d.getMonth() + 1, jd = d.getDate();
+  // 夜子时（23:00-23:59）归次日——仅日柱进一日（与奇门/八字 sect2 口径一致）
+  const dEff = h === 23 ? new Date(d.getTime() + 86400000) : d;
+  const y = dEff.getFullYear(), m = dEff.getMonth() + 1, day = dEff.getDate();
   const hourIndex = Math.floor(((h + 1) % 24) / 2); // 0=子
   /* 日干支 */
   const dIdx = mod(daysSince(y, m, day) + 55, 60);
@@ -234,12 +238,12 @@ export function liurenCalc(dt: string | Date): LiurenResult {
     雨水: '亥', 春分: '戌', 谷雨: '酉', 小满: '申', 夏至: '未', 大暑: '午',
     处暑: '巳', 秋分: '辰', 霜降: '卯', 小雪: '寅', 冬至: '丑', 大寒: '子',
   };
-  // 北京钟表时刻（字面组件 +08:00）：与节气时刻同基准，进程时区无关（CI/容器 TZ=UTC 亦正确）
-  const _t = beijingMs(y, m, day, h);
+  // 北京钟表时刻（原始日 +08:00）：与节气时刻同基准，进程时区无关（CI/容器 TZ=UTC 亦正确）
+  const _t = beijingMs(jy, jm, jd, h);
   let jiang = '丑';
   {
     const jqTimes: { name: string; time: number }[] = [];
-    for (const yy of [y - 1, y, y + 1]) {
+    for (const yy of [jy - 1, jy, jy + 1]) {
       for (const jq of getJieQiTableExact(yy)) {
         if (JIANG_BY_JQ[jq.name]) jqTimes.push({ name: jq.name, time: jq.time.getTime() });
       }
@@ -251,7 +255,7 @@ export function liurenCalc(dt: string | Date): LiurenResult {
     }
   }
   const jiangIdx = ZHI.indexOf(jiang as any);
-  const jqName = currentJieqiNameExact(y, m, day, h);
+  const jqName = currentJieqiNameExact(jy, jm, jd, h);
   /* 天盘：月将加时顺布 */
   const tianpan: Record<number, string> = {};
   for (let i = 0; i < 12; i++) tianpan[mod(hourIndex + i, 12)] = ZHI[mod(jiangIdx + i, 12)];

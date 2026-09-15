@@ -179,12 +179,12 @@ describe('== 6. 大六壬（月将为重点）==', () => {
 
 describe('== 7. 小六壬 ==', () => {
   it('正月初一子时=大安；六月初一子时=空亡', () => {
-    expect(xiaoliurenCalc('time', 1, 1, 1).name).toBe('大安');
-    expect(xiaoliurenCalc('time', 6, 1, 1).name).toBe('空亡');
+    expect(xiaoliurenCalc('time', 1, 1, 0).name).toBe('大安');   // 正月初一子时（时辰序 0=子）
+    expect(xiaoliurenCalc('time', 6, 1, 0).name).toBe('空亡');   // 六月初一子时
   });
   it('报数 3/3/3=大安；三月初一辰时=大安', () => {
     expect(xiaoliurenCalc('num', 0, 0, 0, 3, 3, 3).name).toBe('大安');
-    expect(xiaoliurenCalc('time', 3, 1, 5).name).toBe('大安');
+    expect(xiaoliurenCalc('time', 3, 1, 4).name).toBe('大安');   // 三月初一辰时（4=辰）
   });
 });
 

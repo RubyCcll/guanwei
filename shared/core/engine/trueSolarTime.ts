@@ -11,12 +11,15 @@ const DST_PERIODS: [number, number, number, number, number, number][] = [
   [1991, 4, 14, 1991, 9, 15],
 ];
 
-export function isChinaDST(y: number, m: number, d: number): boolean {
+export function isChinaDST(y: number, m: number, d: number, hour = 12, min = 0): boolean {
+  // 区间按「北京标准时」绝对时刻构造（显式 +08:00），并按实际钟点判定：
+  //  - 起始日 02:00 起拨（02:00 前仍为标准时，不应回拨）
+  //  - 结束日 02:00 停拨（00:00-01:59 仍属夏令时，原实现整天判 false）
   for (const [sy, sm, sd, ey, em, ed] of DST_PERIODS) {
-    const start = new Date(sy, sm - 1, sd, 2, 0, 0).getTime();
-    const end = new Date(ey, em - 1, ed, 2, 0, 0).getTime();
-    const t = new Date(y, m - 1, d, 12, 0, 0).getTime();
-    if (t >= start && t <= end) return true;
+    const start = Date.UTC(sy, sm - 1, sd, 2, 0) - 8 * 3600 * 1000;
+    const end = Date.UTC(ey, em - 1, ed, 2, 0) - 8 * 3600 * 1000;
+    const t = Date.UTC(y, m - 1, d, hour, min) - 8 * 3600 * 1000;
+    if (t >= start && t < end) return true;
   }
   return false;
 }
@@ -42,7 +45,7 @@ export function trueSolarTime(
 ): TrueSolarTime {
   let beijingHours = hour + min / 60;
   // 夏令时回拨 1 小时
-  if (applyDST && isChinaDST(y, m, d)) beijingHours -= 1;
+  if (applyDST && isChinaDST(y, m, d, hour, min)) beijingHours -= 1;
   // 平太阳时：东经 120° 基准，每 1° 差 4 分钟
   const localMeanHours = beijingHours + (lng - 120) * 4 / 60;
   // 均时差 EoT（分钟）

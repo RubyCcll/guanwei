@@ -84,7 +84,7 @@ export default function DemoPage() {
       case 'meihua': return () => meihuaCalc({ mode: 'number', n1, n2, n3, now: new Date() } as any);
       case 'liuyao': return () => liuyaoCalc(undefined, { y, m, d });
       case 'liuren': return () => liurenCalc(new Date(y, m - 1, d, hour, 0));
-      case 'xiaoliuren': return () => xiaoliurenCalc('time', m, d, Math.floor((hour % 24) / 2), n1, n2, n3);
+      case 'xiaoliuren': return () => xiaoliurenCalc('time', m, d, Math.floor(((hour % 24) + 1) % 24 / 2), n1, n2, n3);
       case 'tarot': return () => {
         const spread = allTarotSpreads().find((x: any) => x.id === 'three') || allTarotSpreads()[0];
         return { spread, cards: tarotDraw(3) };

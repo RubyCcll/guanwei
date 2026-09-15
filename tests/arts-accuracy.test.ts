@@ -51,7 +51,8 @@ describe('六爻纳甲（通行纳甲表标准卦例）', () => {
 
 describe('小六壬（掌诀口诀案例）', () => {
   it('2024-01-15 午时 → 赤口（大安起正月顺数至腊月=空亡；空亡起初一顺数至初五=赤口；赤口起子时至午时=赤口）', () => {
-    const r = xiaoliurenCalc('time', 2024, 1, 15, 12);
+    // 农历腊月初五午时：月=12 日=5 时辰序=6（午）→ 口诀「大安起正月…」推得赤口
+    const r = xiaoliurenCalc('time', 12, 5, 6);
     expect(r.name).toBe('赤口');
     expect(r.detail.ji).toBe('凶');
   });

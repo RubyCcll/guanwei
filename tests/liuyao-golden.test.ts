@@ -3,6 +3,19 @@
 import { describe, it, expect } from 'vitest';
 import { GUA_LOOKUP, BAGUA } from '../shared/core/data/gua64';
 import { GONG_SH, NAJIA, SHEN_LIU, GONG_WX } from '../shared/core/data/liuyao';
+import { liuyaoCalc, mulberry32 } from '../shared/core/engine/liuyao';
+
+// 独立推导：八经卦的内/外卦纳甲（通行口诀，与数据表 NAJIA 无耦合）
+// 口诀：乾内甲子、外壬午；坎内戊寅、外戊申；艮内丙辰、外丙戌；震内庚子、外庚午；
+//       巽内辛丑、外辛未；离内己卯、外己酉；坤内乙未、外癸丑；兑内丁巳、外丁亥（阳顺阴逆隔二）
+const TRI_IN: Record<string, string[]> = {
+  乾: ['甲子', '甲寅', '甲辰'], 坎: ['戊寅', '戊辰', '戊午'], 艮: ['丙辰', '丙午', '丙申'], 震: ['庚子', '庚寅', '庚辰'],
+  巽: ['辛丑', '辛亥', '辛酉'], 离: ['己卯', '己丑', '己亥'], 坤: ['乙未', '乙巳', '乙卯'], 兑: ['丁巳', '丁卯', '丁丑'],
+};
+const TRI_OUT: Record<string, string[]> = {
+  乾: ['壬午', '壬申', '壬戌'], 坎: ['戊申', '戊戌', '戊子'], 艮: ['丙戌', '丙子', '丙寅'], 震: ['庚午', '庚申', '庚戌'],
+  巽: ['辛未', '辛巳', '辛卯'], 离: ['己酉', '己未', '己巳'], 坤: ['癸丑', '癸亥', '癸酉'], 兑: ['丁亥', '丁酉', '丁未'],
+};
 
 // 八卦先天序 → 三爻位（自下而上，阳=1）：乾兑离震巽坎艮坤 = 111 110 101 100 011 010 001 000
 const BITS: Record<number, number> = { 1: 0b111, 2: 0b011, 3: 0b101, 4: 0b001, 5: 0b110, 6: 0b010, 7: 0b100, 8: 0b000 };
@@ -36,6 +49,29 @@ function derivePalace(pure: number): { name: string; shi: number }[] {
     return { name: nameOf(+upT, +downT), shi: shiSeq[i] };
   });
 }
+
+describe('六爻装卦：纳甲由上下经卦决定（2026-09 修 P0，原按宫纳甲 56/64 卦错）', () => {
+  it('数据表可按经卦分解：NAJIA[卦] = 内卦三爻 + 外卦三爻', () => {
+    for (const g of Object.keys(TRI_IN)) {
+      expect(NAJIA[g].slice(0, 3), g + ' 内卦').toEqual(TRI_IN[g]);
+      expect(NAJIA[g].slice(3, 6), g + ' 外卦').toEqual(TRI_OUT[g]);
+    }
+  });
+
+  it('端到端：200 次摇卦的装卦干支 == 按上下经卦独立推导', () => {
+    const date = { y: 2024, m: 1, d: 15 };
+    for (let seed = 1; seed <= 200; seed++) {
+      const r = liuyaoCalc(mulberry32(seed), date);
+      if (!r.najia) continue;
+      const want = [
+        ...TRI_IN[BAGUA[r.benGua.down].name],
+        ...TRI_OUT[BAGUA[r.benGua.up].name],
+      ];
+      const got = r.najia.lines.map((l: any) => l.gz);
+      expect(got, r.benGua.name + ' seed=' + seed).toEqual(want);
+    }
+  });
+});
 
 describe('六爻数据表 vs 京房八宫推导', () => {
   it('64 卦名与上下卦象一致（回归：地水师/水地比曾上下卦写反）', () => {

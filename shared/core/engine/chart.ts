@@ -53,8 +53,10 @@ export function chartCalc(artId: string, inputs: any): unknown {
     }
     case 'tarot': {
       const i = inputs || {};
-      const cards = tarotDraw(Math.max(1, i.n || 3));
       const spread = allTarotSpreads().find((s: any) => s.id === i.spread) || allTarotSpreads()[0];
+      // 抽牌数=牌阵位数（2026-09 修 P2：原恒取 i.n，凯尔特十字/年度运势等只抽 3 张，牌数与阵位不齐）
+      const need = Math.max(1, (spread?.positions?.length) || i.n || 3);
+      const cards = tarotDraw(need);
       return { spread: spread || { id: 'three', name: '圣三角', description: '', positions: [] }, cards };
     }
     default:

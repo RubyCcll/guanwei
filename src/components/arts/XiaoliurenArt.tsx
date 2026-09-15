@@ -40,7 +40,7 @@ export function XiaoliurenPanel({ onDivine }: PanelProps) {
         </div>
       )}
       <div className="field"><label htmlFor="xlr-h">时（时辰序）</label>
-        <SongSelect id="xlr-h" value={String(h)} options={['子(1)', '丑(2)', '寅(3)', '卯(4)', '辰(5)', '巳(6)', '午(7)', '未(8)', '申(9)', '酉(10)', '戌(11)', '亥(12)'].map((t, i) => ({ value: String(i + 1), label: t }))} onChange={v => setH(Number(v))} />
+        <SongSelect id="xlr-h" value={String(h)} options={['子(0)', '丑(1)', '寅(2)', '卯(3)', '辰(4)', '巳(5)', '午(6)', '未(7)', '申(8)', '酉(9)', '戌(10)', '亥(11)'].map((t, i) => ({ value: String(i), label: t }))} onChange={v => setH(Number(v))} />
       </div>
       {mode === 'num' && (
         <div className="field"><label htmlFor="xlr-n3">三数</label><input className="input-line" type="number" id="xlr-n3" min={1} max={12} value={n3} onChange={e => setN3(Number(e.target.value))} /></div>

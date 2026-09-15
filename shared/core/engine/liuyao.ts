@@ -1,6 +1,7 @@
 // 六爻：三枚铜钱摇卦（rng 可注入，保证测试可复现）+ 纳甲筮法（补齐层）
 import { GUA_LOOKUP } from '../data/gua64';
 import { GONG_SH, NAJIA, GONG_WX, SHEN_LIU, GAN_WX, ZHI_WX, liuqin } from '../data/liuyao';
+import { BAGUA } from '../data/gua64';
 import { daysSince, monthBranchOf } from './calendar';
 import type { LiuyaoResult } from '../types';
 
@@ -52,7 +53,11 @@ export function liuyaoCalc(rng: () => number = Math.random, date?: LiuyaoDateInf
   if (date) {
     const gs = GONG_SH[benGua.name];
     if (gs) {
-      const gz6 = NAJIA[gs.gong] || [];
+      // 纳甲由「上下经卦」决定，与宫属无关（2026-09 修 P0：原用宫纳甲，56/64 卦干支/六亲/旬空错）
+      // 通行口诀：内卦三爻纳甲 + 外卦三爻纳甲；八纯卦的宫纳甲表恰等于「同卦上下」的特例
+      const inner = NAJIA[BAGUA[benGua.down].name] || [];
+      const outer = NAJIA[BAGUA[benGua.up].name] || [];
+      const gz6 = [...inner.slice(0, 3), ...outer.slice(3, 6)];
       // 日干支（历元 +55）与月支
       const dIdx = mod(daysSince(date.y, date.m, date.d) + 55, 60);
       const dayGZ = GAN[dIdx % 10] + ZHI[dIdx % 12];

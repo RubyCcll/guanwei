@@ -9,8 +9,13 @@ import type { QimenInput, QimenResult } from '../types';
 
 export function qimenCalc(input: QimenInput): QimenResult {
   const d = input.datetime instanceof Date ? input.datetime : new Date(input.datetime);
-  const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
   const h = d.getHours();
+  // 原始日（节气/拆补基准，**不可**随夜子时前移，否则距交节天数多算一天、三元错位）
+  const jy = d.getFullYear(), jm = d.getMonth() + 1, jd = d.getDate();
+  // 夜子时（23:00-23:59）归次日：仅「日柱」进一日，否则时柱五鼠遁用错日干、整盘（值符/值使/五层）全错
+  // 2026-09 修 P0：与 qimen-dunjia 对拍，h=23 时 336/336 天日柱不一致
+  const dEff = h === 23 ? new Date(d.getTime() + 86400000) : d;
+  const y = dEff.getFullYear(), m = dEff.getMonth() + 1, day = dEff.getDate();
   /* 日干支 */
   const dIdx = mod(daysSince(y, m, day) + 55, 60);
   const dayGZ = GAN[dIdx % 10] + ZHI[dIdx % 12];
@@ -20,14 +25,14 @@ export function qimenCalc(input: QimenInput): QimenResult {
   const hgIdx = mod((dgIdx % 5) * 2 + hourIndex, 10);
   const hourGZ = GAN[hgIdx] + ZHI[hourIndex];
   /* 当前节气（时刻级：交节当天按钟表时刻切换）→ 阴阳遁 */
-  const _t = beijingMs(y, m, day, h);
-  const jqName = currentJieqiNameExact(y, m, day, h);
+  const _t = beijingMs(jy, jm, jd, h);                       // 原始时刻（节气基准）
+  const jqName = currentJieqiNameExact(jy, jm, jd, h);
   const season = QM_SEASONS.find(s => s.name === jqName);
   if (!season) throw new Error('节气未找到: ' + jqName);
   const yin = season.yin;
   /* 拆补定元：距交节时刻的天数 /5 分段（0-4 上元 5-9 中元 10-14 下元） */
   let jqTime = -Infinity;
-  for (const yy of [y - 1, y, y + 1]) {
+  for (const yy of [jy - 1, jy, jy + 1]) {
     for (const jq of getJieQiTableExact(yy)) {
       if (jq.name === jqName) {
         const tt = jq.time.getTime();
