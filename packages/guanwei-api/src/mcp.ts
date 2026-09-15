@@ -66,7 +66,7 @@ function toolsCall(params: any): { result?: any; error?: { code: number; message
 // ─── 协议核心：处理单个 JSON-RPC 请求 → 返回响应对象（stdio 与 HTTP/SSE 共用）───
 export function handleMcpRequest(req: McpRequest): McpResponse | null {
   if (req.method === 'initialize') {
-    return { jsonrpc: '2.0', id: req.id ?? null, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'guanwei-mcp', version: '1.3.3' } } };
+    return { jsonrpc: '2.0', id: req.id ?? null, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'guanwei-mcp', version: '1.3.4' } } };
   }
   if (req.method === 'notifications/initialized' || req.method === 'notifications/cancelled') {
     return null;  // 通知无响应
