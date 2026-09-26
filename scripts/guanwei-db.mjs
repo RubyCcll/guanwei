@@ -9,6 +9,7 @@
 //   node scripts/guanwei-db.mjs backup  [--out DIR] [--note 说明] [--dir 数据目录]
 //   node scripts/guanwei-db.mjs list    [--out DIR]
 //   node scripts/guanwei-db.mjs restore <备份文件> [--yes] [--force] [--dir 数据目录]
+//     （--force：跳过「端口有服务在监听」的拒绝；PORT 环境变量参与该检查）
 //
 // 退出码：0 成功 / 1 参数或状态错误 / 2 校验失败
 import fs from 'node:fs';
@@ -61,8 +62,8 @@ function stats(file) {
   } finally { db.close(); }
 }
 
-/** 目标库是否正被服务占用（默认端口可连即视为运行中） */
-function serverRunning(port = DEFAULT_PORT) {
+/** 端口是否已有服务在监听 */
+function portLive(port) {
   return new Promise(resolve => {
     const sock = net.connect({ host: '127.0.0.1', port });
     const done = (v) => { try { sock.destroy(); } catch { /* ignore */ } resolve(v); };
@@ -71,6 +72,19 @@ function serverRunning(port = DEFAULT_PORT) {
     sock.once('timeout', () => done(false));
     sock.once('error', () => done(false));
   });
+}
+
+/**
+ * 目标库是否可能正被服务占用。
+ * 启发式（TCP 探测）：只要 `PORT` 与默认 3018 中任一端口有监听即视为运行中——
+ * 宁可多问一次，也不要在服务握有旧 inode 时替换数据库文件（会撕裂 WAL）。
+ */
+async function serverRunning() {
+  const ports = [...new Set([process.env.PORT ? Number(process.env.PORT) : null, DEFAULT_PORT].filter(Boolean))];
+  for (const p of ports) {
+    if (await portLive(p)) return p;
+  }
+  return 0;
 }
 
 function sha256(file) {
@@ -180,9 +194,9 @@ function cmdRestore() {
   // 2) 服务运行中直接替换文件会撕裂 WAL → 默认拒绝
   return serverRunning().then(running => {
     if (running && !has('--force')) {
-      bail(`检测到后端仍在运行（127.0.0.1:${DEFAULT_PORT}）——请先停止服务再恢复（guanwei stop）；确要强行恢复加 --force`);
+      bail(`检测到端口 ${running} 有服务在监听（后端可能仍在运行）——请先停止服务再恢复（guanwei stop）；确要强行恢复加 --force`);
     }
-    if (running) console.warn('⚠️  后端仍在运行且指定了 --force：恢复后请立即重启服务，否则可能读到不一致数据');
+    if (running) console.warn('⚠️  端口 ' + running + ' 仍有服务且指定了 --force：恢复后请立即重启服务，否则可能读到不一致数据');
 
     if (!has('--yes')) {
       console.log(`将用 ${src}`);

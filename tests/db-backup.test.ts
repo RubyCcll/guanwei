@@ -15,6 +15,9 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'gw-backup-'));
 const DATA = path.join(TMP, 'data');
 const DB = path.join(DATA, 'guanwei.db');
 const BACKUPS = path.join(DATA, 'backups');
+// CI 会在默认 3018 起后端（集成测试用）→ 本组显式指定一个空闲端口，
+// 使「服务在跑则拒绝恢复」的判定不误伤；该判定本身由 ④ 用真实监听覆盖。
+const FREE_PORT = '3399';
 
 /** 跑 CLI，返回 { code, out } */
 function run(args: string[], env: Record<string, string> = {}): { code: number; out: string } {
@@ -86,12 +89,12 @@ describe('备份 / 恢复（scripts/guanwei-db.mjs）', () => {
   });
 
   it('③ 无 --yes 拒绝恢复；坏文件拒绝（退出码 2）', () => {
-    const noConfirm = run(['restore', snapshot]);
+    const noConfirm = run(['restore', snapshot], { PORT: FREE_PORT });
     expect(noConfirm.code).toBe(1);
     expect(noConfirm.out).toContain('--yes');
     const bad = path.join(TMP, 'bad.db');
     fs.writeFileSync(bad, 'not a sqlite file');
-    const badRun = run(['restore', bad, '--yes']);
+    const badRun = run(['restore', bad, '--yes'], { PORT: FREE_PORT });
     expect(badRun.code).toBe(2);
     // 库里数据未被破坏
     expect(count('users')).toBe(25);
@@ -102,7 +105,7 @@ describe('备份 / 恢复（scripts/guanwei-db.mjs）', () => {
     const srv = net.createServer();
     await new Promise<void>(res => srv.listen(port, '127.0.0.1', () => res()));
     try {
-      const blocked = run(['restore', snapshot, '--yes'], { PORT: String(port) });
+      const blocked = run(['restore', snapshot, '--yes'], { PORT: String(port) });   // 真实监听 → 必须拒绝
       expect(blocked.code).toBe(1);
       expect(blocked.out).toContain('仍在运行');
       expect(count('users')).toBe(25);   // 未被覆盖
@@ -116,7 +119,7 @@ describe('备份 / 恢复（scripts/guanwei-db.mjs）', () => {
     db.close();
     expect(count('users')).toBe(0);
 
-    const r = run(['restore', snapshot, '--yes']);
+    const r = run(['restore', snapshot, '--yes'], { PORT: FREE_PORT });
     expect(r.code, r.out).toBe(0);
     expect(r.out).toContain('账号 25');
     expect(count('users')).toBe(25);
