@@ -73,15 +73,15 @@ jobs:
       - name: Publish to npm（OIDC 优先，回退 NPM_TOKEN；已发布则跳过）
         run: |
           set -euo pipefail
+          # 回退通道自检（只验凭据，不发布；token 由 Actions 自动打码）——每次发版都验证一次
+          npm whoami --//registry.npmjs.org/:_authToken="${{ secrets.NPM_TOKEN }}" \
+            && echo "✅ NPM_TOKEN 可用（回退通道就绪）" \
+            || echo "⚠️ NPM_TOKEN 不可用（secret 缺失或已撤销）"
           VER=$(node -p "require('./package.json').version")
           if npm view "guanwei@$VER" version >/dev/null 2>&1; then
             echo "guanwei@$VER 已存在于 registry，跳过发布（幂等）"
             exit 0
           fi
-          # 回退通道自检（只验凭据，不发布；token 由 Actions 自动打码）
-          npm whoami --//registry.npmjs.org/:_authToken="${{ secrets.NPM_TOKEN }}" \
-            && echo "✅ NPM_TOKEN 可用（回退通道就绪）" \
-            || echo "⚠️ NPM_TOKEN 不可用（secret 缺失或已撤销）"
           if npm publish --access public --provenance; then
             echo "✅ 经 Trusted Publisher(OIDC) 发布，已附 provenance"
             exit 0
