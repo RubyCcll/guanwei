@@ -64,8 +64,17 @@ jobs:
         run: npm install -g npm@latest
 
       # npm Trusted Publishing：凭 GitHub OIDC 直接发布，免 token/免 2FA 动态码，并自动附 provenance 签名
-      # 前置（npm 网站一次性配置）：包 guanwei → Settings → Trusted Publisher → GitHub Actions
-      #   Organization: RubyCcll   Repository: guanwei   Workflow: release.yml
-      - name: Publish to npm (OIDC)
-        run: npm publish --access public --provenance
+      # 前置（npm 网站一次性配置，**尚未配置时本步骤会 ENEEDAUTH 失败**）：包 guanwei → Settings →
+      #   Trusted Publisher → GitHub Actions：Organization `RubyCcll` / Repository `guanwei` / Workflow `release.yml`
+      # 未配置期间改用本地 Automation token 发布：`node scripts/npm-release.mjs`（见 internal/docs/RELEASE-SOP.md）
+      # 幂等：版本已在 registry 上则跳过（重跑工作流不会因「版本已存在」失败）
+      - name: Publish to npm (OIDC；已发布则跳过)
+        run: |
+          set -euo pipefail
+          VER=$(node -p "require('./package.json').version")
+          if npm view "guanwei@$VER" version >/dev/null 2>&1; then
+            echo "guanwei@$VER 已存在于 registry，跳过发布（幂等）"
+          else
+            npm publish --access public --provenance
+          fi
 
