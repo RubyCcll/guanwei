@@ -43,7 +43,8 @@ import aiRouter from './routes/ai.js';
 import usersRouter from './routes/users.js';
 import divineRouter from './routes/divine.js';
 import hourRouter from './routes/hour.js';
-import { DATA_DIR } from './services/dataDir.js';
+import { DATA_DIR, DIVINE_DB } from './services/dataDir.js';
+import { ensureInit as initUsersStore, userCount } from './services/usersStore.js';
 
 const app = express();
 const PORT = process.env.PORT || 3018;
@@ -138,7 +139,10 @@ app.get('/api/health', (_req, res) => {
   // 轻量自检：数据目录可写 + LLM 配置状态（不含敏感值）
   let dataDirOk = true;
   try { fs.accessSync(DATA_DIR, fs.constants.W_OK); } catch { dataDirOk = false; }
-  res.json({ status: dataDirOk ? 'ok' : 'degraded', dataDir: dataDirOk ? 'ok' : 'readonly', timestamp: Date.now() });
+  // 只报账号数量与存储类型，不泄露账号名（隐私口径）
+  let users: number | null = null;
+  try { users = userCount(); } catch { /* 库不可读时保持 null */ }
+  res.json({ status: dataDirOk ? 'ok' : 'degraded', dataDir: dataDirOk ? 'ok' : 'readonly', store: 'sqlite', users, timestamp: Date.now() });
 });
 
 app.use('/api/tarot', tarotRouter);
@@ -158,6 +162,14 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     message: isJsonErr ? '请求体不是合法 JSON' : (status >= 500 ? '服务暂时不可用' : (err?.message || '请求有误')),
   });
 });
+
+// 启动即初始化统一存储：建表 + 旧 db.json 一次性导入（幂等；失败不阻塞启动）
+try {
+  initUsersStore();
+  console.log(`[store] SQLite: ${DIVINE_DB}（账号 ${userCount()} 个）`);
+} catch (e: any) {
+  console.error('[store] 初始化失败:', e?.message || e);
+}
 
 app.listen(Number(PORT), HOST, () => {
   console.log(`

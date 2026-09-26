@@ -48,14 +48,25 @@ const LEGACY_DIRS = [
 /** 解析数据文件路径（含旧目录一次性迁移） */
 export function dataFile(name: string): string {
   const target = path.join(DATA_DIR, name);
+  // SQLite WAL 模式下数据可能主要落在 -wal 文件里、主库文件本身很小；
+  // 比较体积时必须把 -wal/-shm 计入，否则会误判「目标库较小」而用旧库覆盖新库。
+  const sizeOf = (p: string): number => {
+    try {
+      let n = fs.statSync(p).size;
+      for (const suffix of ['-wal', '-shm']) {
+        try { n += fs.statSync(p + suffix).size; } catch { /* 无副文件 */ }
+      }
+      return n;
+    } catch { return 0; }
+  };
   try {
     const legacy = LEGACY_DIRS.map(d => path.join(d, name)).find(p => fs.existsSync(p) && fs.statSync(p).size > 0);
     const legacyOk = !!legacy;
     const targetExists = fs.existsSync(target);
-    const targetSize = targetExists ? fs.statSync(target).size : 0;
+    const targetSize = sizeOf(target);
     let needFill = !targetExists || targetSize === 0;
     // SQLite 库启发式：目标存在但显著小于旧库（如历史遗留的空壳库）→ 也迁移，避免真实记录被空库遮蔽
-    if (!needFill && /\.(db|sqlite|sqlite3)$/.test(name) && legacyOk && targetSize < fs.statSync(legacy!).size / 2) {
+    if (!needFill && /\.(db|sqlite|sqlite3)$/.test(name) && legacyOk && targetSize < sizeOf(legacy!) / 2) {
       needFill = true;
     }
     if (legacyOk && needFill) {
@@ -66,6 +77,10 @@ export function dataFile(name: string): string {
         console.log('[data] 目标库较小，已备份: ' + bak);
       }
       fs.copyFileSync(legacy!, target);
+      // 只复制主库：旧库的 WAL 副文件若一并留用会与新主库不匹配
+      for (const suffix of ['-wal', '-shm']) {
+        try { fs.rmSync(target + suffix, { force: true }); } catch { /* ignore */ }
+      }
       console.log('[data] 已从旧路径迁移: ' + legacy + ' → ' + target + ' (' + fs.statSync(target).size + ' bytes)');
     }
   } catch (e: any) {
@@ -74,7 +89,7 @@ export function dataFile(name: string): string {
   return target;
 }
 
-/** 用户档案库（JSON） */
+/** 旧用户档案库（JSON）：仅作一次性导入来源（见 services/usersStore.ensureInit） */
 export const USERS_DB = process.env.GUANWEI_USERS_DB || dataFile('db.json');
-/** 占卜记录库（SQLite） */
+/** 统一数据库（SQLite）：用户库 + 占卜记录 + 失败留档 */
 export const DIVINE_DB = process.env.GUANWEI_DB_FILE || dataFile('guanwei.db');

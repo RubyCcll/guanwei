@@ -4,19 +4,16 @@
 //  - 三处路由各自实现 authedUsername，口径漂移：ai.ts 漏校验 tokenExpires（过期 token 在 AI 链路永久可用）
 //  - 旧记录可能没有 tokenExpires 字段（1.3.3 前签发）→ 原逻辑视作「永不过期」；
 //    这些 token 已随 npm 1.3.2 包公开泄漏，故一律按失效处理（用户重新登录即可获新 token）
-import crypto from 'crypto';
-import { readUsersDb } from './usersDb.js';
+import { getUserByToken, type UserRow } from './usersStore.js';
 
-export interface TokenUser { username: string; user: any }
+export interface TokenUser { username: string; user: UserRow }
 
 /** 请求携带的 token → 用户（无 token / 不匹配 / 已过期 → null） */
 export function resolveTokenUser(req: any): TokenUser | null {
   const tk = String(req.headers['x-guanwei-token'] || '');
   if (!tk) return null;
   try {
-    const db = readUsersDb();
-    const user = db.users.find((u: any) =>
-      u.token && u.token.length === tk.length && crypto.timingSafeEqual(Buffer.from(u.token), Buffer.from(tk)));
+    const user = getUserByToken(tk);   // 存储：统一 SQLite（含恒时比较）
     if (!user) return null;
     // 过期即失效；无 tokenExpires 的旧记录（含已泄漏 token）同样视为失效
     if (!user.tokenExpires || Date.now() > user.tokenExpires) return null;

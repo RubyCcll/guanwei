@@ -12,10 +12,14 @@ import http from 'http';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { createRequire } from 'module';
+
+// node:sqlite 不在 Vite 的内置模块清单中（jsdom 环境下会尝试打包）→ 用 createRequire 运行时加载
+const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
 
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'gw-sec-'));
-const USERS_DB = path.join(TMP, 'nested', 'data', 'db.json');   // 目录亦不存在 → 覆盖 P2-1
-const SQLITE = path.join(TMP, 'guanwei.db');
+const USERS_DB = path.join(TMP, 'nested', 'data', 'db.json');   // 旧 JSON 库路径（不存在；新装不应产生）
+const SQLITE = path.join(TMP, 'nested', 'data', 'guanwei.db');  // 统一 SQLite（含 users 表）；目录亦不存在 → 覆盖 P2-1
 const PORT = 3198;
 const BASE = `http://127.0.0.1:${PORT}`;
 const API_PORT = 3199;          // 限流实例（RATE_MAX=3）
@@ -37,7 +41,11 @@ async function waitReady(url: string, ms = 40000): Promise<void> {
 beforeAll(async () => {
   procs.push(spawn('npx', ['tsx', 'src/index.ts'], {
     cwd: path.join(process.cwd(), 'server'),
-    env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', GUANWEI_USERS_DB: USERS_DB, GUANWEI_DB_FILE: SQLITE },
+    // 显式指定两个数据文件（短路 dataDir 的「旧路径迁移」）：避免把项目内开发数据复制进临时目录
+    env: {
+      ...process.env, PORT: String(PORT), HOST: '127.0.0.1',
+      GUANWEI_DATA_DIR: path.join(TMP, 'nested', 'data'), GUANWEI_DB_FILE: SQLITE, GUANWEI_USERS_DB: USERS_DB,
+    },
     stdio: 'ignore',
   }));
   procs.push(spawn('npx', ['tsx', 'packages/guanwei-api/src/server.ts'], {
@@ -63,12 +71,34 @@ afterAll(() => {
 const post = (url: string, body: unknown, headers: Record<string, string> = {}) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
 
+/** 直连统一 SQLite 库（与运行中的服务并存，WAL 支持多读者 + 写锁等待） */
+function withDb<T>(fn: (db: InstanceType<typeof DatabaseSync>) => T): T {
+  const db = new DatabaseSync(SQLITE);
+  try { db.exec('PRAGMA busy_timeout = 5000'); } catch { /* ignore */ }
+  try { return fn(db); } finally { db.close(); }
+}
+/** 把某用户 tokenExpires 置为过去（模拟到期/旧签发） */
+function expireToken(username: string, token: string): void {
+  const changes = withDb(db => Number(db.prepare('UPDATE users SET token_expires = ? WHERE username = ? AND token = ?')
+    .run(Date.now() - 1000, username, token).changes || 0));
+  expect(changes, '应命中 1 行（用户存在且 token 一致）').toBe(1);
+}
+/** 读该用户的占位凭据（原测试读 db.json，现读 users 表） */
+function tokenOf(username: string): string | null {
+  return withDb(db => {
+    const row = db.prepare('SELECT token FROM users WHERE username = ?').get(username) as any;
+    return row?.token ? String(row.token) : null;
+  });
+}
+
 describe('安全回归（P0/P1/P2）', () => {
-  it('P2-1 干净实例首次起占：目录/文件皆不存在也自动建档', async () => {
-    expect(fs.existsSync(USERS_DB)).toBe(false);
+  it('P2-1 干净实例：嵌套目录自动创建、统一 SQLite 建档，首次起占不 401', async () => {
+    // 统一存储后启动即建库（原实现依赖首次请求才 mkdirSync，缺目录会 401）
+    expect(fs.existsSync(SQLITE)).toBe(true);
+    expect(fs.existsSync(USERS_DB)).toBe(false);   // 新装不再产生旧 JSON 库
     const res = await post(BASE + '/api/divine', { username: '首位来客', artId: 'liuyao', inputs: {} });
     expect(res.status).toBe(200);
-    expect(fs.existsSync(USERS_DB)).toBe(true);   // mkdirSync + 建档成功
+    expect(tokenOf('首位来客')).toMatch(/^[0-9a-f]{64}$/);   // 账号落在 users 表
   });
 
   it('P0-1 claimToken 仅新建时下发；已存在账号不回吐、无法被抢占，合法认领仍可用', async () => {
@@ -118,11 +148,8 @@ describe('安全回归（P0/P1/P2）', () => {
     // 有效期内可读历史
     res = await fetch(BASE + '/api/divine?username=' + encodeURIComponent(name), { headers: { 'X-Guanwei-Token': token } });
     expect(res.status).toBe(200);
-    // 把该用户 tokenExpires 改成过去 → divine 链路应拒绝
-    const db = JSON.parse(fs.readFileSync(USERS_DB, 'utf-8'));
-    const u = db.users.find((x: any) => x.username === name);
-    u.tokenExpires = Date.now() - 1000;
-    fs.writeFileSync(USERS_DB, JSON.stringify(db, null, 2));
+    // 把该用户 tokenExpires 改成过去（直接改统一 SQLite 库）→ divine 链路应拒绝
+    expireToken(name, token);
     res = await fetch(BASE + '/api/divine?username=' + encodeURIComponent(name), { headers: { 'X-Guanwei-Token': token } });
     expect(res.status).toBe(401);
   });

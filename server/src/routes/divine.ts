@@ -3,37 +3,25 @@ import { Router } from 'express';
 import { chartCalc } from '../../../shared/core/engine/chart.js';
 import { createDivination, listDivinations, getDivination, deleteDivination } from '../services/divineStore.js';
 import { resolveTokenUser, allowAnonymous } from '../services/auth.js';
-import { readUsersDb, withUsersDb } from '../services/usersDb.js';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// 用户档案库路径与读写统一由 services/usersDb 提供（默认 server/data/db.json，
-// 可用 GUANWEI_USERS_DB / GUANWEI_DATA_DIR 覆盖；原子写 + 进程内串行锁）
-
-// 用户库读写统一走 services/usersDb（进程内串行锁 + 临时文件原子替换）
-function loadUsersDb(): any { return readUsersDb(); }
+import { getUser, createUserIfAbsent, newToken } from '../services/usersStore.js';
 
 const router = Router();
 const MINGPAN_ARTS = ['bazi', 'ziwei', 'astrology'];
 
-// 宽松建档：前端本地注册的用户在此同步建档（与 users.ts upsert 同策略；新建时发 claimToken 防抢占）
+// 宽松建档：前端本地注册的用户在此同步建档（与 users.ts register 同策略；新建时发 claimToken 防抢占）
 // 返回 null=失败；否则 { existed, claimToken }
 // 安全（2026-09 修 P0-1）：claimToken 只在「本次新建」时返回，绝不回吐已存在账号的 token——
 // 否则任何人只要知道 username 即可取走占位账号凭据并 register 抢占（含档案/起占历史）。
-async function ensureUser(username: string): Promise<{ existed: boolean; claimToken: string } | null> {
+// 存储（W38 #4）：INSERT OR IGNORE 原子建档，并发请求只有一个拿到 claimToken。
+function ensureUser(username: string): { existed: boolean; claimToken: string } | null {
   if (!username || typeof username !== 'string') return null;
   try {
-    return await withUsersDb((db) => {
-      const exist = db.users.find((u: any) => u.username === username);
-      if (exist) return { existed: true, claimToken: '' };   // 已存在账号绝不回吐 token（P0-1）
-      const token = crypto.randomBytes(32).toString('hex');
-      db.users.push({ username, passHash: '', createdAt: Date.now(), profile: {}, samples: [], records: [], token, tokenExpires: Date.now() + 30 * 24 * 3600 * 1000 });
-      console.log('[divine] 自动建档:', username);
-      return { existed: false, claimToken: token };
-    });
+    if (getUser(username)) return { existed: true, claimToken: '' };   // 已存在账号绝不回吐 token（P0-1）
+    const token = newToken();
+    const created = createUserIfAbsent({ username, token, tokenExpires: Date.now() + 30 * 24 * 3600 * 1000 });
+    if (!created) return { existed: true, claimToken: '' };
+    console.log('[divine] 自动建档:', username);
+    return { existed: false, claimToken: token };
   } catch (e: any) {
     console.error('[divine] ensureUser 异常:', e?.message || e);
     return null;
@@ -68,7 +56,7 @@ function resolveOwner(req: any, res: any, fallbackUsername: string, opts: { requ
   if (!owner) { res.status(401).json({ error: 'UNAUTHORIZED', message: '请先入馆（登录）' }); return null; }
   let user: any = null;
   try {
-    user = loadUsersDb().users.find((u: any) => u.username === owner) || null;
+    user = getUser(owner);
   } catch { /* 读失败按占位处理 */ }
   const isPlaceholder = !user || !user.passHash;
   if (!authed && !isPlaceholder) {
@@ -85,7 +73,7 @@ router.post('/', async (req, res) => {
   const resolved = resolveOwner(req, res, String(username || ''));
   if (!resolved) return;
   const owner = resolved.owner;
-  const ensured = await ensureUser(owner);
+  const ensured = ensureUser(owner);
   if (!ensured) {
     return res.status(401).json({ error: 'UNAUTHORIZED', message: '请先入馆（登录）再起占' });
   }
@@ -125,7 +113,7 @@ router.get('/', async (req, res) => {
   const pageSize = Number(req.query.pageSize || 20);
   const resolved = resolveOwner(req, res, username, { requireToken: true });
   if (!resolved) return;
-  if (!(await ensureUser(resolved.owner))) return res.status(401).json({ error: 'UNAUTHORIZED' });
+  if (!ensureUser(resolved.owner)) return res.status(401).json({ error: 'UNAUTHORIZED' });
   res.json(listDivinations(resolved.owner, page, pageSize, String(req.query.profileId || '')));
 });
 

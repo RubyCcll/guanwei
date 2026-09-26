@@ -92,3 +92,56 @@ describe('紫微排盘 vs iztro 事实标准', () => {
     }
   });
 });
+
+// ─── 自选盲测组（不参照既有案例挑选，专挑各实现最易分歧的边界）───
+// 覆盖：闰月十五前后（fixLeap 分界）、闰月整月、晚子时/早子时、正月初一、
+//       立春前、跨甲子（1952/2043）。
+const BLIND_CASES: [string, number, number, string, string][] = [
+  ['1969-07-20', 5, 40, '男', '农历6月7日'],
+  ['1975-11-03', 19, 5, '女', '农历10月1日'],
+  ['1988-03-15', 13, 10, '男', '农历1月28日'],
+  ['1997-09-09', 9, 30, '女', '农历8月8日'],
+  ['2004-04-04', 17, 55, '男', '闰2月15日（fixLeap 分界）'],
+  ['2013-12-22', 23, 20, '女', '农历11月20日 晚子时'],
+  ['2016-02-08', 0, 40, '男', '正月初一 早子时'],
+  ['2043-06-01', 12, 0, '女', '农历4月24日'],
+  ['1952-08-30', 7, 15, '男', '农历7月11日'],
+  ['2010-10-10', 10, 10, '女', '农历9月3日'],
+  ['2023-04-02', 15, 0, '男', '闰2月12日'],
+  ['2023-04-16', 15, 0, '女', '闰2月26日（fixLeap 进位）'],
+  ['2025-08-08', 8, 8, '女', '闰6月15日（fixLeap 分界）'],
+];
+
+describe('紫微排盘 vs iztro：自选盲测 13 案例（含闰月/子时边界）', () => {
+  it('五行局 / 命宫 / 身宫 / 紫微（13 案例）', () => {
+    for (const [dateStr, h, , gender, note] of BLIND_CASES) {
+      const hourIndex = Math.floor(((h + 1) % 24) / 2);
+      const it = astro.bySolar(dateStr, hourIndex, gender, true, 'zh-CN');
+      const iZw = it.palaces.find((p: any) => p.majorStars?.some((s: any) => s.name === '紫微'))?.earthlyBranch;
+      const g = ownCalc(dateStr, h, gender);
+      const tag = `${dateStr} ${String(h).padStart(2, '0')}时 ${note}`;
+      expect(g.juName, tag + ' 五行局').toBe(it.fiveElementsClass);
+      expect(DIZHI[g.ming], tag + ' 命宫').toBe(it.earthlyBranchOfSoulPalace);
+      expect(DIZHI[g.shen], tag + ' 身宫').toBe(it.earthlyBranchOfBodyPalace);
+      expect(DIZHI[g.zwPos], tag + ' 紫微').toBe(iZw);
+    }
+  });
+
+  it('十四主星位置 + 亮度（13 案例 × 14 星）', () => {
+    for (const [dateStr, h, , gender, note] of BLIND_CASES) {
+      const hourIndex = Math.floor(((h + 1) % 24) / 2);
+      const it = astro.bySolar(dateStr, hourIndex, gender, true, 'zh-CN');
+      const iStars: Record<string, string> = {};
+      const iB: Record<string, string> = {};
+      it.palaces.forEach((p: any) => p.majorStars?.forEach((s: any) => {
+        if (MAJORS.includes(s.name) && !iStars[s.name]) { iStars[s.name] = p.earthlyBranch; iB[s.name] = s.brightness; }
+      }));
+      const g = ownCalc(dateStr, h, gender);
+      const tag = `${dateStr} ${String(h).padStart(2, '0')}时 ${note}`;
+      for (const s of MAJORS) {
+        expect(DIZHI[g.zwStars[s]], tag + ' ' + s).toBe(iStars[s]);
+        expect(g.brightness[s], tag + ' ' + s + ' 亮度').toBe(iB[s]);
+      }
+    }
+  });
+});

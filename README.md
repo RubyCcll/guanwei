@@ -15,7 +15,7 @@
   <a href="https://github.com/RubyCcll/guanwei/releases"><img src="https://img.shields.io/github/v/release/RubyCcll/guanwei" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-9c4a2f" alt="MIT License"></a>
   <a href="https://github.com/RubyCcll/guanwei"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript"></a>
-  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-270-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-278-brightgreen" alt="Tests"></a>
 </p>
 
 <p align="center">
@@ -248,7 +248,7 @@ guanwei stop                 # 停止（docker 模式）
 
 ### 测试
 ```bash
-npm test                 # 270 项测试（含九术引擎对权威库的交叉验证）
+npm test                 # 278 项测试（含九术引擎对权威库的交叉验证）
 cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 ```
 
@@ -261,8 +261,9 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 | 星盘行星 / 上升 / 中天 | **Swiss Ephemeris**（瑞士星历） | 8 时空 × 7 古典行星 | 黄经 ≤0.05°、上升/中天 ≤0.1° |
 | 节气时刻（定年月柱、奇门定局、六壬月将的共同地基） | Swiss Ephemeris 太阳视黄经过宫（二分求根） | 3 年 × 24 节气 | 与历表差 ≤90 秒 |
 | 八字四柱 / 胎元 / 命宫 / 身宫 / 大运 | **lunar-typescript** `EightChar`（sect2） | 10 案例（含立春分钟级边界、晚子时） | 全字段一致，大运序列对齐 |
-| 紫微宫位 / 十四主星 / 辅星 / 亮度 | **iztro** 2.6.0 | 11 案例 × 14 星 | 零差异 |
+| 紫微宫位 / 十四主星 / 辅星 / 亮度 | **iztro** 2.6.0 | 24 案例 × 14 星（含闰月分界、晚子时、正月初一） | 零差异 |
 | 奇门阴阳遁 / 局数 / 五层盘（地盘天盘八门九星八神） | **qimen-dunjia** 3.1.0（拆补法） | 19 案例 × 逐宫 | 全对齐（含夜子时） |
+| 六壬月将（中气定将） | Swiss Ephemeris 太阳视黄经 30° 分段 | 12 中气 × 前后 6 小时 + 全年 24 时刻 | 与过宫时刻一致 |
 | 六爻纳甲 / 世位 / 六神 | 京房八宫递变 + 上下经卦纳甲**独立推导** | 64 卦 + 200 次摇卦 | 全对齐 |
 
 > 交叉验证抓到过的真实缺陷（均已修复并有回归）：六爻「宫纳甲」误用致 56/64 卦装卦错、奇门夜子时日柱少进一日、节气时刻在 1986–1991 夏令时窗口系统性偏 1 小时、六十四卦「地水师/水地比」上下卦写反、紫微亮度表整体失真。
@@ -274,7 +275,7 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 ├── server/
 │   ├── src/
 │   │   ├── routes/      # divine（排盘）/ ai（解读）/ users / hour（时辰反推）
-│   │   └── services/    # promptBuilder / llmProvider / divineStore / dataDir / auth / usersDb
+│   │   └── services/    # db（统一 SQLite）/ usersStore / divineStore / promptBuilder / llmProvider / dataDir / auth
 │   └── .env.example
 ├── shared/core/         # 前后端共用引擎（排盘算法/数据，单一副本）
 ├── packages/guanwei-api/# 开放 API（REST /v1 + MCP）
@@ -304,6 +305,7 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 - **限流**：`/api/ai` 30/分、起占 60/分、登录/注册 10/分、其余计算端点 120/分（`GUANWEI_RATE_*` 可调）；反代下通过 `trust proxy` 取真实客户端 IP
 - **密钥**：仅存于本地 `server/.env`（已 gitignore），仓库只提供 `.env.example` 模板；Docker 构建排除 `.env`；发布流水线有内容级扫描（密钥形态命中即拒绝发布）
 - **数据隔离**：运行时数据（用户档案 + 占卜记录）默认在 `~/.guanwei/data`，位于项目树之外——npm/Docker 构建上下文物理上取不到；`scripts/check-boundary.mjs` 与 `scripts/check-package.mjs` 在 CI/发布前双重把关
+- **统一存储**：账号、占卜记录、AI 失败留档同处一个 SQLite 库（`guanwei.db`，WAL + `BEGIN IMMEDIATE` 事务），并发注册/建档不会互相覆盖；1.3.4 及更早版本遗留的 JSON 用户库（`db.json`）在首次启动时一次性导入（原文件保留可回滚）
 - **隐私**：出生信息与人生经历会发送给所配置的 LLM 服务商用于生成解读；如需完全离线，请仅使用本地排盘能力（不调用 `/api/ai/*`）
 - AI 报告质量门槛：结构评分不达标不入库，自动留档供改进提示词
 - 测试数据全部虚构/匿名化，不含真实用户隐私；真实案例仅存本地（git 忽略）

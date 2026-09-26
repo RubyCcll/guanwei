@@ -1,60 +1,10 @@
 // 占卜数据存储（SQLite）：起占记录 / AI 报告 / 失败留档 / 占卜历史
-// 依赖：node:sqlite（Node 22 内置，零依赖）
-import { DatabaseSync } from 'node:sqlite';
-import { DIVINE_DB } from './dataDir.js';
-import fs from 'fs';
+// 句柄与建表统一由 services/db 提供（与用户库同库，见 db.ts）
+import { getDb, withTx } from './db.js';
 import { randomUUID } from 'node:crypto';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = DIVINE_DB;
-
-let db: DatabaseSync | null = null;
-
-export function getDb(): DatabaseSync {
-  if (db) return db;
-  fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-  db = new DatabaseSync(DB_FILE);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS divinations (
-      id            TEXT PRIMARY KEY,
-      username      TEXT NOT NULL,
-      art_id        TEXT NOT NULL,
-      kind          TEXT NOT NULL,
-      question      TEXT,
-      profile_id    TEXT NOT NULL DEFAULT 'main',
-      profile_json  TEXT,
-      params_json   TEXT,
-      result_raw_json TEXT NOT NULL,
-      display_json  TEXT NOT NULL,
-      report_json   TEXT,
-      report_quality TEXT,
-      status        TEXT NOT NULL DEFAULT 'divined',
-      created_at    INTEGER NOT NULL,
-      updated_at    INTEGER NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_div_user_time ON divinations(username, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS ai_fail_logs (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      art_id      TEXT NOT NULL,
-      kind        TEXT NOT NULL,
-      divine_id   TEXT,
-      raw_output  TEXT,
-      fail_reason TEXT,
-      created_at  INTEGER NOT NULL
-    );
-  `);
-  // 老库迁移：补 profile_id 列（2026-08-20 档案隔离）——必须在引用该列的索引之前
-  try {
-    db.exec("ALTER TABLE divinations ADD COLUMN profile_id TEXT NOT NULL DEFAULT 'main'");
-  } catch (e: any) {
-    if (!/duplicate column/i.test(e.message || '')) console.error('[divineStore] 迁移 profile_id 失败:', e.message);
-  }
-  db.exec('CREATE INDEX IF NOT EXISTS idx_div_user_profile ON divinations(username, profile_id, created_at DESC)');
-  return db;
-}
+export { getDb };
+export { withTx };
 
 export interface DivineRecord {
   id: string;
@@ -156,6 +106,7 @@ export function markAiFailed(id: string | null, artId: string, kind: string, rea
 }
 
 // 占卜历史分页（时间倒序，摘要字段）
+// 同一毫秒内建立的记录（如冒烟/并发场景）以 rowid 兜底，保证分页顺序确定（原按 id 比较 uuid，顺序随机）
 export function listDivinations(username: string, page = 1, pageSize = 20, profileId?: string): { list: { divineId: string; artId: string; question: string | null; createdAt: number; hasReport: boolean; status: string; profileId: string }[]; total: number } {
   const d = getDb();
   const pageN = Math.max(1, page);
@@ -163,7 +114,7 @@ export function listDivinations(username: string, page = 1, pageSize = 20, profi
   const where = profileId ? 'WHERE username = ? AND profile_id = ?' : 'WHERE username = ?';
   const params = profileId ? [username, profileId] : [username];
   const totalRow = d.prepare('SELECT COUNT(*) AS c FROM divinations ' + where).get(...params) as any;
-  const rows = d.prepare('SELECT id, art_id, question, created_at, report_json, status, profile_id FROM divinations ' + where + ' ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?')
+  const rows = d.prepare('SELECT id, art_id, question, created_at, report_json, status, profile_id FROM divinations ' + where + ' ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?')
     .all(...params, size, (pageN - 1) * size) as any[];
   return {
     list: rows.map(r => ({

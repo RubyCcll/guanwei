@@ -3,6 +3,10 @@ import { spawn, type ChildProcess } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { createRequire } from 'module';
+
+// node:sqlite 不在 Vite 的内置模块清单中（jsdom 环境下会尝试打包）→ 用 createRequire 运行时加载
+const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
 
 // 后端 API 测试：**自建实例 + 临时数据目录**（密闭）
 // 2026-09 修复：原先硬编码 `http://localhost:${PORT}` 并依赖宿主已启服务与 server/src/data/db.json，
@@ -26,6 +30,7 @@ beforeAll(async () => {
   proc = spawn('npx', ['tsx', 'src/index.ts'], {
     cwd: path.join(process.cwd(), 'server'),
     env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', GUANWEI_DATA_DIR: TMP_DATA,
+      GUANWEI_DB_FILE: path.join(TMP_DATA, 'guanwei.db'), GUANWEI_USERS_DB: path.join(TMP_DATA, 'db.json'),
       // 本文件用大量注册/登录请求做链路验证，放宽限流桶（限流另有 api-security.test.ts 专项覆盖）
       GUANWEI_RATE_AUTH: '1000', GUANWEI_RATE_GENERIC: '5000', GUANWEI_RATE_DIVINE: '5000' },
     stdio: 'ignore',
@@ -194,14 +199,13 @@ describe('H1 安全加固（claimToken 抢占防护 + 越权防护）', () => {
       body: JSON.stringify({ username: name, artId: 'liuyao', inputs: {} }),
     });
     expect(res.status).toBe(200);
-    // 从 db.json 读 claimToken（测试辅助）
-    const fs = await import('fs');
-    const path = await import('path');
-    // 自建实例的数据目录（密闭）：GUANWEI_DATA_DIR 指向临时目录
-    const dbPath = path.join(TMP_DATA, 'db.json');
-    const db = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-    const u = db.users.find((x: any) => x.username === name);
+    // 从统一 SQLite 的用户表读 claimToken（测试辅助；原为 db.json）
+    const table = path.join(TMP_DATA, 'guanwei.db');
+    const db = new DatabaseSync(table);
+    const u = db.prepare('SELECT token, pass_hash FROM users WHERE username = ?').get(name) as any;
+    db.close();
     expect(u?.token).toBeTruthy();
+    expect(u?.pass_hash).toBe('');   // 占位账号无密语
     const claimToken = u.token;
     // ② 攻击者无 claimToken 注册 → 409
     res = await fetch(BASE + '/register', {
