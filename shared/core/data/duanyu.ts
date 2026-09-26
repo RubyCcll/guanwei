@@ -71,11 +71,11 @@ export const DUANYU: DuanyuEntry[] = [
   // ─── 梅花易数 meihua ───
   {
     id: 'mhys-tiyong-01', bookId: 'meihua-yishu', art: 'meihua', chapter: '卷二 · 体用论',
-    original: '体克用，诸事吉；用克体，诸事凶。体生用，有进益之喜；用生体，有耗失之忧。体用比和，谋为皆成。',
+    original: '体克用，诸事吉；用克体，诸事凶。体生用有耗失之患，用生体有进益之喜；体用比和，则百事顺遂。',
     duanyu: '梅花体用断诀：体为己、用为事——体克用事可成，用克体事有阻；体生用有耗失，用生体有进益；比和则诸事顺遂。',
     factors: ['体用', '生克'], tags: ['体用', '生克'],
     sources: ['https://ctext.org/wiki.pl?if=gb&chapter=475043', 'https://zh.wikisource.org/zh-hans/%E6%A2%85%E8%8A%B1%E6%98%93%E6%95%B8/%E5%8D%B7%E4%BA%8C'],
-    note: '2026-08-24 已按 ctext 卷二·体用论校核：断诀措辞与通行本一致（五句体用吉凶断）。', status: 'reviewed',
+    note: '2026-09-26 订正：原引文后半「体生用有进益之喜；用生体有耗失之忧」与通行本及本条 duanyu 释义自相矛盾，已按卷二·体用总诀改为「体生用有耗失之患，用生体有进益之喜」（另见「体生用为之泄气」句）；引擎体用判定同因修正。', status: 'reviewed',
   },
   {
     id: 'mhys-budong-01', bookId: 'meihua-yishu', art: 'meihua', chapter: '观梅占',

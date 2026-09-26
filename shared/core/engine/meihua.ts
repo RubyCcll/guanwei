@@ -49,8 +49,12 @@ export function meihuaCalc(input: MeihuaInput): MeihuaResult {
   const yongGua = yongIsLower ? lower : upper;
   const tiWx = BAGUA[tiGua].wx, yongWx = BAGUA[yongGua].wx;
   const wxOrder2 = ['木', '火', '土', '金', '水'];
+  // rel = (用 − 体) 在相生序（木→火→土→金→水）上的步数：
+  //   1 体生用（泄气） 2 体克用（吉） 3 用克体（凶） 4 用生体（吉） 0 比和
+  // 2026-09-26 修正：原表 1/4、2/3 两组对调，致 64 组体用里 50 组吉凶判反
+  //（例：兑金体见离火用，经典作「用克体，凶」，原实现输出「体生用，泄气」）。
   const rel = mod(wxOrder2.indexOf(yongWx) - wxOrder2.indexOf(tiWx), 5);
-  const shengkeMap: Record<number, string> = { 1: '用生体，吉', 4: '体克用，吉', 2: '用克体，凶', 3: '体生用，泄气' };
+  const shengkeMap: Record<number, string> = { 1: '体生用，泄气', 2: '体克用，吉', 3: '用克体，凶', 4: '用生体，吉' };
   const shengke = shengkeMap[rel] || '体用比和，平';
 
   /* ── 补齐层：旺衰时令（月令卦气）── */
@@ -67,13 +71,13 @@ export function meihuaCalc(input: MeihuaInput): MeihuaResult {
     const mz = ZHI2[(lm - 1 + 12) % 12];
     const ZHI_WX: Record<string, string> = { 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水', 子: '水', 丑: '土' };
     monthWx = ZHI_WX[mz];
-    // 旺相休囚死：旺=同令 相=令生 休=生令者 囚=克令者 死=被令克
+    // 旺相休囚死（以月令论，依《梅花易数·体用总诀》「春震巽盛、春坤艮衰／夏乾兑衰／秋震巽衰／冬离衰／四季月坎衰」校核）：
+    //   rel2 = (卦行 − 月令) 相生序步数 → 0 同令=旺；1 令生者=相；2 令克者=死；3 克令者=囚；4 生令者=休
+    // 2026-09-26 修正：原表 1..4 全错位（春火应「相」却判「死」，春土应「死」却判「囚」）。
     const wxOrder = ['木', '火', '土', '金', '水'];
     const mIdx = wxOrder.indexOf(monthWx as any);
-    const wsOf = (wx: string): '旺' | '相' | '休' | '囚' | '死' => {
-      const rel2 = mod(wxOrder.indexOf(wx) - mIdx, 5);
-      return rel2 === 0 ? '旺' : rel2 === 1 ? '死' : rel2 === 2 ? '囚' : rel2 === 3 ? '休' : '相';
-    };
+    const WS_RANKS: ('旺' | '相' | '休' | '囚' | '死')[] = ['旺', '相', '死', '囚', '休'];
+    const wsOf = (wx: string): '旺' | '相' | '休' | '囚' | '死' => WS_RANKS[mod(wxOrder.indexOf(wx) - mIdx, 5)];
     tiWangShuai = wsOf(tiWx);
     yongWangShuai = wsOf(yongWx);
     // 吉凶加成：体旺用衰→大吉；体衰用旺→力不从心

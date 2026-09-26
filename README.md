@@ -15,7 +15,7 @@
   <a href="https://github.com/RubyCcll/guanwei/releases"><img src="https://img.shields.io/github/v/release/RubyCcll/guanwei" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-9c4a2f" alt="MIT License"></a>
   <a href="https://github.com/RubyCcll/guanwei"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript"></a>
-  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-284-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-291-brightgreen" alt="Tests"></a>
 </p>
 
 <p align="center">
@@ -277,9 +277,10 @@ guanwei stop && guanwei restore <备份文件> --yes   # 恢复（先停服务�
 | 紫微宫位 / 十四主星 / 辅星 / 亮度 | **iztro** 2.6.0 | 24 案例 × 14 星（含闰月分界、晚子时、正月初一） | 零差异 |
 | 奇门阴阳遁 / 局数 / 五层盘（地盘天盘八门九星八神） | **qimen-dunjia** 3.1.0（拆补法） | 19 案例 × 逐宫 | 全对齐（含夜子时） |
 | 六壬月将（中气定将） | Swiss Ephemeris 太阳视黄经 30° 分段 | 12 中气 × 前后 6 小时 + 全年 24 时刻 | 与过宫时刻一致 |
+| 梅花体用生克 / 旺相休囚死 | **《梅花易数》卷二·体用总诀**（古籍原文） | 3 则原案（观梅占 / 牡丹占 / 邻夜扣门）+ 128 组体用 + 48 项月令卦气 | 逐条一致 |
 | 六爻纳甲 / 世位 / 六神 | 京房八宫递变 + 上下经卦纳甲**独立推导** | 64 卦 + 200 次摇卦 | 全对齐 |
 
-> 交叉验证抓到过的真实缺陷（均已修复并有回归）：六爻「宫纳甲」误用致 56/64 卦装卦错、奇门夜子时日柱少进一日、节气时刻在 1986–1991 夏令时窗口系统性偏 1 小时、六十四卦「地水师/水地比」上下卦写反、紫微亮度表整体失真。
+> 交叉验证抓到过的真实缺陷（均已修复并有回归）：梅花体用生克与旺衰两表整体反向（64 组体用中 50 组吉凶判反）、六爻「宫纳甲」误用致 56/64 卦装卦错、奇门夜子时日柱少进一日、节气时刻在 1986–1991 夏令时窗口系统性偏 1 小时、六十四卦「地水师/水地比」上下卦写反、紫微亮度表整体失真。
 
 ## 📁 目录结构
 
