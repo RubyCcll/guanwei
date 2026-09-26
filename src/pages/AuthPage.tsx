@@ -93,6 +93,9 @@ export default function AuthPage() {
           </div>
           <div className="field"><label>名号</label><input className="input-line" placeholder="取一雅号" value={username} onChange={e => setUsername(e.target.value)} /></div>
           <div className="field"><label>密语</label><input className="input-line" type="password" placeholder="四字以上" value={password} onChange={e => setPassword(e.target.value)} /></div>
+          <p className="muted" style={{ fontSize: '.78rem', marginTop: '-.4rem' }}>
+            本地档案仅作离线体验：口令只在本机校验（未上传服务端），<b>不具备真正的保密能力</b>；请勿在本地档案中填写敏感信息。
+          </p>
           <button className="btn-divine" onClick={submit}>{mode === 'register' ? '入 馆' : '入 座'}</button>
           {msg && <p className={"mt-3 " + (msgOk ? 'tag-cool' : 'tag-hot')}>{msg}</p>}
         </div>

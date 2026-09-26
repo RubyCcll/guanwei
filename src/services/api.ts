@@ -6,12 +6,20 @@ const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/api'
 
 // 云同步 token（登录后 localStorage 会话中保存）：所有需要归属校验的请求带上，
 // 后端有 token 即以 token 解析用户，堵「自报 username」越权（H-NEW1 修复）
-function authHeaders(): Record<string, string> {
+function authHeaders(username?: string): Record<string, string> {
   try {
     const sess = JSON.parse(localStorage.getItem('guanwei_session') || 'null');
     if (sess?.token) return { 'X-Guanwei-Token': sess.token };
+    // 本地占位账号（未注册）：带上起占时下发的 claimToken，后端据此校验归属
+    const claim = (username && claimTokenOf(username)) || claimTokenOf(sess?.username || '') || currentClaimToken();
+    if (claim) return { 'X-Guanwei-Token': claim };
   } catch { /* ignore */ }
   return {};
+}
+
+/** 当前生效的占位账号凭据（单机本地流程通常只有一个） */
+function currentClaimToken(): string {
+  try { return localStorage.getItem(CLAIM_CURRENT_KEY) || ''; } catch { return ''; }
 }
 // 诊断：全局暴露当前 API 基址
 if (typeof window !== 'undefined') { (window as any).__API_BASE__ = API_BASE; }
@@ -256,7 +264,7 @@ export interface DivineResult {
 export async function apiDivine(username: string, artId: string, inputs: unknown, profile?: unknown, question?: string, _profileId?: string): Promise<DivineResult> {
   const res = await fetch(API_BASE + '/divine', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(username) },
     body: JSON.stringify({ username, artId, inputs, profile, question }),
   });
   if (!res.ok) {
@@ -272,16 +280,23 @@ export async function apiDivine(username: string, artId: string, inputs: unknown
 }
 
 const CLAIM_KEY = (name: string) => 'guanwei_claim_' + name;
+const CLAIM_CURRENT_KEY = 'guanwei_claim_current';
 
 /** 保存/读取占位账号认领凭据（仅本地持有，随注册一次性使用） */
 export function saveClaimToken(username: string, token: string): void {
-  try { localStorage.setItem(CLAIM_KEY(username), token); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(CLAIM_KEY(username), token);
+    localStorage.setItem(CLAIM_CURRENT_KEY, token);   // 供无 username 上下文的请求（如 AI 解读）回退使用
+  } catch { /* ignore */ }
 }
 export function claimTokenOf(username: string): string {
   try { return localStorage.getItem(CLAIM_KEY(username)) || ''; } catch { return ''; }
 }
 export function clearClaimToken(username: string): void {
-  try { localStorage.removeItem(CLAIM_KEY(username)); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem(CLAIM_KEY(username));
+    if (localStorage.getItem(CLAIM_CURRENT_KEY) === localStorage.getItem(CLAIM_KEY(username))) localStorage.removeItem(CLAIM_CURRENT_KEY);
+  } catch { /* ignore */ }
 }
 
 export interface DivineHistoryItem {
@@ -294,19 +309,19 @@ export interface DivineHistoryItem {
 }
 
 export async function apiDivineHistory(username: string, page = 1, pageSize = 20, profileId?: string): Promise<{ list: DivineHistoryItem[]; total: number }> {
-  const res = await fetch(API_BASE + '/divine?username=' + encodeURIComponent(username) + '&page=' + page + '&pageSize=' + pageSize + (profileId ? '&profileId=' + encodeURIComponent(profileId) : ''), { headers: authHeaders() });
+  const res = await fetch(API_BASE + '/divine?username=' + encodeURIComponent(username) + '&page=' + page + '&pageSize=' + pageSize + (profileId ? '&profileId=' + encodeURIComponent(profileId) : ''), { headers: authHeaders(username) });
   if (!res.ok) return { list: [], total: 0 };
   return res.json();
 }
 
 export async function apiDivineDetail(id: string, username: string): Promise<Record<string, unknown> | null> {
-  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username), { headers: authHeaders() });
+  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username), { headers: authHeaders(username) });
   if (!res.ok) return null;
   return res.json();
 }
 
 export async function apiDivineDelete(id: string, username: string): Promise<boolean> {
-  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username), { method: 'DELETE', headers: authHeaders() });
+  const res = await fetch(API_BASE + '/divine/' + id + '?username=' + encodeURIComponent(username), { method: 'DELETE', headers: authHeaders(username) });
   return res.ok;
 }
 

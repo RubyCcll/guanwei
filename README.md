@@ -15,7 +15,7 @@
   <a href="https://github.com/RubyCcll/guanwei/releases"><img src="https://img.shields.io/github/v/release/RubyCcll/guanwei" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-9c4a2f" alt="MIT License"></a>
   <a href="https://github.com/RubyCcll/guanwei"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript"></a>
-  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-181-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-270-brightgreen" alt="Tests"></a>
 </p>
 
 <p align="center">
@@ -24,6 +24,8 @@
 </p>
 
 > 占问所得，仅供修身养性、怡情遣兴之用，不构成任何决策依据。
+
+> **定位**：**自托管工具** —— 排盘与 AI 解读都跑在你自己机器上，档案与起占记录只落本地（`~/.guanwei/data`）；项目方不提供托管服务，**不采集任何遥测、不上报使用数据**。
 
 ## ▶️ 立即体验（无需注册 · 无需配置 · 无需 API Key）
 
@@ -56,7 +58,7 @@
 - 起占结果由后端计算并**持久化入库**（SQLite），六爻摇卦、塔罗抽牌等交互结果同样后端定稿
 
 ### AI 深度解读
-- **9 术角色化解读**：每术独立 persona（紫微：命盘结构 → 星曜落宫 → 十二宫 → 大限流年 → 人生阶段），技能清单单轮注入（多 Agent 编排规划中，接入后作为 guanwei-pro 模式，见 ROADMAP）
+- **9 术角色化解读**：每术独立 persona（紫微：命盘结构 → 星曜落宫 → 十二宫 → 大限流年 → 人生阶段）；**紫微已支持三步深度编排**（`orchestrate: "ziwei-deep"`：三次独立推理后汇总，guanwei-pro 雏形），其余八术为单轮 persona 注入
 - **双轨 Schema**：命盘类（原始解读/性格/原生家庭/心智模式/人生阶段/事业/爱情/财富/健康）、占问类（现状/趋势/时机）
 - **盘面事实一致性约束**：AI 必须逐字引用排盘数据，不得编造；后端**六亲宫位事实校验 + 矛盾定向修正**（宫位地支/主星/借星/生年四化）
 - **解读稳定性**：Step1 盘面解析缓存复用、低温采样、论断锚定（主观程度词必须有盘面依据）、去重与字数预算
@@ -122,11 +124,28 @@ curl -X POST http://127.0.0.1:3020/v1/chart -H "Content-Type: application/json" 
 curl http://127.0.0.1:3020/v1/arts             # 九术能力清单 + 参数 schema
 ```
 
-> 排盘免费（纯计算零 token）；协议风格与未来托管 API 一致（/v1、统一错误码），本地自部署与第三方集成同源。
+> 排盘免费（纯计算零 token）；`/v1` 协议与统一错误码便于本地集成与二次开发。
 >
 > 安全默认：服务只绑 `127.0.0.1` 并内置 per-IP 限流（默认 120 次/分，`GUANWEI_API_RATE_MAX` 可调）、SSE 连接上限与闲置回收。
 > 如需公网/局域网暴露：`GUANWEI_API_HOST=0.0.0.0 npm start`，并请自行加反向代理与更严格的网关限流。
 > Docker 用户可用 `docker compose --profile api up -d` 启动该服务（容器内自动置 `GUANWEI_API_HOST=0.0.0.0`）。
+
+#### 想让它被外部调用（内网/公网试跑）？
+
+默认只绑 `127.0.0.1`，必须显式放开：
+
+```bash
+GUANWEI_API_HOST=0.0.0.0 GUANWEI_API_RATE_MAX=60 npm start    # packages/guanwei-api
+```
+
+- **限流兜底**：per-IP 桶（默认 120/分，可调）、SSE 连接上限与闲置回收、429 带 `Retry-After`
+- **只要计数、不采隐私**：仅本机可读的使用计数（无 IP / 无参数 / 无载荷），`GUANWEI_API_STATS=0` 可完全关闭
+
+```bash
+curl http://127.0.0.1:3020/v1/stats     # {"total":…, "byEndpoint":{"/v1/chart":…}, "byDay":{…}}
+```
+
+- **公网务必**在前置反代加网关鉴权（Nginx basic auth / Authelia / Cloudflare Access 等）与更严格的限流
 
 ## 🚀 快速开始（一行命令）
 
@@ -229,9 +248,24 @@ guanwei stop                 # 停止（docker 模式）
 
 ### 测试
 ```bash
-npm test                 # 181 项测试（核心引擎/渲染/交互/存储/流程/提示词）
+npm test                 # 270 项测试（含九术引擎对权威库的交叉验证）
 cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 ```
+
+## 🔬 与权威实现的交叉验证
+
+排盘结果不靠自述——九术引擎的关键算法都与**外部权威实现**逐项对拍，且全部可在本仓复跑（`npx vitest run`；未装 `pyswisseph` 时星历两组自动跳过）：
+
+| 验证面 | 权威源 | 案例规模 | 断言 |
+|---|---|---|---|
+| 星盘行星 / 上升 / 中天 | **Swiss Ephemeris**（瑞士星历） | 8 时空 × 7 古典行星 | 黄经 ≤0.05°、上升/中天 ≤0.1° |
+| 节气时刻（定年月柱、奇门定局、六壬月将的共同地基） | Swiss Ephemeris 太阳视黄经过宫（二分求根） | 3 年 × 24 节气 | 与历表差 ≤90 秒 |
+| 八字四柱 / 胎元 / 命宫 / 身宫 / 大运 | **lunar-typescript** `EightChar`（sect2） | 10 案例（含立春分钟级边界、晚子时） | 全字段一致，大运序列对齐 |
+| 紫微宫位 / 十四主星 / 辅星 / 亮度 | **iztro** 2.6.0 | 11 案例 × 14 星 | 零差异 |
+| 奇门阴阳遁 / 局数 / 五层盘（地盘天盘八门九星八神） | **qimen-dunjia** 3.1.0（拆补法） | 19 案例 × 逐宫 | 全对齐（含夜子时） |
+| 六爻纳甲 / 世位 / 六神 | 京房八宫递变 + 上下经卦纳甲**独立推导** | 64 卦 + 200 次摇卦 | 全对齐 |
+
+> 交叉验证抓到过的真实缺陷（均已修复并有回归）：六爻「宫纳甲」误用致 56/64 卦装卦错、奇门夜子时日柱少进一日、节气时刻在 1986–1991 夏令时窗口系统性偏 1 小时、六十四卦「地水师/水地比」上下卦写反、紫微亮度表整体失真。
 
 ## 📁 目录结构
 

@@ -51,8 +51,14 @@ function authedUsername(req: any): string | null {
 //   · 目标为占位账号（passHash 空，自动建档/未正式注册）→ 允许（本地单机流程）
 //   · 目标为正式账号（注册过，passHash 非空）→ 401（必须持本人 token，H-NEW1~3）
 // 返回 { owner, isPlaceholder }；null = 校验失败（已 res 响应）
-function resolveOwner(req: any, res: any, fallbackUsername: string): { owner: string; isPlaceholder: boolean } | null {
+function resolveOwner(req: any, res: any, fallbackUsername: string, opts: { requireToken?: boolean } = {}): { owner: string; isPlaceholder: boolean } | null {
   const authed = authedUsername(req);
+  // 读/删类操作（历史、详情、删除）一律须持凭据——占位账号亦然（2026-09 W38 收紧 #3 残余：
+  // 原实现允许同内网凭 username 匿名读他人起占历史）。本地流程由前端携带起占时下发的 claimToken。
+  if (!authed && opts.requireToken) {
+    res.status(401).json({ error: 'AUTH_REQUIRED', message: '读取档案/记录需携带本人凭据（本地流程请携带起占时下发的 claimToken）' });
+    return null;
+  }
   // 匿名来源限制（P0-3）：公网来源必须持 token；仅回环/内网允许无 token 的本地流程
   if (!authed && !allowAnonymous(req)) {
     res.status(401).json({ error: 'AUTH_REQUIRED', message: '请先入馆（登录）后操作（公网访问不开放匿名起占）' });
@@ -117,7 +123,7 @@ router.get('/', async (req, res) => {
   const username = String(req.query.username || '');
   const page = Number(req.query.page || 1);
   const pageSize = Number(req.query.pageSize || 20);
-  const resolved = resolveOwner(req, res, username);
+  const resolved = resolveOwner(req, res, username, { requireToken: true });
   if (!resolved) return;
   if (!(await ensureUser(resolved.owner))) return res.status(401).json({ error: 'UNAUTHORIZED' });
   res.json(listDivinations(resolved.owner, page, pageSize, String(req.query.profileId || '')));
@@ -128,7 +134,7 @@ router.get('/:id', (req, res) => {
   const rec = getDivination(req.params.id);
   if (!rec) return res.status(404).json({ error: 'DIVINE_NOT_FOUND' });
   // 归属校验：token 优先；无 token 仅占位账号可经 query username 访问
-  const resolved = resolveOwner(req, res, String(req.query.username || ''));
+  const resolved = resolveOwner(req, res, String(req.query.username || ''), { requireToken: true });
   if (!resolved) return;
   // 归属不符统一返回 404（原 403/404 差异可枚举 divineId 存在性，2026-09 修 P1-7）
   if (resolved.owner !== rec.username) return res.status(404).json({ error: 'DIVINE_NOT_FOUND' });

@@ -94,6 +94,8 @@ function rateLimit(group: string, limit: { windowMs: number; max: number }) {
     }
     rec.count++;
     if (rec.count > limit.max) {
+      // 与开放 API 同口径：给出可退避的秒数（前端据此退避重试）
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((rec.resetAt - now) / 1000))));
       return res.status(429).json({ error: 'RATE_LIMITED', message: '请求过于频繁，请稍后再试' });
     }
     next();

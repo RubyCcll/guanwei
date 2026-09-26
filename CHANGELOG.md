@@ -54,7 +54,7 @@
 - 其它：支持 `GUANWEI_USERS_DB` 指定用户库（测试/多实例隔离）；`duanyu` 关键词提取修死代码与 `[object Object]` 无效关键词；`guanwei-api` 补齐间接依赖声明（原仅声明 express/tsx，独立安装必崩）
 
 ### 🧪 测试
-- **49 文件 / 273 项全过**（`npx vitest run`，Asia/Shanghai 与 UTC 两时区均全绿）
+- **49 文件 / 270 项全过**（`npx vitest run`，Asia/Shanghai 与 UTC 两时区均全绿；统计口径为仓库跟踪的测试文件）
 - 新增权威对照：`bazi-eightchar`（vs EightChar 10 案例）、`ziwei-iztro` 亮度断言（vs iztro）、`astro-sweph`（vs Swiss Ephemeris）、`jieqi-astro`（3 年 × 24 节气 ≤90 秒）、`liuyao-golden`（京房八宫推导）、`qimen-chaibu`（vs qimen-dunjia 16 案例 × 五层）
 - 新增安全回归 `api-security`（P0-1/P0-2/P1-1/P1-2/P2-1 各一条，自建实例 + 临时库，不依赖宿主服务）
 - 新增 devDependency：qimen-dunjia 3.1.0（MIT，仅测试用）

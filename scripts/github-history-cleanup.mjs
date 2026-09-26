@@ -24,6 +24,10 @@ const has = (name) => argv.includes(name);
 const REPO = arg('--repo');
 const KEEP = (arg('--keep', '') || '').split(',').map(s => s.trim()).filter(Boolean);
 const APPLY = has('--apply');
+const CONFIRM = has('--yes');   // 破坏性操作需 --apply --yes 双重确认
+// 默认保护的分支名（避免误删主干/发布分支）
+const PROTECTED_BRANCH = [/^main$/, /^master$/, /^develop(\/.*)?$/, /^release\/.*$/, /^hotfix\/.*$/];
+const isProtectedBranch = (n) => PROTECTED_BRANCH.some(re => re.test(n));
 if (!REPO || !REPO.includes('/')) {
   console.error('用法: node scripts/github-history-cleanup.mjs <list|purge|branches|releases> --repo owner/name [--keep tag,...] [--apply]');
   process.exit(1);
@@ -89,8 +93,14 @@ const run = async () => {
   }
 
   if (cmd === 'branches') {
-    const stale = branches.map(b => b.name).filter(n => n !== repo.default_branch);
-    if (!stale.length) return console.log('无非默认分支');
+    const skipped = branches.map(b => b.name).filter(n => n !== repo.default_branch && isProtectedBranch(n));
+    const stale = branches.map(b => b.name).filter(n => n !== repo.default_branch && !isProtectedBranch(n));
+    if (skipped.length) console.log('受保护分支（跳过）:', skipped.join(', '));
+    if (!stale.length) return console.log('无可删除分支');
+    if (APPLY && !CONFIRM) {
+      console.error('✗ 破坏性操作需二次确认：加 --yes（当前待删分支：' + stale.join(', ') + '）');
+      process.exit(1);
+    }
     for (const n of stale) {
       if (!APPLY) { console.log(`[dry-run] 将删除分支 ${n}`); continue; }
       const { status } = await api('DELETE', `/repos/${REPO}/git/refs/heads/${n}`);
@@ -100,6 +110,10 @@ const run = async () => {
   }
 
   if (cmd === 'purge' || cmd === 'releases') {
+    if (APPLY && !CONFIRM) {
+      console.error('✗ 破坏性操作需二次确认：node scripts/github-history-cleanup.mjs ' + cmd + ' --repo ' + REPO + ' --apply --yes');
+      process.exit(1);
+    }
     // 防误删：未显式 --keep 时，默认保留「最新版本 tag」（latest release → semver 最大者）
     let keep = [...KEEP];
     if (keep.length === 0) {
@@ -129,7 +143,8 @@ const run = async () => {
         }
       }
     }
-    if (!APPLY) console.log(`\n共 ${staleTags.length} 个待处理；确认后加 --apply 执行`);
+    if (!APPLY) console.log(`\n共 ${staleTags.length} 个待处理；确认后执行：--apply --yes`);
+    else console.log(`已处理 ${staleTags.length} 个 tag/release`);
     return;
   }
 

@@ -1,7 +1,6 @@
 // AI 解读路由：/api/ai/interpret（非流式）+ /api/ai/interpret/stream（SSE）
 import { Router } from 'express';
-import { resolveTokenUser, allowAnonymous } from '../services/auth.js';
-import { readUsersDb } from '../services/usersDb.js';
+import { resolveTokenUser } from '../services/auth.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { buildMessages, buildReportMessages, buildStep1Messages, buildStep2Messages } from '../services/promptBuilder.js';
@@ -21,15 +20,10 @@ function authedUsername(req: any): string | null {
 
 // 解读归属校验：正式账号须本人 token；占位账号仅限「可信内网来源」无 token 访问
 // （2026-09 修 P0-2：原实现 catch 分支 fail-open，读库失败即放行，配合无鉴权建档可跨用户读档案/耗 AI 额度）
-function canReadChart(req: any, recUsername: string, fallbackUsername: string): boolean {
+function canReadChart(req: any, recUsername: string): boolean {
+  // 解读 = 读取排盘记录 + 消耗 owner 的 LLM 额度：一律须持凭据（2026-09 W38 收紧）
   const authed = authedUsername(req);
-  if (authed) return authed === recUsername;
-  if (!allowAnonymous(req)) return false;                       // 公网来源必须带 token
-  if (fallbackUsername && fallbackUsername !== recUsername) return false;  // 不得自报他人名号
-  try {
-    const user = readUsersDb().users.find((u: any) => u.username === recUsername);
-    return !user || !user.passHash;                             // 占位账号放行（内网）
-  } catch { return false; }                                     // 读库失败一律拒绝（不再 fail-open）
+  return !!authed && authed === recUsername;
 }
 
 // 非流式：token 优先归属
@@ -51,7 +45,7 @@ router.post('/interpret', async (req, res) => {
     if (divineId) {
       const rec = getDivination(divineId);
       if (!rec) return res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
-      if (!canReadChart(req, rec.username, String(username || ''))) return res.status(403).json({ error: 'FORBIDDEN' });
+      if (!canReadChart(req, rec.username)) return res.status(403).json({ error: 'FORBIDDEN' });
       resultRaw = rec.resultRaw;
       recProfile = rec.profile;
     } else {
@@ -132,7 +126,7 @@ router.post('/interpret/stream', async (req, res) => {
     res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
     return;
   }
-  if (!canReadChart(req, rec.username, String(username || ''))) {
+  if (!canReadChart(req, rec.username)) {
     res.status(403).json({ error: 'FORBIDDEN' });
     return;
   }

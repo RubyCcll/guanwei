@@ -39,6 +39,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// ─── 最小使用计数（"水表"）：只统计次数，不记录 IP / 参数 / 载荷，也不外发 ───
+// 目的：自托管/试跑时能回答「有没有人用、用了哪一术」，而不引入任何遥测与隐私面。
+// 关闭：GUANWEI_API_STATS=0；查看：本机 GET /v1/stats（非本机来源返回 404）
+const STATS_ON = process.env.GUANWEI_API_STATS !== '0';
+const stats = { startedAt: Date.now(), total: 0, byEndpoint: {} as Record<string, number>, byDay: {} as Record<string, number> };
+app.use((req, res, next) => {
+  if (!STATS_ON) return next();
+  if (req.path === '/v1/stats') return next();
+  const key = (req.path.startsWith('/v1/chart') ? '/v1/chart' : req.path.startsWith('/mcp') ? '/mcp' : req.path);
+  const day = new Date().toISOString().slice(0, 10);
+  stats.total++;
+  stats.byEndpoint[key] = (stats.byEndpoint[key] || 0) + 1;
+  stats.byDay[day] = (stats.byDay[day] || 0) + 1;
+  next();
+});
+
 // 请求日志（access log：谁在什么时间调了哪一术，Gate 1 需求验证数据）
 app.use((req, res, next) => {
   res.on('finish', () => {
@@ -47,6 +63,13 @@ app.use((req, res, next) => {
     console.log(line);
   });
   next();
+});
+
+app.get('/v1/stats', (req, res) => {
+  const raw = String(req.ip || req.socket?.remoteAddress || '').replace(/^::ffff:/, '');
+  const local = raw === '127.0.0.1' || raw === '::1';
+  if (!local) { res.status(404).json({ error: 'NOT_FOUND' }); return; }
+  res.json({ ...stats, uptimeSec: Math.round((Date.now() - stats.startedAt) / 1000), note: '仅计数，无 IP/参数/载荷；GUANWEI_API_STATS=0 可关闭' });
 });
 
 app.get('/v1', (_req, res) => {

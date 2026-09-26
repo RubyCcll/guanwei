@@ -95,6 +95,21 @@ describe('安全回归（P0/P1/P2）', () => {
     expect(reg.token).toBeTruthy();
   });
 
+  it('W38 收紧：占位账号历史与解读也须凭据（匿名读 → 401，带 claimToken → 200）', async () => {
+    const name = '匿名读占位' + Date.now().toString().slice(-4);
+    // 起占仍允许匿名（本机来源），并下发 claimToken
+    let res = await post(BASE + '/api/divine', { username: name, artId: 'liuyao', inputs: {} });
+    expect(res.status).toBe(200);
+    const { claimToken } = await res.json();
+    expect(typeof claimToken).toBe('string');
+    // 无凭据读该占位账号历史 → 401（原实现同内网来源会放行）
+    res = await fetch(BASE + '/api/divine?username=' + encodeURIComponent(name));
+    expect(res.status).toBe(401);
+    // 带起占下发的 claimToken → 200（本地流程不受影响）
+    res = await fetch(BASE + '/api/divine?username=' + encodeURIComponent(name), { headers: { 'X-Guanwei-Token': claimToken } });
+    expect(res.status).toBe(200);
+  });
+
   it('P1-2 过期 token 在 divine 链路失效（与 users 同口径）', async () => {
     const name = '过期令牌' + Date.now().toString().slice(-4);
     let res = await post(BASE + '/api/users/register', { username: name, password: 'secret123' });
@@ -141,6 +156,17 @@ describe('开放 API 硬化（P0-2）', () => {
     expect(codes.slice(0, 3)).toEqual([200, 200, 200]);
     expect(codes[3]).toBe(429);
     expect(last!.headers.get('retry-after')).toBeTruthy();
+  });
+
+  it('使用计数（水表）：/v1/stats 仅本机可读，且统计排盘调用（无 IP / 无载荷）', async () => {
+    const r1 = await post(SSE_BASE + '/v1/chart', { art: 'liuyao', inputs: {} });
+    expect(r1.status).toBe(200);
+    const res = await fetch(SSE_BASE + '/v1/stats');
+    expect(res.status).toBe(200);
+    const d = await res.json();
+    expect(d.total).toBeGreaterThan(0);
+    expect(d.byEndpoint['/v1/chart']).toBeGreaterThan(0);
+    expect(JSON.stringify(d)).not.toContain('127.0.0.1');   // 不记录来源
   });
 
   it('SSE 连接数上限：超出返回 503', async () => {
