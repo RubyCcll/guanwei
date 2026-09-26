@@ -68,3 +68,52 @@ jobs:
 
       # 注：包可见性无法由 GITHUB_TOKEN 修改（GitHub 平台限制），
       # 首次发布后需手动在 Profile → Packages → 包设置 → Change visibility 设为 Public
+
+  # 容器端到端冒烟：镜像「能构建」不等于「能跑」——起容器 → 健康检查 → 起占 → 校验落库到挂载卷。
+  # 覆盖点：node:22-alpine 上 node:sqlite 可用、/app/data 卷可写、统一 SQLite（WAL）在建卷后正常落盘。
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image (load into daemon)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.server
+          platforms: linux/amd64
+          load: true
+          tags: guanwei-backend:smoke
+          cache-from: type=gha,scope=smoke
+          cache-to: type=gha,mode=max,scope=smoke
+
+      - name: Run container and verify storage + API
+        run: |
+          set -euo pipefail
+          docker volume create gw-smoke-data
+          docker run -d --name gw-smoke -p 127.0.0.1:3300:3018 -v gw-smoke-data:/app/data guanwei-backend:smoke
+          ok=""
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3300/api/health -o /tmp/health.json; then ok=1; break; fi
+            sleep 2
+          done
+          test -n "$ok" || { echo "容器未就绪"; docker logs gw-smoke; exit 1; }
+          echo "health: $(cat /tmp/health.json)"
+          grep -q '"store":"sqlite"' /tmp/health.json
+          grep -q '"users":0' /tmp/health.json
+          # 起占（匿名本机来源）→ 自动建档 + 落库 + 下发 claimToken
+          code=$(curl -s -o /tmp/divine.json -w '%{http_code}' -X POST http://127.0.0.1:3300/api/divine \
+            -H 'Content-Type: application/json' -d '{"username":"容器冒烟","artId":"liuyao","inputs":{}}')
+          test "$code" = "200" || { echo "起占失败 HTTP $code"; cat /tmp/divine.json; docker logs gw-smoke; exit 1; }
+          grep -q '"claimToken"' /tmp/divine.json
+          curl -fsS http://127.0.0.1:3300/api/health | tee /tmp/health2.json
+          grep -q '"users":1' /tmp/health2.json
+          # 数据必须落在挂载卷里的统一库（不是镜像层内的临时目录）
+          docker exec gw-smoke sh -c 'ls -l /app/data'
+          docker exec gw-smoke sh -c 'test -f /app/data/guanwei.db'
+          docker exec gw-smoke sh -c 'test ! -f /app/data/db.json'
+          docker logs gw-smoke | tail -20
+          docker rm -f gw-smoke

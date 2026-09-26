@@ -134,7 +134,7 @@ export function login(username: string, password: string): AuthResult {
 }
 
 // 向后端登录/注册换取云同步 token（失败静默——离线纯本地场景不受影响）
-// 前端注册/登录是本地体系；后端 db.json 无此用户时自动注册（同密码）以获取 token
+// 前端注册/登录是本地体系；后端用户库（SQLite users 表）无此用户时自动注册（同密码）以获取 token
 async function fetchServerToken(username: string, password: string): Promise<void> {
   try {
     let res = await fetch(API + '/login', {
