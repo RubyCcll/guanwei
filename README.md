@@ -15,7 +15,7 @@
   <a href="https://github.com/RubyCcll/guanwei/releases"><img src="https://img.shields.io/github/v/release/RubyCcll/guanwei" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-9c4a2f" alt="MIT License"></a>
   <a href="https://github.com/RubyCcll/guanwei"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript"></a>
-  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-278-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-284-brightgreen" alt="Tests"></a>
 </p>
 
 <p align="center">
@@ -248,9 +248,22 @@ guanwei stop                 # 停止（docker 模式）
 
 ### 测试
 ```bash
-npm test                 # 278 项测试（含九术引擎对权威库的交叉验证）
+npm test                 # 283 项测试（含九术引擎对权威库的交叉验证）
 cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 ```
+
+### 备份与恢复
+账号与占卜记录都在一个 SQLite 库（`~/.guanwei/data/guanwei.db`）里，一条命令即可快照：
+
+```bash
+guanwei backup --note 升级前            # 在线快照（VACUUM INTO，服务运行中也安全）
+guanwei db-list                        # 列出备份与其中账号/记录条数
+guanwei stop && guanwei restore <备份文件> --yes   # 恢复（先停服务；会自动留存当前库）
+```
+
+- 备份默认落在 `<数据目录>/backups/`，同时附 `.json` 元数据（时间/版本/条数/sha256）；旧版 JSON 用户库（`db.json`）也会一并备份
+- 恢复前会先校验备份可打开且含关键表，再留存现有库（`.pre-restore-<时间>`）并挪走 `-wal/-shm` 副文件；服务仍在运行时默认拒绝（`--force` 可强行，但恢复后请立刻重启）
+- 直接 `cp guanwei.db` 在服务运行中**不可靠**（最近事务可能还在 `-wal` 里），请用 `guanwei backup`
 
 ## 🔬 与权威实现的交叉验证
 
@@ -279,7 +292,7 @@ cd server && npx tsx scripts/divineStoreSmoke.ts   # SQLite 存储冒烟
 │   └── .env.example
 ├── shared/core/         # 前后端共用引擎（排盘算法/数据，单一副本）
 ├── packages/guanwei-api/# 开放 API（REST /v1 + MCP）
-├── scripts/             # setup.sh / guanwei（CLI）/ release.sh / preflight-release.sh / check-*.mjs
+├── scripts/             # setup.sh / guanwei（CLI）/ guanwei-db.mjs（备份恢复）/ release.sh / preflight-release.sh / check-*.mjs
 ├── deploy/              # nginx 配置（Docker 部署）
 ├── .devcontainer/       # GitHub Codespaces 模板
 ├── Dockerfile.web / Dockerfile.server / docker-compose.yml

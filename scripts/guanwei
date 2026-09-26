@@ -8,6 +8,9 @@
 #   guanwei update                                 更新到最新版（全局：npm 升级；本地：git 增量合并）
 #   guanwei check / status                         版本检查 / 状态
 #   guanwei doctor                                 环境自检
+#   guanwei backup [--out DIR] [--note 说明]       备份数据（在线快照，服务运行中也安全）
+#   guanwei restore <备份文件> --yes                用备份恢复（恢复前请先停服务）
+#   guanwei db-list                                列出已有备份与条数
 #   guanwei stop                                   停止服务
 #   guanwei web                                    仅打开浏览器
 #   guanwei --help                                 帮助
@@ -27,7 +30,7 @@ remote_head() { git ls-remote origin -h refs/heads/main 2>/dev/null | cut -f1; }
 latest_tag()  { git ls-remote --tags origin 'refs/tags/v*' 2>/dev/null | sed 's|.*refs/tags/||' | sort -V | tail -1; }
 
 cmd_help() {
-  sed -n '3,19p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,16p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 cmd_check() {
@@ -224,6 +227,20 @@ cmd_doctor() {
   [[ ${ok} -eq 1 ]] && echo "🎉 自检通过" || echo "🛠️  按提示修复后重试：guanwei doctor"
 }
 
+# 备份工具随包分发；旧版安装包内可能没有该文件（1.3.5 及更早）→ 给出明确指引而非堆栈
+run_db_tool() {
+  local tool="${ROOT}/scripts/guanwei-db.mjs"
+  if [[ ! -f "${tool}" ]]; then
+    echo "⚠️  当前安装包内没有备份工具（scripts/guanwei-db.mjs）——这是 1.3.5 及更早版本的情况，请先升级：guanwei update"
+    return 1
+  fi
+  node "${tool}" "$@"
+}
+
+cmd_backup()   { run_db_tool backup "$@" ; }
+cmd_restore()  { run_db_tool restore "$@" ; }
+cmd_db_list()  { run_db_tool list "$@" ; }
+
 cmd_stop() {
   for port in 3018 ${WEB_PORT:-5173}; do
     local pid
@@ -242,6 +259,9 @@ case "${CMD}" in
   check)  cmd_check ;;
   status) cmd_status ;;
   doctor) cmd_doctor ;;
+  backup) shift; cmd_backup "$@" ;;
+  restore) shift; cmd_restore "$@" ;;
+  db-list) cmd_db_list ;;
   stop)   cmd_stop ;;
   help|-h|--help) cmd_help ;;
   *) echo "未知命令: ${CMD}"; cmd_help; exit 1 ;;
