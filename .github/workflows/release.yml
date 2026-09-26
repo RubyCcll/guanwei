@@ -68,13 +68,24 @@ jobs:
       #   Trusted Publisher → GitHub Actions：Organization `RubyCcll` / Repository `guanwei` / Workflow `release.yml`
       # 未配置期间改用本地 Automation token 发布：`node scripts/npm-release.mjs`（见 internal/docs/RELEASE-SOP.md）
       # 幂等：版本已在 registry 上则跳过（重跑工作流不会因「版本已存在」失败）
-      - name: Publish to npm (OIDC；已发布则跳过)
+      # 双通道：首选 OIDC（Trusted Publisher，附 provenance 签名）；未配置时回退仓库 secret `NPM_TOKEN`
+      # （Automation token，与本地 scripts/npm-release.mjs 同一枚；token 路径无 provenance）
+      - name: Publish to npm（OIDC 优先，回退 NPM_TOKEN；已发布则跳过）
         run: |
           set -euo pipefail
           VER=$(node -p "require('./package.json').version")
           if npm view "guanwei@$VER" version >/dev/null 2>&1; then
             echo "guanwei@$VER 已存在于 registry，跳过发布（幂等）"
-          else
-            npm publish --access public --provenance
+            exit 0
           fi
+          # 回退通道自检（只验凭据，不发布；token 由 Actions 自动打码）
+          npm whoami --//registry.npmjs.org/:_authToken="${{ secrets.NPM_TOKEN }}" \
+            && echo "✅ NPM_TOKEN 可用（回退通道就绪）" \
+            || echo "⚠️ NPM_TOKEN 不可用（secret 缺失或已撤销）"
+          if npm publish --access public --provenance; then
+            echo "✅ 经 Trusted Publisher(OIDC) 发布，已附 provenance"
+            exit 0
+          fi
+          echo "⚠️ OIDC 发布未成功（Trusted Publisher 未配置？）→ 回退 NPM_TOKEN 发布"
+          npm publish --access public --//registry.npmjs.org/:_authToken="${{ secrets.NPM_TOKEN }}"
 
