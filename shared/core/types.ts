@@ -187,7 +187,8 @@ export interface AstrologyResult {
   mc?: number;         // 中天黄经
   epsilon?: number;    // 黄赤交角（度）
   // ─── 补齐层（2026-08-20 星盘细化）───
-  houseSystem: 'whole-sign';      // 当前宫位制：整宫制（以上升点为 1 宫头，每宫 30°）
+  houseSystem: 'whole-sign' | 'equal' | 'placidus';   // 宫位制：整宫（上升所落整星座）/ 等宫（上升度数起 30°）/ 普拉西度
+  cusps?: number[];               // 十二宫头黄经（1..12）
   houses: { num: number; cusp: number; sign: string; ruler: string; rulerLng: number }[];  // 十二宫
   planetDetails: {
     cn: string; sym: string; color: string;

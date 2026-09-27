@@ -22,6 +22,7 @@ export function AstrologyPanel({ onDivine }: PanelProps) {
   const [loc, setLoc] = useState<GeoLocation | null>(p?.location || null);
   const [gender, setGender] = useState<'男' | '女'>(p?.gender || '男');
   const [profileSrc, setProfileSrc] = useState<{ id: string; name: string } | null>(null);
+  const [houseSystem, setHouseSystem] = useState<'whole-sign' | 'equal' | 'placidus'>('whole-sign');
 
   const filled = p && date === p.birthDate && gender === p.gender;
   const go = () => {
@@ -30,7 +31,7 @@ export function AstrologyPanel({ onDivine }: PanelProps) {
     if (!y || !m || !d) return;
     const birthHourIndex = Math.floor(((hh || 0) + 1) % 24 / 2);
     const profile: UserProfile = { birthDate: date, birthTime: time, birthHourIndex, gender, location: loc };
-    onDivine({ y, m, d, hour: hh || 0, min: mm || 0, lng: loc?.lng, lat: loc?.lat }, profile, undefined, profileSrc?.id || 'main');
+    onDivine({ y, m, d, hour: hh || 0, min: mm || 0, lng: loc?.lng, lat: loc?.lat, houseSystem }, profile, undefined, profileSrc?.id || 'main');
   };
 
   return (
@@ -51,10 +52,22 @@ export function AstrologyPanel({ onDivine }: PanelProps) {
         <LocationPicker value={loc} onChange={setLoc} />
       </div>
       <button className="btn-divine" onClick={go}>布 星 图<span className="small">推行星黄经 · 布十二宫</span></button>
-      <p className="hint" style={{ marginTop: '.8rem' }}>行星位置采用简略天文近似（平均运动），上升点按本地恒星时 LST 推算，宫位取整宫制，仅供怡情。</p>
+      <div className="field"><label htmlFor="astro-hs">宫位制</label>
+        <SongSelect id="astro-hs" value={houseSystem} options={[
+          { value: 'whole-sign', label: '整宫制（古典 · 上升所落整星座为命宫）' },
+          { value: 'equal', label: '等宫制（上升度数起，每宫 30°）' },
+          { value: 'placidus', label: '普拉西度 Placidus（现代主流 · 时间三分）' },
+        ]} onChange={v => setHouseSystem(v as 'whole-sign' | 'equal' | 'placidus')} />
+      </div>
+      <p className="hint" style={{ marginTop: '.8rem' }}>行星位置采用精确星历（VSOP87），上升/中天按本地恒星时与黄赤交角推算；普拉西度宫头与瑞士星历对照偏差 &lt;0.01°（高纬不收敛时自动回退整宫制）。</p>
     </>
   );
 }
+
+/** 宫位制显示名 */
+const HS_NAME: Record<string, string> = { 'whole-sign': '整宫制', equal: '等宫制', placidus: '普拉西度' };
+/** 黄经 → 星座序号 */
+const signOfLng = (lng: number) => Math.floor(mod(lng, 360) / 30);
 
 export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCalc> }) {
   const r = data;
@@ -88,7 +101,7 @@ export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCal
     <>
       <ResultCard title="命盘之纲">
         <p>上升 <strong>{ZODIAC[ascSign][0]}</strong> {mod(r.asc, 30).toFixed(1)}°（本地恒星时 {r.lstHours.toFixed(2)}h），中天 <strong>{ZODIAC[Math.floor((r.mc ?? 0) / 30)][0]}</strong>，太阳落 <strong>{ZODIAC[sunSign][0]}</strong>，月亮落 <strong>{ZODIAC[moonSign][0]}</strong>。</p>
-        <p className="tiny muted">回归黄道（Tropical）· VSOP87 精确星历 · 黄赤交角 {r.epsilon?.toFixed(2)}° · 宫位整宫制</p>
+        <p className="tiny muted">回归黄道（Tropical）· VSOP87 精确星历 · 黄赤交角 {r.epsilon?.toFixed(2)}° · 宫位制：{HS_NAME[r.houseSystem] ?? r.houseSystem}</p>
         <p>太阳主自我之核，月亮主情感之底，上升主处世之貌。三者为命盘之纲。</p>
       </ResultCard>
       <ResultCard title="行星经纬"
@@ -108,17 +121,19 @@ export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCal
       <ResultCard title="行星落宫参详">
         {r.planets.map((p) => {
           const s = Math.floor(mod(p[2], 360) / 30);
-          const house = mod(s - ascSign + 12, 12); // 整宫制：上升起算
+          // 落宫以引擎按所选宫位制判定（整宫/等宫/普拉西度各自成立），不再由黄经差硬算
+          const detail = r.planetDetails?.find(d => d.cn === p[0]);
+          const house = (detail ? detail.house : mod(s - ascSign + 12, 12) + 1) - 1;
           return <p key={p[0]}><strong>{p[0]}</strong>落{house + 1}宫（{HOUSES[house]}）· {ZODIAC[s][0]}座 —— {houseMeaning(p[0], house)}</p>;
         })}
-        <p className="tiny muted">整宫制推演，行星入宫主人生领域之侧重；仅供怡情。</p>
+        <p className="tiny muted">{HS_NAME[r.houseSystem] ?? r.houseSystem}推演，行星入宫主人生领域之侧重；仅供怡情。</p>
       </ResultCard>
-      <ResultCard title="十二宫位（整宫制）">
-        <p>{HOUSES.map((hname, i) => <span key={hname}><strong>{hname}</strong>·{ZODIAC[mod(ascSign + i, 12)][0]}　</span>)}</p>
+      <ResultCard title={`十二宫位（${HS_NAME[r.houseSystem] ?? r.houseSystem}）`}>
+        <p>{HOUSES.map((hname, i) => <span key={hname}><strong>{hname}</strong>·{ZODIAC[mod(signOfLng(r.cusps?.[i] ?? r.asc + i * 30), 12)][0]}　</span>)}</p>
         <div className="result-grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', marginTop: '.7rem' }}>
           {houseRows}
         </div>
-        <p className="mt-1">命宫即上升所落之座，为一生行运之门户；宫主星为该宫头星座之古典守护星（不含三王星）。Placidus 宫位制在迭代计划中。</p>
+        <p className="mt-1">宫头星座即各宫之门；宫主星为该宫头星座之古典守护星（不含三王星）。整宫制为古典本位（上升所落整星座即命宫），普拉西度按时间三分（与瑞士星历对照偏差 &lt;0.01°）。</p>
       </ResultCard>
     </>
   );

@@ -31,7 +31,7 @@ export function chartCalc(artId: string, inputs: any): unknown {
     }
     case 'astrology': {
       const i = inputs || {};
-      return astrologyCalc(i.y, i.m, i.d, i.hour || 0, i.min || 0, i.lng, i.lat);
+      return astrologyCalc(i.y, i.m, i.d, i.hour || 0, i.min || 0, i.lng, i.lat, i.houseSystem);
     }
     case 'qimen': {
       return qimenCalc({ datetime: inputs?.datetime ? new Date(inputs.datetime) : new Date() });

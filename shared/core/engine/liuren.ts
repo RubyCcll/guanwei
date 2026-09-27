@@ -87,31 +87,50 @@ export function jiuzongmen(tianpan: Record<number, string>, ganJi: string, dayZh
   const isFuyin = jiangIdx === hourIndex;                    // 天地盘同位
   const isFanyin = mod(jiangIdx - hourIndex, 12) === 6;      // 天地盘对冲
 
-  // 涉害：多克且比用不出时，取受克最深者（涉害深者发用）；同深取先见
-  const shehai = (candidates: Ke[]): Ke => {
-    let best = candidates[0], bestDepth = -1;
-    for (const c of candidates) {
+  // 涉害（《六壬大全·入手法》：「涉害行来本家止，路逢多克为用取，孟深仲浅季当休，复等柔辰刚日宜」）
+  //   ① 自该上神的**地盘本家**顺行至其所临之宫，途中（含终点）受地盘支克者，逐宫计深；
+  //   ② 同深者取所临之宫属「孟」(寅申巳亥)，次取「仲」(子午卯酉)，「季」(辰戌丑未)当休；
+  //   ③ 仍相等者，刚日（阳日）取干上神、柔日（阴日）取支上神。
+  // 2026-09-26 修正：原实现只按「十二支中克该神者总数」计深且同深取先见，未合古法两条断法。
+  const shehai = (candidates: Ke[], dayGanYang: boolean, ganShang: string, zhiShang: string): Ke => {
+    const MENG = ['寅', '申', '巳', '亥'], ZHONG = ['子', '午', '卯', '酉'];
+    const rankOf = (gongZhi: string) => (MENG.includes(gongZhi) ? 0 : ZHONG.includes(gongZhi) ? 1 : 2);
+    const scored = candidates.map(c => {
+      const sIdx = ZHI.indexOf(c.shang as any);        // 上神本家
+      const gongIdx = ZHI.indexOf(c.xia as any);       // 上神所临之宫（即该课下神）
       let depth = 0;
-      for (const z of ZHI) {
-        const wx = WUXING[c.shang];
-        if (ke(WUXING[z], wx)) depth++;   // 地盘支克上神
+      const steps = mod(gongIdx - sIdx, 12);
+      for (let k = 0; k <= steps; k++) {
+        const z = ZHI[mod(sIdx + k, 12)];
+        if (ke(WUXING[z], WUXING[c.shang])) depth++;   // 路逢地盘支克此神
       }
-      if (depth > bestDepth) { best = c; bestDepth = depth; }
+      return { c, depth, rank: rankOf(c.xia) };
+    });
+    scored.sort((a, b) => (b.depth - a.depth) || (a.rank - b.rank));
+    const top = scored[0];
+    const tied = scored.filter(x => x.depth === top.depth && x.rank === top.rank);
+    if (tied.length > 1) {
+      const prefer = dayGanYang ? ganShang : zhiShang;   // 复等：刚日取干上、柔日取支上
+      return (tied.find(x => x.c.shang === prefer) || top).c;
     }
-    return best;
+    return top.c;
   };
 
   // ── 1. 贼克法 ──
+  // 《六壬大全·入手法》：「取课先从下贼呼，如无下贼上克初」——**下贼上优先**；
+  // 「一下克上曰重审，一上克下曰元首」。
+  // 2026-09-26 修正：原实现优先取上克下（与古法相反），且把一下贼上误称「始入课」。
   if (shangKeRows.length > 0 || xiaKeRows.length > 0) {
-    // 有上克下优先取上克下；无上克下取贼
-    const pool = shangKeRows.length > 0 ? shangKeRows : xiaKeRows;
+    const pool = xiaKeRows.length > 0 ? xiaKeRows : shangKeRows;
     if (pool.length === 1) {
-      // 元首课（一上克下）/ 始入课（一下贼上）
       const c1 = pool[0].shang;
       const { chuan2, chuan3 } = chuanFrom(tianpan, c1);
+      const isZei = pool[0].xiaKe;   // 下贼上
       return {
-        method: pool[0].shangKe ? (shangKeRows.length === 1 && xiaKeRows.length === 0 ? '元首课' : '重审课') : '始入课',
-        note: pool[0].shangKe ? (shangKeRows.length === 1 && xiaKeRows.length === 0 ? '一上克下，事起于外，宜主动决断。' : '课多上克，主事多制肘，须审时度势。') : '一下贼上，事起于内，防人算计。',
+        method: isZei ? '重审课' : '元首课',
+        note: isZei
+          ? '一下贼上，事起于内，以臣诤君，宜详审而后行。'
+          : '一上克下，事起于外，天地得位，宜主动决断。',
         chuan1: c1, chuan2, chuan3,
       };
     }
@@ -124,7 +143,7 @@ export function jiuzongmen(tianpan: Record<number, string>, ganJi: string, dayZh
       return { method: '知一课', note: '取与日干比和者发用，事有取舍，宜择同类而谋。', chuan1: c1, chuan2, chuan3 };
     }
     // 比用不出 → 涉害
-    const pick = shehai(pool);
+    const pick = shehai(pool, dayGanYang, kes[0].shang, kes[2].shang);
     const c1 = pick.shang;
     const { chuan2, chuan3 } = chuanFrom(tianpan, c1);
     return { method: '涉害课', note: '诸克不比，取受克最深者发用，事机隐晦，宜深察利害。', chuan1: c1, chuan2, chuan3 };
@@ -149,24 +168,29 @@ export function jiuzongmen(tianpan: Record<number, string>, ganJi: string, dayZh
     return { method: '伏吟课', note: '天地盘同位，诸事迟滞反复；无克取刑发用，主静中藏动，宜守待变。', chuan1: tianpan[zi(c1)], chuan2, chuan3 };
   }
 
-  // ── 2. 遥克法（无上下克）：日干遥克上神（蒿矢）/ 上神遥克日干（弹射） ──
+  // ── 2. 遥克法（四课无上下克）──
+  // 《六壬大全·入手法》：「四课无克号为遥，日与神兮递互招；**先取神遥克其日，如无方取日来遥**」，
+  // 且「神遥克日曰蒿矢，日遥克神曰弹射」。
+  // 2026-09-26 修正：原实现优先「日克神」并把两名对调。
   const ganWx = WUXING[dayGan];
-  const yaoKe: Ke[] = [];
-  const yaoBei: Ke[] = [];
+  const shenKeRi: Ke[] = [];   // 上神克日干 → 蒿矢
+  const riKeShen: Ke[] = [];   // 日干克上神 → 弹射
   for (const k of kes) {
-    if (ke(ganWx, WUXING[k.shang])) yaoKe.push(k);       // 日干克上神
-    if (ke(WUXING[k.shang], ganWx)) yaoBei.push(k);      // 上神克日干
+    if (ke(WUXING[k.shang], ganWx)) shenKeRi.push(k);
+    if (ke(ganWx, WUXING[k.shang])) riKeShen.push(k);
   }
-  if (yaoKe.length > 0 || yaoBei.length > 0) {
-    const pool = yaoKe.length > 0 ? yaoKe : yaoBei;
+  if (shenKeRi.length > 0 || riKeShen.length > 0) {
+    const pool = shenKeRi.length > 0 ? shenKeRi : riKeShen;
     const dayGanYang = ganYang(dayGan);
-    const bi = pool.filter(k => zhiYang(k.shang) === dayGanYang);
+    const bi = pool.filter(k => zhiYang(k.shang) === dayGanYang);   // 「择与日干比者用」
     const pick = bi.length > 0 ? bi[0] : pool[0];
     const c1 = pick.shang;
     const { chuan2, chuan3 } = chuanFrom(tianpan, c1);
     return {
-      method: yaoKe.length > 0 ? '蒿矢课' : '弹射课',
-      note: yaoKe.length > 0 ? '日遥克神，事由己发，主主动求取，渐有所成。' : '神遥克日，事出意外，防暗箭来袭，宜谨慎自守。',
+      method: shenKeRi.length > 0 ? '蒿矢课' : '弹射课',
+      note: shenKeRi.length > 0
+        ? '神遥克日（蒿矢），事从外来，其力尚轻，宜防外扰而缓图。'
+        : '日遥克神（弹射），事由己发，其力较劲，宜主动求取。',
       chuan1: c1, chuan2, chuan3,
     };
   }
@@ -284,28 +308,36 @@ export function liurenCalc(dt: string | Date): LiurenResult {
   const guiRen = (GUIREN[dayGZ[0]] || ['丑', '未'])[isDay ? 0 : 1];
   // 天将序列（贵人起）：贵人 螣蛇 朱雀 六合 勾陈 青龙 天空 白虎 太常 玄武 太阴 天后
   const JIANG_SEQ = ['贵人', '螣蛇', '朱雀', '六合', '勾陈', '青龙', '天空', '白虎', '太常', '玄武', '太阴', '天后'];
-  // 贵人加临天盘后定顺逆：贵人落支在亥子丑寅卯辰 → 顺布；巳午未申酉戌 → 逆布
-  const grIdx = ZHI.indexOf(guiRen as any);
-  const grPan = tianpan[grIdx];          // 贵人在天盘所加之支
-  const grPanIdx = ZHI.indexOf(grPan as any);
-  const forwardJiang = [10, 11, 0, 1, 2, 3].includes(grPanIdx); // 亥子丑寅卯辰顺
+  // 十二天将安布（《六壬大全》：「以课之**天盘**起贵神之例，**地盘**定顺逆之序」）：
+  //   ① 贵人歌所得之支即「贵人所乘之神」→ 天将贵人落在天盘上该神所在之宫；
+  //   ② 视该宫所临的**地盘**支定顺逆：亥子丑寅卯辰 → 顺布，巳午未申酉戌 → 逆布。
+  // 2026-09-26 修正：原实现把贵人歌之支当作地盘位、取其上神落将，并以该天盘神定顺逆（两处皆反）。
+  let panIdx = 0;
+  for (let i = 0; i < 12; i++) if (tianpan[i] === guiRen) { panIdx = i; break; }
+  const forwardJiang = [10, 11, 0, 1, 2, 3].includes(panIdx); // 贵人临 亥子丑寅卯辰 顺布
   const tianJiang: Record<number, string> = {};
   for (let i = 0; i < 12; i++) {
     const step = forwardJiang ? i : -i;
-    tianJiang[mod(grPanIdx + step, 12)] = JIANG_SEQ[i];
+    tianJiang[mod(panIdx + step, 12)] = JIANG_SEQ[i];
   }
+  // 三传乘将：三传为**天盘神**，须先找该神所在之宫（地盘位），再取该宫天将
+  // （2026-09-26 修正：原按传支当作地盘索引直取，天地盘不同位时取错）
+  const gongOfGod = (zhi: string): number => {
+    for (let i = 0; i < 12; i++) if (tianpan[i] === zhi) return i;
+    return -1;
+  };
   const chuanJiang = [chuan1, chuan2, chuan3].map(ch => {
-    const cz = ZHI.indexOf(ch as any);
-    return { chuan: ch, jiang: tianJiang[cz] || '' };
+    const g = gongOfGod(ch);
+    return { chuan: ch, jiang: g >= 0 ? (tianJiang[g] || '') : '' };
   });
 
   /* ── 补齐层：课体分类（2026-08-20）── */
   const hourZhi = ZHI[hourIndex];
   let keti = '常课';
   if (jiang === hourZhi) keti = '伏吟课';
-  else if (mod(ZHI.indexOf(jiang as any) - hourIndex, 12) === 6) keti = '反吟课';
+  else if (mod(ZHI.indexOf(jiang as any) - hourIndex, 12) === 6) keti = '返吟课';
   const ketiNote = keti === '伏吟课' ? '天地盘同位，诸事迟滞反复，宜静待其变，不宜躁进。'
-    : keti === '反吟课' ? '天地盘相冲，事有反复翻覆，来去无常，宜缓不宜急。'
+    : keti === '返吟课' ? '天地盘相冲，事有反复翻覆，来去无常，宜缓不宜急。'
     : '四课三传乘常气，事机明朗，顺其自然即可。';
 
   return { dayGZ, hourGZ, jiang, jqName, tianpan, ganJi, ke1, ke2, ke3, ke4, chuan1, chuan2, chuan3, guiRen, isDay, tianJiang, chuanJiang, keti, ketiNote, chuanMethod: method, chuanNote: note };

@@ -91,6 +91,8 @@ for c in req['cases']:
         'planets': planets,
         'asc': ascmc[0] % 360.0,
         'mc': ascmc[1] % 360.0,
+        # Placidus 十二宫头（1..12；用于宫位制对拍）
+        'cusps': [c % 360.0 for c in cusps],
         'jd': jd,
     })
 print(json.dumps({'results': out}, ensure_ascii=False))

@@ -59,11 +59,24 @@ describe('星盘 vs Swiss Ephemeris（事实标准）', () => {
     }
   });
 
-  it.skipIf(!HAS_SWE)('引擎输出结构自洽：行星落宫=整宫制（asc 起 1 宫）', () => {
+  it.skipIf(!HAS_SWE)('引擎输出结构自洽：整宫制（默认）落宫 = 上升所落星座起算', () => {
     for (const [y, m, d, hour, min, lng, lat] of CASES.slice(0, 4)) {
       const g = astrologyCalc(y, m, d, hour, min, lng, lat);
+      expect(g.houseSystem).toBe('whole-sign');
+      const ascSign = Math.floor(g.asc / 30);
       for (const pd of g.planetDetails) {
-        // 整宫制：宫号 = floor((黄经 - asc)/30) + 1
+        // 整宫制：宫号 = 该行星所在星座与上升星座的间隔 + 1（宫头取星座 0°，非上升度数）
+        const expectHouse = ((Math.floor(pd.lng / 30) - ascSign + 12) % 12) + 1;
+        expect(pd.house, `${y}-${m}-${d} ${pd.cn}`).toBe(expectHouse);
+      }
+    }
+  });
+
+  it.skipIf(!HAS_SWE)('等宫制落宫 = floor((黄经 − 上升)/30) + 1（原实现行为，仍可显式选用）', () => {
+    for (const [y, m, d, hour, min, lng, lat] of CASES.slice(0, 4)) {
+      const g = astrologyCalc(y, m, d, hour, min, lng, lat, 'equal');
+      expect(g.houseSystem).toBe('equal');
+      for (const pd of g.planetDetails) {
         const expectHouse = Math.floor(((pd.lng - g.asc + 360) % 360) / 30) + 1;
         expect(pd.house, `${y}-${m}-${d} ${pd.cn}`).toBe(expectHouse);
       }

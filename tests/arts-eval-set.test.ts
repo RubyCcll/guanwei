@@ -21,26 +21,43 @@ describe('星盘：相位/宫位/庙旺已知案例', () => {
     expect(r.aspects.length).toBeGreaterThanOrEqual(0);
   });
 
-  it('十二宫整宫制：上升点所在宫为 1 宫，每宫 30° 递增', () => {
+  it('整宫制（默认）：1 宫 = 上升所落整个星座（宫头取该星座 0°），每宫 30° 递增', () => {
     const r = astrologyCalc(1990, 6, 15, 12, 0, 116.4, 39.9);
     expect(r.houseSystem).toBe('whole-sign');
     expect(r.houses.length).toBe(12);
-    // 1 宫头 = 上升点
-    expect(r.houses[0].cusp).toBeCloseTo(r.asc, 1);
+    // 2026-09-26 修正：整宫制宫头为星座 0°（原实现实为等宫制「上升度数起 30°」，标签与算法不符）
+    const signStart = Math.floor(r.asc / 30) * 30;
+    expect(r.houses[0].cusp).toBeCloseTo(signStart, 9);
+    expect(r.houses[0].cusp % 30).toBeCloseTo(0, 9);
     // 相邻宫头差 30°
     for (let i = 1; i < 12; i++) {
       const diff = (r.houses[i].cusp - r.houses[i - 1].cusp + 360) % 360;
       expect(diff).toBeCloseTo(30, 5);
     }
+    // 等宫制仍可显式选用：1 宫头 = 上升度数
+    const e = astrologyCalc(1990, 6, 15, 12, 0, 116.4, 39.9, 'equal');
+    expect(e.houseSystem).toBe('equal');
+    expect(e.houses[0].cusp).toBeCloseTo(e.asc, 9);
+    // 普拉西度：宫头不再均分（时间三分）
+    const p = astrologyCalc(1990, 6, 15, 12, 0, 116.4, 39.9, 'placidus');
+    expect(p.houseSystem).toBe('placidus');
+    // 普拉西度：各宫跨度不再恒为 30°（且对宫同跨度 → 至多 6 个不同值）
+    const spans = p.cusps!.map((c, i) => ((p.cusps![(i + 1) % 12] - c + 360) % 360));
+    expect(spans.some(sp => Math.abs(sp - 30) > 0.5)).toBe(true);
+    expect(new Set(spans.map(sp => sp.toFixed(2))).size).toBeGreaterThanOrEqual(4);
   });
 
   it('行星落宫与黄经一致：行星黄经在对应宫的宫头范围内', () => {
-    const r = astrologyCalc(1990, 6, 15, 12, 0, 116.4, 39.9);
-    for (const p of r.planetDetails) {
-      const house = r.houses[p.house - 1];
-      const diff = (p.lng - house.cusp + 360) % 360;
-      expect(diff).toBeGreaterThanOrEqual(0);
-      expect(diff).toBeLessThan(30);
+    for (const hs of ['whole-sign', 'equal', 'placidus'] as const) {
+      const r = astrologyCalc(1990, 6, 15, 12, 0, 116.4, 39.9, hs);
+      for (const p of r.planetDetails) {
+        const cusp = r.cusps![p.house - 1];
+        const next = r.cusps![p.house % 12];
+        const span = (next - cusp + 360) % 360;
+        const diff = (p.lng - cusp + 360) % 360;
+        expect(diff, `${hs} ${p.cn}`).toBeGreaterThanOrEqual(0);
+        expect(diff, `${hs} ${p.cn}`).toBeLessThan(span);
+      }
     }
   });
 });

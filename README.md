@@ -15,7 +15,7 @@
   <a href="https://github.com/RubyCcll/guanwei/releases"><img src="https://img.shields.io/github/v/release/RubyCcll/guanwei" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-9c4a2f" alt="MIT License"></a>
   <a href="https://github.com/RubyCcll/guanwei"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6" alt="TypeScript"></a>
-  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-318-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/RubyCcll/guanwei/issues"><img src="https://img.shields.io/badge/tests-335-brightgreen" alt="Tests"></a>
 </p>
 
 <p align="center">
@@ -280,6 +280,8 @@ guanwei stop && guanwei restore <备份文件> --yes   # 恢复（先停服务�
 | 梅花体用生克 / 旺相休囚死 | **《梅花易数》卷二·体用总诀**（古籍原文） | 3 则原案（观梅占 / 牡丹占 / 邻夜扣门）+ 128 组体用 + 48 项月令卦气 | 逐条一致 |
 | 小六壬三宫推演（大安起月·月上起日·日上起时） | 外部教程原例题（含闰月作本月） | 3 则例题逐宫 + 六宫循环/时辰口径 | 三宫逐位一致 |
 | 基础对应（五行↔方位↔颜色、六神↔方位、八卦↔五行、八门九星↔宫位、六爻六神起例、塔罗星座↔元素） | 术数通行底层口径 + 金色黎明元素体系 | 逐表全量（含六宫断辞全表） | 逐条一致 |
+| 星盘宫位制（整宫 / 等宫 / 普拉西度） | **Swiss Ephemeris** `houses_ex` Placidus 宫头 | 8 时空 × 12 宫头（含南半球与高纬 59°N） | 宫头 ≤0.01°（实测最大 0.005°） |
+| 大六壬起课（十干寄宫 / 贵人歌 / 九宗门三传） | **《六壬大全》卷一·入手法**（四库全书本原文） | 10 干寄宫 + 10 干×昼夜贵人 + 60 日干支×12 时辰 = 720 课结构 | 逐条一致 |
 | 六爻纳甲 / 世位 / 六神 | 京房八宫递变 + 上下经卦纳甲**独立推导** | 64 卦 + 200 次摇卦 | 全对齐 |
 
 > 交叉验证抓到过的真实缺陷（均已修复并有回归）：梅花体用生克与旺衰两表整体反向（64 组体用中 50 组吉凶判反）、六爻「宫纳甲」误用致 56/64 卦装卦错、奇门夜子时日柱少进一日、节气时刻在 1986–1991 夏令时窗口系统性偏 1 小时、六十四卦「地水师/水地比」上下卦写反、紫微亮度表整体失真。

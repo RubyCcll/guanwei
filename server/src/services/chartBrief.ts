@@ -78,7 +78,7 @@ function ziweiBrief(r: ZiweiResult): string {
 }
 
 function astroBrief(r: AstrologyResult): string {
-  const L: string[] = ['【命盘之纲】上升' + r.ascSign + (mod2(r.asc, 30)).toFixed(1) + '°，太阳' + r.sunSign + '，月亮' + r.moonSign + '，中天' + (r.mc !== undefined ? SIGNS[Math.floor(mod2(r.mc, 360) / 30)] : '') + '。宫位制：' + r.houseSystem + '。'];
+  const L: string[] = ['【命盘之纲】上升' + r.ascSign + (mod2(r.asc, 30)).toFixed(1) + '°，太阳' + r.sunSign + '，月亮' + r.moonSign + '，中天' + (r.mc !== undefined ? SIGNS[Math.floor(mod2(r.mc, 360) / 30)] : '') + '。宫位制：' + ({ 'whole-sign': '整宫制', equal: '等宫制', placidus: '普拉西度' } as Record<string,string>)[r.houseSystem] + '。'];
   L.push('【行星入宫】' + (r.planetDetails || []).map(p => p.cn + p.sign + p.degree.toFixed(0) + '°落' + p.house + '宫' + (p.retrograde ? '（逆）' : '') + (p.dignity.status ? '[' + p.dignity.status + ']' : '')).join('、') + '。');
   if (r.houses?.length) L.push('【十二宫】' + r.houses.map(h => h.num + '宫' + h.sign + '（主' + h.ruler + '）').join('、') + '。');
   if (r.aspects?.length) L.push('【相位】' + r.aspects.map(a => a[0] + a[2] + a[1]).join('、') + '。');

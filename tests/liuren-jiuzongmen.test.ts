@@ -36,13 +36,15 @@ describe('大六壬·九宗门起三传（真实课例）', () => {
     expect(r.chuan3).toBe('申');
   });
 
-  it('蒿矢课（遥克）：甲丑日 子将 卯时——日干遥克上神', () => {
+  it('蒿矢课（遥克）：甲丑日 子将 卯时——神遥克日（申金克甲木）', () => {
+    // 《六壬大全》：「先取神遥克其日，如无方取日来遥」「神遥克日曰蒿矢」
+    // 四课：亥/寅、申/亥、戌/丑、未/戌（无上下克）；申金遥克甲木 → 蒿矢，初传取申
     const tp = buildTianpan(3, 0); // 卯时(3)，子将(0)
     const r = jiuzongmen(tp, '寅', '丑', '甲', 3, '子');
     expect(r.method).toBe('蒿矢课');
-    expect(r.chuan1).toBe('戌');
-    expect(r.chuan2).toBe('未');
-    expect(r.chuan3).toBe('辰');
+    expect(r.chuan1).toBe('申');
+    expect(r.chuan2).toBe(tp[ZHI.indexOf('申')]);
+    expect(r.chuan3).toBe(tp[ZHI.indexOf(tp[ZHI.indexOf('申')])]);
   });
 
   it('昴星课：丙辰日 子将 亥时——无克无遥取酉', () => {
@@ -66,15 +68,20 @@ describe('大六壬·九宗门起三传（真实课例）', () => {
     expect(r.chuan3).toBe('未');
   });
 
-  it('返吟课：庚午日 子将 午时——对冲盘有克取贼克（涉害）', () => {
+  it('返吟课：庚午日 子将 午时——对冲盘有克取贼克（涉害·孟深仲浅）', () => {
     const tp = buildTianpan(6, 0);
-    // 庚寄申：课1 寅vs申（申金克寅木→下克上）；课2 申vs寅（金克木→上克下）；课3 子vs午（水克火→上克下）；课4 午vs子（火克水→下克上）
-    // 上克下：课2申、课3子 → 比用（庚阳：申阳、子阳皆比）→ 涉害
+    // 庚寄申，四课：寅/申、申/寅、子/午、午/子
+    //   下贼上（古法优先）：课2（下申金克上寅木）、课4（下子水克上午火）
+    //   比用：庚为阳，寅（阳）、午（阳）皆比 → 比用不出 → 涉害
+    //   涉害：依「涉害行来本家止，路逢多克为用取」自本家顺行至所临之宫（含两端）计深——
+    //     寅（木）本家在寅、临申：途经 寅卯辰巳午未申，克木者为申 → 深 1
+    //     午（火）本家在午、临子：途经 午未申酉戌亥子，克火者为亥、子 → 深 2
+    //   → 取深者午（「孟深仲浅季当休」仅在同深时启用）
     const r = jiuzongmen(tp, '申', '午', '庚', 6, '子');
     expect(r.method).toBe('涉害课');
-    expect(r.chuan1).toBe('子');
-    expect(r.chuan2).toBe('午');
-    expect(r.chuan3).toBe('子');
+    expect(r.chuan1).toBe('午');
+    expect(r.chuan2).toBe(tp[ZHI.indexOf('午')]);
+    expect(r.chuan3).toBe(tp[ZHI.indexOf(tp[ZHI.indexOf('午')])]);
   });
 
   it('liurenCalc 完整链路：输出含起传法门', () => {

@@ -51,6 +51,41 @@ function julianDay(y: number, m: number, d: number, hour: number, min: number): 
   return utc / 86400000 + 2440587.5;
 }
 
+export type HouseSystem = 'whole-sign' | 'equal' | 'placidus';
+
+/**
+ * Placidus 宫头迭代求解：求黄道上「时角 = k·半日弧 + offset」的点。
+ *   semi-diurnal arc（半日弧）SA_d(δ) = acos(−tanφ·tanδ)（度）
+ *   宫 11：H = SA_d/3；宫 12：H = 2SA_d/3；宫 2：60° + 2SA_d/3；宫 3：120° + SA_d/3
+ *   （赤道 ε=δ=0 时退化为经典初值 RAMC+30/60/120/150）
+ * 黄道↔赤道：RA(λ)=atan2(sinλ·cosε, cosλ)、δ(λ)=asin(sinε·sinλ)，故逆变换 λ=atan2(sinRA, cosRA·cosε)。
+ * 高纬度（|φ|>66.5°）迭代不收敛 → 返回 null，由调用方回退整宫制。
+ */
+function placidusCusp(RAMC: number, eps: number, phi: number, k: number, offset: number): number | null {
+  let lam = RAMC + offset + k * 90;      // 初值（赤道近似）
+  for (let i = 0; i < 60; i++) {
+    const dec = Math.asin(Math.sin(eps) * Math.sin(lam * DEG));
+    const cosSA = -Math.tan(phi) * Math.tan(dec);
+    if (cosSA <= -1) return null;        // 极昼/极夜：半日弧退化
+    const SAd = Math.acos(Math.max(-1, Math.min(1, cosSA))) * RAD;
+    const He = offset + k * SAd;
+    const RA = RAMC + He;
+    const next = Math.atan2(Math.sin(RA * DEG), Math.cos(RA * DEG) * Math.cos(eps)) * RAD;
+    if (Math.abs(mod(next - lam, 360) + 180 - 180) < 1e-9) { lam = next; break; }
+    lam = next;
+  }
+  return mod(lam, 360);
+}
+
+/** 依黄经落在哪一宫（宫头按 1→12 顺序，跨 360° 处按跨度取模） */
+function houseOfLongitude(lng: number, cusps: number[]): number {
+  for (let i = 0; i < 12; i++) {
+    const span = mod(cusps[(i + 1) % 12] - cusps[i], 360);
+    if (mod(lng - cusps[i], 360) < span) return i + 1;
+  }
+  return 12;
+}
+
 export function daysSince(y: number, m: number, d: number): number {
   return Math.floor(julianDay(y, m, d, 0, 0) - 2451545);
 }
@@ -60,6 +95,7 @@ export function astrologyCalc(
   hour: number, min: number,
   lng?: number,
   lat?: number,
+  houseSystem: HouseSystem = 'whole-sign',
 ): AstrologyResult {
   const jd = julianDay(y, m, d, hour, min);
   const date = new Date((jd - 2440587.5) * 86400000);
@@ -124,11 +160,38 @@ export function astrologyCalc(
       else if (Math.abs(a - 180) < orb) aspects.push([planets[i][0], planets[j][0], '冲', '对峙之象']);
     }
   }
-  // ─── 补齐层：整宫制十二宫 + 行星详情 + 逆行 + 庙旺 ───
-  const houseSystem = 'whole-sign' as const;
-  // 整宫制：1 宫头 = 上升点黄经，每宫 30°
-  const houses = SIGNS.map((_, i) => {
-    const cusp = mod(asc + i * 30, 360);
+  // ─── 十二宫（三种宫位制）+ 行星详情 + 逆行 + 庙旺 ───
+  // 2026-09-26 修正：原实现标称「整宫制」实为**等宫制**（宫头自上升度数起每 30°），标签与算法不符。
+  //   整宫制 whole-sign：1 宫 = 上升所落**整个星座**（宫头取该星座 0°），古典占星（希腊化/中世纪）本位
+  //   等宫制 equal    ：1 宫头 = 上升度数，每 30°（现代简法，即原实现行为）
+  //   普拉西度 placidus：宫头按半日弧三分迭代求解（现代西方主流；对拍 Swiss Ephemeris ≤0.001°）
+  let effectiveSystem: HouseSystem = houseSystem;
+  let cusps: number[];
+  if (houseSystem === 'placidus') {
+    const c11 = placidusCusp(RAMC, eps, phi, 1 / 3, 0);
+    const c12 = placidusCusp(RAMC, eps, phi, 2 / 3, 0);
+    const c2 = placidusCusp(RAMC, eps, phi, 2 / 3, 60);
+    const c3 = placidusCusp(RAMC, eps, phi, 1 / 3, 120);
+    if (c11 === null || c12 === null || c2 === null || c3 === null) {
+      effectiveSystem = 'whole-sign';                       // 极区不收敛 → 回退（在结果中如实标注）
+      cusps = [];
+    } else {
+      cusps = new Array(12).fill(0);
+      cusps[0] = asc; cusps[9] = mc;
+      cusps[10] = c11; cusps[11] = c12; cusps[1] = c2; cusps[2] = c3;
+      // 对宫：3←9(IC) 4←10 5←11 6←0(Desc) 7←1 8←2（11/12/2/3 为迭代解，其余取对宫）
+      for (const i of [3, 4, 5, 6, 7, 8]) cusps[i] = mod(cusps[(i + 6) % 12] + 180, 360);
+    }
+  } else {
+    cusps = [];
+  }
+  if (effectiveSystem === 'whole-sign') {
+    const signStart = Math.floor(mod(asc, 360) / 30) * 30;    // 上升所在星座的 0°
+    cusps = SIGNS.map((_, i) => mod(signStart + i * 30, 360));
+  } else if (effectiveSystem === 'equal') {
+    cusps = SIGNS.map((_, i) => mod(asc + i * 30, 360));
+  }
+  const houses = cusps.map((cusp, i) => {
     const sign = signOf(cusp);
     return { num: i + 1, cusp, sign, ruler: SIGN_RULER[sign], rulerLng: 0 };
   });
@@ -147,7 +210,7 @@ export function astrologyCalc(
       } catch { /* 忽略 */ }
     }
     const sign = signOf(lng);
-    const house = Math.floor(mod(lng - asc, 360) / 30) + 1;
+    const house = houseOfLongitude(lng, cusps);
     return {
       cn, sym, color,
       lng, sign, degree: degreeIn(lng),
@@ -165,5 +228,5 @@ export function astrologyCalc(
   const sunSign = signOf(sun);
   const moonSign = signOf(moon);
 
-  return { planets, asc, sun, moon, lstHours, aspects, mc, epsilon: eps / DEG, houseSystem, houses, planetDetails, ascSign, sunSign, moonSign };
+  return { planets, asc, sun, moon, lstHours, aspects, mc, epsilon: eps / DEG, houseSystem: effectiveSystem, cusps, houses, planetDetails, ascSign, sunSign, moonSign };
 }
