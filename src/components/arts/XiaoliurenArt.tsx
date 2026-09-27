@@ -75,6 +75,7 @@ export function XiaoliurenResult({ data }: { data: XiaoliurenResult }) {
       </ResultCard>
       <ResultCard title="推演轨迹">
         <p>{r.a} 月 {r.b} 日 {r.c} 时占：大安起月 → 月{r.a}落 <strong>{XLR_ORDER[step1]}</strong> → 日{r.b}落 <strong>{XLR_ORDER[step2]}</strong> → 时{r.c}终落 <strong className={jiClass}>{r.name}</strong>。</p>
+        <p className="mt-2"><strong>天地人三宫：</strong>天宫（月落·起因）{r.gong.tian.name} → 地宫（日落·经过）{r.gong.di.name} → 人宫（时落·结果）<strong className={jiClass}>{r.gong.ren.name}</strong>。占断以人宫为主，三宫合参。</p>
         <p className="mt-2"><strong>断语参详：</strong>{xlrAdvice(r)}</p>
       </ResultCard>
     </>

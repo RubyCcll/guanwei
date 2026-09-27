@@ -173,6 +173,8 @@ export interface LiurenResult {
 export interface XiaoliurenResult {
   a: number; b: number; c: number;
   idx: number; name: string;
+  /** 天地人三宫（天=月落·起因，地=日落·经过，人=时落·结果=占断所取） */
+  gong: { tian: { idx: number; name: string }; di: { idx: number; name: string }; ren: { idx: number; name: string } };
   detail: { ji: string; wx: string; num: string; dir: string; poem: string; text: string };
 }
 

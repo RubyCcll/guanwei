@@ -81,10 +81,15 @@ export default function DemoPage() {
       };
       case 'astrology': return () => astrologyCalc(birth.y, birth.m, birth.d, hour, 0, birth.location.lng, birth.location.lat);
       case 'qimen': return () => qimenCalc({ datetime: new Date(y, m - 1, d, hour, 0) });
-      case 'meihua': return () => meihuaCalc({ mode: 'number', n1, n2, n3, now: new Date() } as any);
+      case 'meihua': return () => meihuaCalc({ mode: 'num', n1, n2, n3, now: new Date() } as any);
       case 'liuyao': return () => liuyaoCalc(undefined, { y, m, d });
       case 'liuren': return () => liurenCalc(new Date(y, m - 1, d, hour, 0));
-      case 'xiaoliuren': return () => xiaoliurenCalc('time', m, d, Math.floor(((hour % 24) + 1) % 24 / 2), n1, n2, n3);
+      case 'xiaoliuren': {
+        // 小六壬掌诀依「农历月、日 + 时辰」（面板同口径）：此处须先把表单日期转农历，
+        // 否则等于用公历月日掐指（2026-09 修：默认档案即会得出不同掌诀）
+        const xl = Solar.fromYmd(y, m, d).getLunar();
+        return () => xiaoliurenCalc('time', Math.abs(xl.getMonth()), xl.getDay(), Math.floor(((hour % 24) + 1) % 24 / 2), n1, n2, n3);
+      }
       case 'tarot': return () => {
         const spread = allTarotSpreads().find((x: any) => x.id === 'three') || allTarotSpreads()[0];
         return { spread, cards: tarotDraw(3) };
