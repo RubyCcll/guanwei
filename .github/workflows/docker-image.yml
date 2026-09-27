@@ -76,7 +76,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # buildx 需从 Docker Hub 拉 buildkit 镜像，偶发网络重置（实测 connection reset by peer）
+      # → 失败不终止，下一步重试一次；仍失败则如实失败
       - name: Set up Docker Buildx
+        id: buildx
+        continue-on-error: true
+        uses: docker/setup-buildx-action@v3
+
+      - name: Retry Docker Buildx（拉取失败时）
+        if: steps.buildx.outcome == 'failure'
         uses: docker/setup-buildx-action@v3
 
       - name: Build backend image (load into daemon)
