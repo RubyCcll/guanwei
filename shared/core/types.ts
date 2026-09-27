@@ -175,7 +175,7 @@ export interface XiaoliurenResult {
   idx: number; name: string;
   /** 天地人三宫（天=月落·起因，地=日落·经过，人=时落·结果=占断所取） */
   gong: { tian: { idx: number; name: string }; di: { idx: number; name: string }; ren: { idx: number; name: string } };
-  detail: { ji: string; wx: string; num: string; dir: string; poem: string; text: string };
+  detail: { ji: string; wx: string; color: string; dir: string; shen: string; num: string; poem: string; text: string };
 }
 
 // 星盘输出

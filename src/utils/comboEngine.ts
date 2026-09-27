@@ -1,134 +1,124 @@
+// 中西合参（塔罗 + 东术交叉印证）：五术一律调用 shared/core 的**单一引擎**。
+//
+// 2026-09-26 重写：原实现是各术的「演示级」近似，含多处基础性错误——
+//   · 小六壬：拿**公历**月+日+钟点直接取模（既非「大安起月·月上起日·日上起时」，也没转农历/时辰序），
+//     且自带了第二份六宫表（留连方位、小吉五行、空亡主数均与引擎表不同 → 两处数据互相矛盾）
+//   · 六爻：用时间戳做伪随机，卦名表只覆盖 16 组，其余落到 `卦象<key>`；无纳甲/六亲/世应
+//   · 梅花：把「时钟时/分」当卦序取卦（`(hour+1)%8` 还会取到下标 8 → undefined），无动爻/互变/体用
+//   · 六壬：把十二天将当地盘（地盘本为十二地支），未用月将/贵人/四课三传
+//   · 奇门：按钟点取八门九星，未走定局/值符值使
+// 现全部改为调用 shared/core 引擎（前后端同一算法副本），并去掉重复数据表。
+import { Solar } from 'lunar-typescript';
+import { meihuaCalc } from '@core/engine/meihua';
+import { liuyaoCalc } from '@core/engine/liuyao';
+import { liurenCalc } from '@core/engine/liuren';
+import { qimenCalc } from '@core/engine/qimen';
+import { xiaoliurenCalc } from '@core/engine/xiaoliuren';
+import { ZHI } from '@core/data/ganzhi';
 import type { ComboResult } from '@/types';
 
-export function generateXiaoLiuRen(): ComboResult {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
-  const hour = now.getHours();
-  
-  const liuShen = ['大安', '留连', '速喜', '赤口', '小吉', '空亡'];
-  const index = (month + day + hour) % 6;
-  const result = liuShen[index];
-  
-  const meanings: Record<string, string> = {
-    '大安': '身不动时，五行属木，颜色青色，方位东方。临青龙，谋事主一、五、七。有静止、心安、吉祥之含义。',
-    '留连': '卒未归时，五行属水，颜色黑色，方位北方。临玄武，谋事主二、八、十。有暗昧不明、延迟、纠缠之含义。',
-    '速喜': '人即至时，五行属火，颜色红色，方位南方。临朱雀，谋事主三、六、九。有快速、喜庆、吉利之含义。',
-    '赤口': '官事凶时，五行属金，颜色白色，方位西方。临白虎，谋事主四、七、十。有不吉、惊恐、凶险之含义。',
-    '小吉': '人来喜时，五行属木，颜色绿色，方位东方。临六合，谋事主一、五、七。有和合、吉利之含义。',
-    '空亡': '音信稀时，五行属土，颜色黄色，方位中央。临勾陈，谋事主三、六、九。有虚无、失望、不利之含义。',
+/** 当下 → 农历月/日 + 0-based 时辰序（0=子 … 11=亥），与九术输入口径一致 */
+function lunarParts(now: Date) {
+  const y = now.getFullYear(), m = now.getMonth() + 1, d = now.getDate(), h = now.getHours();
+  const lunar = Solar.fromYmdHms(y, m, d, h, now.getMinutes(), 0).getLunar();
+  const raw = lunar.getMonth();
+  return {
+    y, m, d, h,
+    lunarMonth: Math.abs(raw) + (raw < 0 && lunar.getDay() > 15 ? 1 : 0),   // 闰月按「作本月」惯例
+    lunarDay: lunar.getDay(),
+    hourIndex: Math.floor(((h + 1) % 24) / 2),
+    lunarText: (raw < 0 ? '闰' : '') + Math.abs(raw) + '月' + lunar.getDay() + '日' + ZHI[Math.floor(((h + 1) % 24) / 2)] + '时',
   };
-  
+}
+
+export function generateXiaoLiuRen(now: Date = new Date()): ComboResult {
+  const t = lunarParts(now);
+  const r = xiaoliurenCalc('time', t.lunarMonth, t.lunarDay, t.hourIndex);
+  const { tian, di, ren } = r.gong;
   return {
     method: 'xiaoliuren',
     methodName: '小六壬',
-    result,
-    detail: meanings[result],
-    relationToTarot: `小六壬${result}与当前塔罗能量呼应。${result === '大安' || result === '速喜' || result === '小吉' ? '东方术数显示吉兆，与塔罗中正位牌的能量共振，宜积极行动。' : '术数提示需要谨慎，与塔罗中逆位牌的警示一致，建议内观等待时机。'}`,
+    result: r.name,
+    detail: `以当下农历${t.lunarText}掐指：天宫（月落·起因）${tian.name} → 地宫（日落·经过）${di.name} → `
+      + `人宫（时落·结果）${ren.name}。占断取人宫${ren.name}：${r.detail.ji}，五行属${r.detail.wx}，方位${r.detail.dir}，主数${r.detail.num}。${r.detail.text}`,
+    relationToTarot: ren.name === '大安' || ren.name === '速喜' || ren.name === '小吉'
+      ? `人宫${ren.name}为吉占，与塔罗中顺位牌的能量相合，宜顺势推进。`
+      : `人宫${ren.name}主滞碍，与塔罗中逆位牌的警示呼应，宜缓图、先安己而后谋事。`,
   };
 }
 
-export function generateLiuYao(): ComboResult {
-  const now = new Date();
-  const yaoResults = [];
-  
-  // 简化六爻起卦：基于时间随机生成六爻
-  const seed = now.getTime();
-  for (let i = 0; i < 6; i++) {
-    const rand = (seed + i * 997) % 100;
-    if (rand < 25) yaoResults.push('老阴');
-    else if (rand < 50) yaoResults.push('少阴');
-    else if (rand < 75) yaoResults.push('少阳');
-    else yaoResults.push('老阳');
-  }
-  
-  const hexagramNames: Record<string, string> = {
-    '666666': '坤为地', '666665': '地雷复', '666656': '地水师', '666655': '地泽临',
-    '665666': '雷地豫', '665665': '震为雷', '665656': '雷水解', '665655': '雷泽归妹',
-    '656666': '水地比', '656665': '水雷屯', '656656': '坎为水', '656655': '水泽节',
-    '655666': '泽地萃', '655665': '泽雷随', '655656': '泽水困', '655655': '兑为泽',
-  };
-  
-  const guaKey = yaoResults.map(y => y.includes('阴') ? '6' : '5').join('');
-  const hexagram = hexagramNames[guaKey] || `卦象${guaKey}`;
-  
+export function generateLiuYao(now: Date = new Date()): ComboResult {
+  const t = lunarParts(now);
+  const r = liuyaoCalc(Math.random, { y: t.y, m: t.m, d: t.d });
+  const najia = r.najia;
+  const dong = r.dongYao.map(i => ['初', '二', '三', '四', '五', '上'][i - 1] + '爻').join('、');
+  const lines = najia
+    ? najia.lines.map((l, i) => ['初', '二', '三', '四', '五', '上'][i] + l.gz + l.liuqin + (l.isShi ? '·世' : l.isYing ? '·应' : '')).join('，')
+    : '';
   return {
     method: 'liuyao',
     methodName: '六爻',
-    result: hexagram,
-    detail: `六爻卦象：${yaoResults.join('、')}。${hexagram}卦象揭示了当前事态的深层变化。动爻显示变化的契机，静爻代表稳定的基础。`,
-    relationToTarot: '六爻卦象与塔罗牌阵形成阴阳互补。卦中的动爻对应塔罗中的转变牌，提示变革的时机已经成熟。',
+    result: dong ? `${r.benGua.name} 之 ${r.bianGua.name}` : r.benGua.name,
+    detail: `三枚铜钱摇卦得${r.benGua.name}${dong ? `，动爻${dong} → 变卦${r.bianGua.name}` : '（静卦无动爻）'}。`
+      + (najia ? `卦属${najia.gong}，世爻在${['初', '二', '三', '四', '五', '上'][najia.shiPos - 1]}位（${najia.shiLiQin}），应爻在${['初', '二', '三', '四', '五', '上'][najia.yingPos - 1]}位，`
+        + `起卦日${najia.dayGZ}、月建${najia.monthZhi}，旬空${najia.xunKong.join('')}、月破${najia.yuePo.join('') || '无'}。${lines}。` : ''),
+    relationToTarot: dong
+      ? '卦有动爻，事在变化之中——与塔罗牌阵中的转变牌位相呼应，宜就其变而图之。'
+      : '此为静卦，事势未动——与塔罗中稳定牌位相应，宜守成待时。',
   };
 }
 
-export function generateMeiHua(): ComboResult {
-  const now = new Date();
-  const hour = now.getHours();
-  const minute = now.getMinutes();
-  
-  const shangGua = (hour + 1) % 8;
-  const xiaGua = (minute + 1) % 8;
-  
-  const trigrams = ['乾', '兑', '离', '震', '巽', '坎', '艮', '坤'];
-  const shang = trigrams[shangGua];
-  const xia = trigrams[xiaGua];
-  
-  const hexagramName = `${shang}${xia}`;
-  
+export function generateMeiHua(now: Date = new Date()): ComboResult {
+  const t = lunarParts(now);
+  const r = meihuaCalc({ mode: 'time', now });
   return {
     method: 'meihua',
     methodName: '梅花易数',
-    result: hexagramName,
-    detail: `以当前时间${hour}时${minute}分起卦，得上卦${shang}、下卦${xia}，合成${hexagramName}卦。体用之分揭示了主客关系，卦气旺衰指示时机吉凶。`,
-    relationToTarot: '梅花易数的体用关系与塔罗牌阵的主牌-辅牌结构相呼应。体卦代表问卜者自身状态，用卦对应塔罗中代表外部环境的牌位。',
+    result: r.bianGua ? `${r.benGua.name} 之 ${r.bianGua.name}` : r.benGua.name,
+    detail: `以农历${t.lunarText}起卦（年支数+月+日定上卦，加时辰定下卦与动爻）：本卦${r.benGua.name}、互卦${r.huGua?.name || '—'}、`
+      + `变卦${r.bianGua?.name || '—'}，动第${r.move}爻。体卦${r.tiWx}、用卦${r.yongWx}（${r.shengke}）。${r.wangShuaiNote || ''}`,
+    relationToTarot: r.shengke.includes('吉')
+      ? `梅花体用为「${r.shengke}」，事有助力——与塔罗中正位牌相合，宜顺势推进。`
+      : r.shengke.includes('凶')
+        ? `梅花体用为「${r.shengke}」，事有阻力——与塔罗中逆位牌呼应，宜缓图慎行。`
+        : `体用比和，成败在人为——与塔罗牌阵的中性牌位相应，事在己心。`,
   };
 }
 
-export function generateDaLiuRen(): ComboResult {
-  const now = new Date();
-  const hour = now.getHours();
-  
-  const tianPan = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-  const diPan = ['贵', '蛇', '雀', '合', '勾', '龙', '空', '虎', '常', '玄', '阴', '后'];
-  
-  const tian = tianPan[hour % 12];
-  const di = diPan[hour % 12];
-  
+export function generateDaLiuRen(now: Date = new Date()): ComboResult {
+  const r = liurenCalc(now);
   return {
     method: 'daliuren',
     methodName: '大六壬',
-    result: `${tian}加${di}`,
-    detail: `大六壬以当前时辰起课，天盘${tian}加地盘${di}。四课三传揭示了事件的来龙去脉，三传（初传、中传、末传）指示事态发展的始、中、终三个阶段。`,
-    relationToTarot: '大六壬的四课三传与塔罗牌阵的时间线（过去-现在-未来）形成精密对应。初传对应过去牌位，末传呼应未来趋势。',
+    result: `${r.jiang}将加${r.hourGZ[1]}时 · ${r.keti}`,
+    detail: `月将${r.jiang}（${r.jqName}后）、贵人${r.guiRen}；日起${r.dayGZ}、时起${r.hourGZ}。`
+      + `四课：${r.ke1}／${r.ke2}／${r.ke3}／${r.ke4}；三传（初·中·末）：${r.chuan1} → ${r.chuan2} → ${r.chuan3}（${r.chuanMethod}）。`,
+    relationToTarot: '三传应事之初、中、末：初传对过去牌位，中传对当下牌位，末传对未来趋势——与塔罗时间线互为表里。',
   };
 }
 
-export function generateQiMen(): ComboResult {
-  const now = new Date();
-  const hour = now.getHours();
-  
-  const baMen = ['休门', '生门', '伤门', '杜门', '景门', '死门', '惊门', '开门'];
-  const jiuXing = ['天蓬', '天任', '天冲', '天辅', '天英', '天芮', '天柱', '天心'];
-  
-  const men = baMen[hour % 8];
-  const xing = jiuXing[hour % 9];
-  
+export function generateQiMen(now: Date = new Date()): ComboResult {
+  const r = qimenCalc({ datetime: now });
+  const yi = r.tianYi?.[r.zfPalace] || r.pan[r.zfPalace]?.yi || '';
   return {
     method: 'qimen',
     methodName: '奇门遁甲',
-    result: `${xing}星临${men}`,
-    detail: `奇门遁甲以当前时辰定局，${xing}星临${men}。奇门盘中的天盘九星、地盘八卦、人盘八门与神盘八神共同构建了时空模型，揭示了趋吉避凶的最佳时机与方位。`,
-    relationToTarot: '奇门遁甲的时空模型为塔罗解读增添了方位与时间的维度。塔罗揭示心灵的图景，奇门提供行动的指南，两者结合形成完整的决策系统。',
+    result: `${r.yin ? '阴' : '阳'}遁${r.ju}局 · ${r.zfStar}临${r.zsMen}`,
+    detail: `${r.jqName}后起局，${r.yin ? '阴' : '阳'}遁${r.ju}局；日${r.dayGZ}、时${r.hourGZ}，旬首${r.xunshouName}。`
+      + `值符${r.zfStar}落${r.zfPalace}宫${yi ? '（天盘' + yi + '）' : ''}，值使${r.zsMen}门落${r.zsPalace}宫。`
+      + `八门九星布宫：${Object.entries(r.pan).filter(([k]) => k !== '5').map(([k, v]) => `${k}宫${v.men}门·${v.star}`).join('，')}。`,
+    relationToTarot: '奇门提供方位与时机，塔罗揭示心境与人事——前者为行动指南，后者为内在图景，合参可定进退之机。',
   };
 }
 
-export function generateComboResult(method: string): ComboResult {
+/** 按术别取合参结果（now 可注入，便于测试与回放） */
+export function generateComboResult(method: string, now: Date = new Date()): ComboResult {
   switch (method) {
-    case 'xiaoliuren': return generateXiaoLiuRen();
-    case 'liuyao': return generateLiuYao();
-    case 'meihua': return generateMeiHua();
-    case 'daliuren': return generateDaLiuRen();
-    case 'qimen': return generateQiMen();
-    default: return generateXiaoLiuRen();
+    case 'xiaoliuren': return generateXiaoLiuRen(now);
+    case 'liuyao': return generateLiuYao(now);
+    case 'meihua': return generateMeiHua(now);
+    case 'daliuren': return generateDaLiuRen(now);
+    case 'qimen': return generateQiMen(now);
+    default: return generateXiaoLiuRen(now);
   }
 }

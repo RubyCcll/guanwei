@@ -626,7 +626,7 @@ export const tarotCards: TarotCard[] = [
     },
     imageSymbols: ['天使加百列', '号角', '从棺材中复活的人们', '雪山', '海洋', '旗帜', '光'],
     story: '天使加百列吹响了金色的号角，嘹亮的声音传遍天地。人们从棺材中站起来，双臂张开，仰望天空——他们复活了。不是身体的复活，而是灵魂的觉醒。他们的脸上没有恐惧，只有释然和喜悦。背景中，巍峨的雪山在阳光下闪耀，大海平静无波。这是最后的审判——不是神在审判你，是你在审判你自己。而审判的结果永远是：原谅。因为每一个经历，每一个「错误」，都是灵魂选择的课程。现在，课程结束了。是时候毕业了。',
-    astrology: { zodiac: '天蝎座', planet: '冥王星', element: '水' },
+    astrology: { zodiac: '天蝎座', planet: '冥王星', element: '火' },
     kabbalah: { path: 31, sephirah: 'Hod-Malkuth' },
     alchemy: { stage: '红化', element: '火' },
     numerology: { number: 20, meaning: '觉醒，重生，神圣的召唤，业力清算' },

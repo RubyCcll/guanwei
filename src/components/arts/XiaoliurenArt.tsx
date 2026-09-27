@@ -67,8 +67,10 @@ export function XiaoliurenResult({ data }: { data: XiaoliurenResult }) {
         cells={[
           { k: '吉凶', v: r.detail.ji, big: true, cool: r.detail.ji === '吉', hot: r.detail.ji !== '吉' },
           { k: '五行', v: r.detail.wx },
-          { k: '主数', v: r.detail.num },
           { k: '方位', v: r.detail.dir },
+          { k: '颜色', v: r.detail.color },
+          { k: '六神', v: r.detail.shen },
+          { k: '主数', v: r.detail.num },
         ]}>
         <p><span className={jiClass}><strong>{r.name}</strong></span> · {r.detail.poem}</p>
         <p>「{r.detail.text}」</p>

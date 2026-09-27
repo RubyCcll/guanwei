@@ -128,7 +128,7 @@ function xiaoliurenBrief(r: XiaoliurenResult): string {
   const g = r.gong
     ? '【天地人三宫】天宫（月落·起因）' + r.gong.tian.name + ' → 地宫（日落·经过）' + r.gong.di.name + ' → 人宫（时落·结果）' + r.gong.ren.name + '。'
     : '';
-  return g + '【掌诀·占断所取】' + r.name + '（' + r.detail.ji + '，五行属' + r.detail.wx + '，主数' + r.detail.num + '，方位' + r.detail.dir + '）。' + r.detail.text;
+  return g + '【掌诀·占断所取】' + r.name + '（' + r.detail.ji + '，五行属' + r.detail.wx + '，' + r.detail.color + '，方位' + r.detail.dir + '，临' + r.detail.shen + '，主数' + r.detail.num + '）。' + r.detail.text;
 }
 
 function tarotBrief(r: any): string {
