@@ -68,6 +68,11 @@ export function AstrologyPanel({ onDivine }: PanelProps) {
 const HS_NAME: Record<string, string> = { 'whole-sign': '整宫制', equal: '等宫制', placidus: '普拉西度' };
 /** 黄经 → 星座序号 */
 const signOfLng = (lng: number) => Math.floor(mod(lng, 360) / 30);
+/** 宫头取值：旧记录（2026-09-26 前）无 cusps 字段 → 按其宫位制标签回退，避免标签与布局不符 */
+const cuspOf = (r: { cusps?: number[]; houseSystem?: string; asc: number }, i: number) =>
+  r.cusps?.[i] ?? (r.houseSystem === 'whole-sign'
+    ? mod(Math.floor(r.asc / 30) * 30 + i * 30, 360)     // 整宫制：上升所落星座 0° 起
+    : mod(r.asc + i * 30, 360));                          // 等宫制/普拉西度缺数据时：上升度数起
 
 export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCalc> }) {
   const r = data;
@@ -87,6 +92,7 @@ export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCal
       {p.dignity.note && <div className="tiny muted">{p.dignity.note}</div>}
     </div>
   ));
+  const cuspAt = (i: number) => cuspOf(r, i);
   const houseRows = (r.houses || []).map(h => (
     <div className="result-cell" key={h.num}>
       <div className="k">{h.num}宫</div>
@@ -129,7 +135,7 @@ export function AstrologyResult({ data }: { data: ReturnType<typeof astrologyCal
         <p className="tiny muted">{HS_NAME[r.houseSystem] ?? r.houseSystem}推演，行星入宫主人生领域之侧重；仅供怡情。</p>
       </ResultCard>
       <ResultCard title={`十二宫位（${HS_NAME[r.houseSystem] ?? r.houseSystem}）`}>
-        <p>{HOUSES.map((hname, i) => <span key={hname}><strong>{hname}</strong>·{ZODIAC[mod(signOfLng(r.cusps?.[i] ?? r.asc + i * 30), 12)][0]}　</span>)}</p>
+        <p>{HOUSES.map((hname, i) => <span key={hname}><strong>{hname}</strong>·{ZODIAC[mod(signOfLng(cuspAt(i)), 12)][0]}　</span>)}</p>
         <div className="result-grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', marginTop: '.7rem' }}>
           {houseRows}
         </div>

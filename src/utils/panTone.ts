@@ -122,7 +122,7 @@ export function baziTone(r: BaziResult): { headline: string; overview: string; c
   // 3. 性格倾向：统计天干+藏干十神权重，取前 2-3
   const w: Record<string, number> = {};
   r.shishen.forEach(s => { w[s.name] = (w[s.name] || 0) + 1; });
-  r.canggan.forEach(cg => cg.gans.forEach(g => { w[g.shishen] = (w[g.shishen] || 0) + (g.qi === '本气' ? 2 : 1); }));
+  (r.canggan ?? []).forEach(cg => cg.gans.forEach(g => { w[g.shishen] = (w[g.shishen] || 0) + (g.qi === '本气' ? 2 : 1); }));
   const picked = TENDENCY_POOL
     .map(pool => ({ pool, weight: pool.keys.reduce((s, k) => s + (w[k] || 0), 0) }))
     .filter(x => x.weight > 0)
@@ -149,7 +149,7 @@ export function baziTone(r: BaziResult): { headline: string; overview: string; c
 
   // 5. 行运指引：当前大运 × 喜忌（十神类名对齐）
   const now = new Date().getFullYear();
-  const cur = r.dayun.find(d => now >= d.startYear && now <= d.endYear);
+  const cur = (r.dayun ?? []).find(d => now >= d.startYear && now <= d.endYear);
   let dayunNote = '';
   if (cur) {
     const cls = tenClass(cur.ganShishen);

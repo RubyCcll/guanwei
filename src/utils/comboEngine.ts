@@ -13,7 +13,7 @@ import { meihuaCalc } from '@core/engine/meihua';
 import { liuyaoCalc } from '@core/engine/liuyao';
 import { liurenCalc } from '@core/engine/liuren';
 import { qimenCalc } from '@core/engine/qimen';
-import { xiaoliurenCalc } from '@core/engine/xiaoliuren';
+import { xiaoliurenCalc, xiaoliurenGong } from '@core/engine/xiaoliuren';
 import { ZHI } from '@core/data/ganzhi';
 import type { ComboResult } from '@/types';
 
@@ -34,7 +34,7 @@ function lunarParts(now: Date) {
 export function generateXiaoLiuRen(now: Date = new Date()): ComboResult {
   const t = lunarParts(now);
   const r = xiaoliurenCalc('time', t.lunarMonth, t.lunarDay, t.hourIndex);
-  const { tian, di, ren } = r.gong;
+  const { tian, di, ren } = r.gong ?? xiaoliurenGong(r.a, r.b, r.c).gong;
   return {
     method: 'xiaoliuren',
     methodName: '小六壬',

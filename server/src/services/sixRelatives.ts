@@ -26,8 +26,8 @@ function baziRelatives(r: BaziResult, gender: '男' | '女'): string {
       if (s.name === target) return ['年干', '月干', '日干', '时干'][i] + s.gan + '（' + target + '）';
     }
     // 地支藏干
-    for (let i = 0; i < r.canggan.length; i++) {
-      const cg = r.canggan[i];
+    for (let i = 0; i < (r.canggan ?? []).length; i++) {
+      const cg = (r.canggan ?? [])[i];
       const hit = cg.gans.find(g => g.shishen === target);
       if (hit) return ['年支', '月支', '日支', '时支'][i] + cg.zhi + '藏' + hit.gan + '（' + target + '）';
     }

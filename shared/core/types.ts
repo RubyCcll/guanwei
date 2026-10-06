@@ -42,14 +42,14 @@ export interface BaziResult {
   correctedHourIndex: number;
   trueSolar?: TrueSolarTime;
   // ─── 补齐层（2026-08-20 排盘要点调研）───
-  canggan: { zhi: string; gans: { gan: string; wx: string; shishen: string; qi: '本气' | '中气' | '余气' }[] }[];  // 四支藏干 + 十神
+  canggan?: { zhi: string; gans: { gan: string; wx: string; shishen: string; qi: '本气' | '中气' | '余气' }[] }[];  // 四支藏干 + 十神
   wxWeighted: Record<string, number>;          // 含藏干权重的五行分
   strengthDetail: { score: number; ling: number; gen: number; shi: number; reasons: string[] };  // 旺衰拆解
   yongshen: { wx: string; shishen: string; xi: string[]; ji: string[]; tiaohou: string; reason: string };  // 用神/喜忌
-  dayun: { gz: string; ganShishen: string; zhiShishen: string; startAge: number; startYear: number; endYear: number; forward: boolean }[];  // 大运
-  qiYun: { startAge: number; startMonth: number; detail: string };  // 起运
-  liunian: { year: number; gz: string; ganShishen: string; zhiShishen: string };  // 流年（当前年）
-  shensha: { name: string; zhi: string; type: '吉' | '平' | '凶' }[];  // 神煞
+  dayun?: { gz: string; ganShishen: string; zhiShishen: string; startAge: number; startYear: number; endYear: number; forward: boolean }[];  // 大运（2026-08 前入库的旧记录无此字段）
+  qiYun?: { startAge: number; startMonth: number; detail: string };  // 起运
+  liunian?: { year: number; gz: string; ganShishen: string; zhiShishen: string };  // 流年（当前年；旧记录无）
+  shensha?: { name: string; zhi: string; type: '吉' | '平' | '凶' }[];  // 神煞（旧记录无）
   taiyuan: string;   // 胎元
   minggong: string;  // 命宫
   shengong: string;  // 身宫
@@ -173,8 +173,9 @@ export interface LiurenResult {
 export interface XiaoliurenResult {
   a: number; b: number; c: number;
   idx: number; name: string;
-  /** 天地人三宫（天=月落·起因，地=日落·经过，人=时落·结果=占断所取） */
-  gong: { tian: { idx: number; name: string }; di: { idx: number; name: string }; ren: { idx: number; name: string } };
+  /** 天地人三宫（天=月落·起因，地=日落·经过，人=时落·结果=占断所取）；
+   *  2026-09-26 前入库的历史记录无此字段 → 用 xiaoliurenGong(a,b,c) 复算 */
+  gong?: { tian: { idx: number; name: string }; di: { idx: number; name: string }; ren: { idx: number; name: string } };
   detail: { ji: string; wx: string; color: string; dir: string; shen: string; num: string; poem: string; text: string };
 }
 

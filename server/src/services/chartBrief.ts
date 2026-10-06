@@ -1,6 +1,7 @@
 // 盘面摘要生成：九术排盘结果 → 结构化中文事实（AI 注入用）
 // 目的：① 比全量 JSON 更利于模型逐字引用 ② 减少输入 token ③ 事实边界清晰（摘要是「可引用域」）
 import type { BaziResult, ZiweiResult, AstrologyResult, QimenResult, MeihuaResult, LiuyaoResult, LiurenResult, XiaoliurenResult } from '../../../shared/core/types';
+import { xiaoliurenGong } from '../../../shared/core/engine/xiaoliuren.js';
 
 const DIZHI = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
 
@@ -26,12 +27,12 @@ export function chartBrief(artId: string, resultRaw: unknown): string {
 function baziBrief(r: BaziResult): string {
   const L: string[] = ['【四柱】' + r.yearGZ + ' 年 / ' + r.monthGZ + ' 月 / ' + r.dayGZ + ' 日（日主' + r.dayGan + r.dayGanWx + '）/ ' + r.hourGZ + ' 时。年命纳音' + r.nayin + '。'];
   L.push('【天干十神】' + r.shishen.map((s, i) => ['年干', '月干', '日干', '时干'][i] + s.gan + s.name).join('、') + '。');
-  L.push('【地支藏干】' + r.canggan.map(c => c.zhi + '藏' + c.gans.map(g => g.gan + g.shishen + '(' + g.qi + ')').join('、')).join('；') + '。');
+  if (r.canggan?.length) L.push('【地支藏干】' + r.canggan.map(c => c.zhi + '藏' + c.gans.map(g => g.gan + g.shishen + '(' + g.qi + ')').join('、')).join('；') + '。');
   L.push('【五行分布】' + ['木', '火', '土', '金', '水'].map(k => k + (r.wxWeighted[k] || 0)).join(' ') + '（含藏干加权）。');
   L.push('【旺衰】日主' + r.strength + '（旺衰分 ' + r.strengthDetail.score + '：' + r.strengthDetail.reasons.join('；') + '）。');
   L.push('【用神喜忌】主用神' + r.yongshen.wx + '（' + r.yongshen.shishen + '）；喜' + r.yongshen.xi.join('、') + '；忌' + r.yongshen.ji.join('、') + '；调候：' + r.yongshen.tiaohou + '。');
-  if (r.dayun?.length) L.push('【大运】' + r.qiYun.detail + '；' + r.dayun.map(d => d.gz + '（' + d.startAge + '岁，' + d.startYear + '-' + d.endYear + '，' + d.ganShishen + '）').join('、') + '。');
-  L.push('【流年】' + r.liunian.year + '年 ' + r.liunian.gz + '（' + r.liunian.ganShishen + '，支藏' + r.liunian.zhiShishen + '）。');
+  if (r.dayun?.length) L.push('【大运】' + (r.qiYun?.detail ?? '') + '；' + r.dayun.map(d => d.gz + '（' + d.startAge + '岁，' + d.startYear + '-' + d.endYear + '，' + d.ganShishen + '）').join('、') + '。');
+  if (r.liunian) L.push('【流年】' + r.liunian.year + '年 ' + r.liunian.gz + '（' + r.liunian.ganShishen + '，支藏' + r.liunian.zhiShishen + '）。');
   if (r.shensha?.length) L.push('【神煞】' + r.shensha.map(s => s.name + s.zhi + '(' + s.type + ')').join('、') + '。');
   L.push('【格局】' + r.geju.name + '——' + r.geju.basis + '。');
   L.push('【胎元命身】胎元' + r.taiyuan + '，命宫' + r.minggong + '，身宫' + r.shengong + '。');
@@ -125,10 +126,11 @@ function liurenBrief(r: LiurenResult): string {
 }
 
 function xiaoliurenBrief(r: XiaoliurenResult): string {
-  const g = r.gong
-    ? '【天地人三宫】天宫（月落·起因）' + r.gong.tian.name + ' → 地宫（日落·经过）' + r.gong.di.name + ' → 人宫（时落·结果）' + r.gong.ren.name + '。'
-    : '';
-  return g + '【掌诀·占断所取】' + r.name + '（' + r.detail.ji + '，五行属' + r.detail.wx + '，' + r.detail.color + '，方位' + r.detail.dir + '，临' + r.detail.shen + '，主数' + r.detail.num + '）。' + r.detail.text;
+  // 历史记录（2026-09-26 前）无 gong/color/shen → 三宫由 a/b/c 复算，缺字段不注入
+  const gong = r.gong ?? xiaoliurenGong(r.a, r.b, r.c).gong;
+  const g = '【天地人三宫】天宫（月落·起因）' + gong.tian.name + ' → 地宫（日落·经过）' + gong.di.name + ' → 人宫（时落·结果）' + gong.ren.name + '。';
+  const extra = [r.detail.color, r.detail.shen ? '临' + r.detail.shen : ''].filter(Boolean).join('，');
+  return g + '【掌诀·占断所取】' + r.name + '（' + r.detail.ji + '，五行属' + r.detail.wx + '，' + (extra ? extra + '，' : '') + '方位' + r.detail.dir + '，主数' + r.detail.num + '）。' + r.detail.text;
 }
 
 function tarotBrief(r: any): string {

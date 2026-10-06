@@ -1,6 +1,7 @@
 // 小六壬：掐指占时面板 + 掌诀/推演轨迹渲染
 import { useState } from 'react';
 import { XLR_ORDER } from '@core/data/xiaoliuren';
+import { xiaoliurenGong } from '@core/engine/xiaoliuren';
 import { mod } from '@core/data/ganzhi';
 import type { XiaoliurenResult } from '@core/types';
 import { ResultCard } from '@/components/ResultCard';
@@ -61,6 +62,8 @@ export function XiaoliurenResult({ data }: { data: XiaoliurenResult }) {
   const jiClass = r.detail.ji === '吉' ? 'tag-cool' : 'tag-hot';
   const step1 = mod(r.a - 1, 6);
   const step2 = mod(step1 + (r.b - 1), 6);
+  // 历史记录（2026-09-26 前入库）不含 gong / color / shen：三宫由 a/b/c 复算，缺字段留白
+  const gong = r.gong ?? xiaoliurenGong(r.a, r.b, r.c).gong;
   return (
     <>
       <ResultCard title={`掌诀 · ${r.name}`}
@@ -68,8 +71,8 @@ export function XiaoliurenResult({ data }: { data: XiaoliurenResult }) {
           { k: '吉凶', v: r.detail.ji, big: true, cool: r.detail.ji === '吉', hot: r.detail.ji !== '吉' },
           { k: '五行', v: r.detail.wx },
           { k: '方位', v: r.detail.dir },
-          { k: '颜色', v: r.detail.color },
-          { k: '六神', v: r.detail.shen },
+          { k: '颜色', v: r.detail.color || '—' },
+          { k: '六神', v: r.detail.shen || '—' },
           { k: '主数', v: r.detail.num },
         ]}>
         <p><span className={jiClass}><strong>{r.name}</strong></span> · {r.detail.poem}</p>
@@ -77,7 +80,7 @@ export function XiaoliurenResult({ data }: { data: XiaoliurenResult }) {
       </ResultCard>
       <ResultCard title="推演轨迹">
         <p>{r.a} 月 {r.b} 日 {r.c} 时占：大安起月 → 月{r.a}落 <strong>{XLR_ORDER[step1]}</strong> → 日{r.b}落 <strong>{XLR_ORDER[step2]}</strong> → 时{r.c}终落 <strong className={jiClass}>{r.name}</strong>。</p>
-        <p className="mt-2"><strong>天地人三宫：</strong>天宫（月落·起因）{r.gong.tian.name} → 地宫（日落·经过）{r.gong.di.name} → 人宫（时落·结果）<strong className={jiClass}>{r.gong.ren.name}</strong>。占断以人宫为主，三宫合参。</p>
+        <p className="mt-2"><strong>天地人三宫：</strong>天宫（月落·起因）{gong.tian.name} → 地宫（日落·经过）{gong.di.name} → 人宫（时落·结果）<strong className={jiClass}>{gong.ren.name}</strong>。占断以人宫为主，三宫合参。</p>
         <p className="mt-2"><strong>断语参详：</strong>{xlrAdvice(r)}</p>
       </ResultCard>
     </>

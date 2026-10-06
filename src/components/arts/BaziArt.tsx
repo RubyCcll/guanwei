@@ -215,7 +215,7 @@ export function BaziResult({ data }: { data: BaziResult }) {
       <ResultCard title="地支藏干 · 人元十神">
         <p className="tiny muted" style={{ marginBottom: 'var(--sp-2)' }}>地支非孤物，各藏人元（本气/中气/余气），十神之根尽在此中——用神是否有根、财官是否有力，皆观藏干。</p>
         <div style={{ display: 'flex', gap: '.8rem', flexWrap: 'wrap', marginTop: 'var(--sp-2)' }}>
-          {r.canggan.map((cg, i) => (
+          {(r.canggan ?? []).map((cg, i) => (
             <div key={i} style={{ border: '1px solid var(--line-soft)', borderRadius: 'var(--r-sm)', padding: '.6rem .8rem', background: 'rgba(251,249,243,.5)' }}>
               <div className="tiny muted" style={{ letterSpacing: '.2em' }}>{['年支', '月支', '日支', '时支'][i]} · {cg.zhi}</div>
               <div style={{ marginTop: '.3rem', fontSize: '.95rem' }}>
@@ -235,9 +235,9 @@ export function BaziResult({ data }: { data: BaziResult }) {
         <p className="tiny muted" style={{ marginTop: '.4rem' }}>用神为全局取运之枢：行运逢喜则顺，逢忌则慎——此为 AI 解读「就盘论命」的核心依据。</p>
       </ResultCard>
       <ResultCard title="大运 · 流年">
-        <p><strong>{r.qiYun.detail}</strong>，大运{ r.dayun[0]?.forward ? '顺行' : '逆行' }（阳男阴女顺、阴男阳女逆）。</p>
+        <p><strong>{r.qiYun?.detail ?? '起运'}</strong>，大运{ (r.dayun ?? [])[0]?.forward ? '顺行' : '逆行' }（阳男阴女顺、阴男阳女逆）。</p>
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginTop: 'var(--sp-2)' }}>
-          {r.dayun.slice(0, 8).map((d, i) => (
+          {(r.dayun ?? []).slice(0, 8).map((d, i) => (
             <div key={i} style={{ border: '1px solid var(--line-soft)', borderRadius: 'var(--r-sm)', padding: '.5rem .7rem', minWidth: '5.6rem', background: 'rgba(251,249,243,.5)' }}>
               <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>{d.gz}</div>
               <div className="tiny" style={{ color: WX_COLOR[WUXING[d.gz[0]]] }}>{d.ganShishen}</div>
@@ -245,11 +245,13 @@ export function BaziResult({ data }: { data: BaziResult }) {
             </div>
           ))}
         </div>
-        <p style={{ marginTop: '.8rem' }}>流年：<strong>{r.liunian.year} 年 {r.liunian.gz}</strong>（{r.liunian.ganShishen} · 支藏{r.liunian.zhiShishen}）——大运为十年之纲，流年为一年之目，合参断吉凶。</p>
+        <p style={{ marginTop: '.8rem' }}>{r.liunian
+          ? <>流年：<strong>{r.liunian.year} 年 {r.liunian.gz}</strong>（{r.liunian.ganShishen} · 支藏{r.liunian.zhiShishen}）——大运为十年之纲，流年为一年之目，合参断吉凶。</>
+          : <span className="tiny muted">此记录入库较早，未含大运／流年／神煞等补齐字段——重新起占即可见完整盘面。</span>}</p>
       </ResultCard>
       <ResultCard title="神煞 · 胎元命身">
-        <p>神煞：{r.shensha.length > 0
-          ? r.shensha.map((s, i) => <span key={i}><strong className={s.type === '吉' ? 'tag-cool' : s.type === '凶' ? 'tag-hot' : ''}>{s.name}</strong>（{s.zhi}）　</span>)
+        <p>神煞：{(r.shensha ?? []).length > 0
+          ? (r.shensha ?? []).map((s, i) => <span key={i}><strong className={s.type === '吉' ? 'tag-cool' : s.type === '凶' ? 'tag-hot' : ''}>{s.name}</strong>（{s.zhi}）　</span>)
           : '四柱无显著神煞，以五行生克为主论之。'}</p>
         <p style={{ marginTop: '.6rem' }}>胎元 <strong>{r.taiyuan}</strong>（受气之始）　命宫 <strong>{r.minggong}</strong>（立命之基）　身宫 <strong>{r.shengong}</strong>（行事之依）</p>
         <p className="tiny muted" style={{ marginTop: '.4rem' }}>神煞取日干与年支/日支三合：贵人禄神主助力，羊刃主刚猛，驿马主奔波，桃花主情缘。</p>
