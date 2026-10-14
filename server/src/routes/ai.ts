@@ -5,7 +5,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { buildMessages, buildReportMessages, buildStep1Messages, buildStep2Messages } from '../services/promptBuilder.js';
 import { chatOnce, chatStream, activeProvider, providerStatus, lastFinishReason } from '../services/llmProvider.js';
-import { getDivination, attachReport, markAiFailed } from '../services/divineStore.js';
+import { getDivination, attachReport, markAiFailed, createDivination } from '../services/divineStore.js';
+import { chartCalc, CHART_ARTS } from '../../../shared/core/engine/chart.js';
+import { getUser, createUserIfAbsent, newToken } from '../services/usersStore.js';
+import { allowAnonymous } from '../services/auth.js';
 import { verifyRelatives, fixFamilyRelatives } from '../services/relativesCheck.js';
 import { orchestrateZiweiDeep } from '../services/orchestrator.js';
 import { MINGPAN_TEMPLATE } from '../services/promptBuilder.js';
@@ -26,6 +29,74 @@ function canReadChart(req: any, recUsername: string): boolean {
   return !!authed && authed === recUsername;
 }
 
+const MINGPAN_ARTS = ['bazi', 'ziwei', 'astrology'];
+
+/**
+ * 解析「本次解读所依据的盘面」。
+ *
+ * 为什么需要它（2026-10-14 修）：解读原先强制要求 divineId 对应的记录存在，于是
+ * 「本地存档记录 / 换过数据库（如 Docker 卷）/ 记录被清理」时点解读必然 400 DIVINE_NOT_FOUND，
+ * 用户侧表现为「AI 不能用了」（实际是记录对不上，与 Key 无关）。
+ *
+ * 安全取舍：仍**不接受**前端直传 resultRaw（v6 的加固保留），改为让调用方带上**原始起占参数**
+ * `inputs`，由服务端用同一引擎重算（引擎是唯一事实来源）并补建一条记录，报告照常落库。
+ * 归属沿用 divine 路由口径：有 token 以 token 用户为准；无 token 仅限本机/内网（allowAnonymous）。
+ */
+function resolveChartForInterpret(req: any, body: any): { ok: true; recId: string; resultRaw: unknown; recProfile: unknown; artId: string; kind: 'mingpan' | 'zhanwen'; owner: string } | { ok: false; status: number; error: string; message: string } {
+  const artId = String(body?.artId || '');
+  const divineId = body?.divineId ? String(body.divineId) : '';
+  const authed = authedUsername(req);
+
+  if (divineId) {
+    const rec = getDivination(divineId);
+    if (rec) {
+      if (!canReadChart(req, rec.username)) return { ok: false, status: 403, error: 'FORBIDDEN', message: '无权解读该记录' };
+      return { ok: true, recId: rec.id, resultRaw: rec.resultRaw, recProfile: rec.profile, artId, kind: MINGPAN_ARTS.includes(artId) ? 'mingpan' : 'zhanwen', owner: rec.username };
+    }
+    // 记录不存在 → 落到下方「重算」分支（若有 inputs 且有权限）
+  }
+
+  // 无 token 时仅允许可信来源（与起占同一口径）
+  if (!authed && !allowAnonymous(req)) {
+    return { ok: false, status: 401, error: 'AUTH_REQUIRED', message: '请先入馆（登录）后再解读（公网访问不开放匿名解读）' };
+  }
+  const owner = authed || String(body?.username || '').trim();
+  if (!owner) return { ok: false, status: 401, error: 'UNAUTHORIZED', message: '请先入馆（登录）再解读' };
+  const inputs = body?.inputs;
+  if (!inputs || typeof inputs !== 'object') {
+    return divineId
+      ? { ok: false, status: 400, error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，且未带上起占参数——请重新起占后再解读' }
+      : { ok: false, status: 400, error: 'DIVINE_REQUIRED', message: '请先起占（divineId 缺失）' };
+  }
+  if (!CHART_ARTS.includes(artId as any)) return { ok: false, status: 400, error: '术无此名', message: '术无此名' };
+
+  // 正式账号（有密语）必须持本人 token，避免自报他人用户名耗其额度
+  let user: any = null;
+  try { user = getUser(owner); } catch { /* 读失败按占位处理 */ }
+  if (!authed && user && user.passHash) {
+    return { ok: false, status: 401, error: 'AUTH_REQUIRED', message: '请先入馆（登录）后再解读' };
+  }
+  if (!user) createUserIfAbsent({ username: owner, token: newToken(), tokenExpires: Date.now() + 30 * 24 * 3600 * 1000 });
+
+  let resultRaw: unknown;
+  try {
+    resultRaw = chartCalc(artId, inputs);
+  } catch (e: any) {
+    return { ok: false, status: 400, error: 'DIVINE_FAILED', message: e?.message?.includes('术无此名') ? '术无此名' : '起占参数不合法，无法重算盘面' };
+  }
+  const kind: 'mingpan' | 'zhanwen' = MINGPAN_ARTS.includes(artId) ? 'mingpan' : 'zhanwen';
+  const rec = createDivination({
+    username: owner, artId, kind,
+    question: body?.question || undefined,
+    profileId: String(body?.profileId || 'main'),
+    profile: body?.profile || undefined,
+    params: inputs,
+    resultRaw,
+  });
+  console.log(`[ai] 记录缺失，已按起占参数服务端重算并补建记录: ${rec.id}（${artId} · ${owner}）`);
+  return { ok: true, recId: rec.id, resultRaw, recProfile: body?.profile, artId, kind, owner };
+}
+
 // 非流式：token 优先归属
 const router = Router();
 
@@ -39,18 +110,12 @@ router.post('/interpret', async (req, res) => {
   const { artId, question, divineId, semantic, profile, report, fit, username, orchestrate } = req.body;
   if (!artId) return res.status(400).json({ error: '缺少必要参数' });
   try {
-    // 从 SQLite 读排盘数据（v6：不再信任前端直传 resultRaw）
-    let resultRaw: unknown = null;
-    let recProfile: unknown = undefined;
-    if (divineId) {
-      const rec = getDivination(divineId);
-      if (!rec) return res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
-      if (!canReadChart(req, rec.username)) return res.status(403).json({ error: 'FORBIDDEN' });
-      resultRaw = rec.resultRaw;
-      recProfile = rec.profile;
-    } else {
-      return res.status(400).json({ error: 'DIVINE_REQUIRED', message: '请先起占（divineId 缺失）' });
-    }
+    // 盘面来源：既有记录优先；记录缺失时按调用方带来的起占参数服务端重算并补建（见 resolveChartForInterpret）
+    const chart = resolveChartForInterpret(req, req.body);
+    if (!chart.ok) return res.status(chart.status).json({ error: chart.error, message: chart.message });
+    const resultRaw: unknown = chart.resultRaw;
+    const recProfile: unknown = chart.recProfile;
+    const recId = chart.recId;
     // 真·多 Agent 编排模式（v1：紫微深度三步链式）
     if (orchestrate === 'ziwei-deep' && artId === 'ziwei') {
       const { full } = await orchestrateZiweiDeep(resultRaw, question, MINGPAN_TEMPLATE, (recProfile as any)?.gender || (profile as any)?.gender);
@@ -62,17 +127,17 @@ router.post('/interpret', async (req, res) => {
         if (fixed2) parsed2.family = fixed2 as any;
       }
       if (parsed2.quality === 'ok') {
-        attachReport(divineId, parsed2, 'ok');
+        attachReport(recId, parsed2, 'ok');
         return res.json({ provider: activeProvider()?.id, report: parsed2, sections: parseSections(full), orchestrated: true });
       }
-      markAiFailed(divineId, 'ziwei', 'mingpan', '编排质量未达标', full.slice(0, 4000));
+      markAiFailed(recId, 'ziwei', 'mingpan', '编排质量未达标', full.slice(0, 4000));
       return res.status(502).json({ error: 'AI_REPORT_INVALID', message: 'AI 输出不符合报告结构，请重试' });
     }
     // 统一报告模式：两步管线（Step1 盘面解析 → Step2 深度报告），Step1 失败降级单步
     const kind = ['bazi', 'ziwei', 'astrology'].includes(artId) ? 'mingpan' : 'zhanwen';
     let step1Text = '';
     try {
-      step1Text = await getStep1(divineId, artId, question || '', resultRaw, recProfile);
+      step1Text = await getStep1(recId, artId, question || '', resultRaw, recProfile);
     } catch (e1: any) {
       console.warn('[ai] Step1 盘面解析失败，降级为单步模式:', e1.message);
     }
@@ -92,11 +157,11 @@ router.post('/interpret', async (req, res) => {
     }
     if (parsed.quality === 'poor') {
       console.error('[ai] 输出不符合报告结构，拒绝返回（不入库）');
-      markAiFailed(divineId, artId, kind, '质量评分未达标', text.slice(0, 4000));
+      markAiFailed(recId, artId, kind, '质量评分未达标', text.slice(0, 4000));
       return res.status(502).json({ error: 'AI_REPORT_INVALID', message: 'AI 输出不符合报告结构，请重试' });
     }
     // 达标 → 报告回写存储（quality=ok 才入库）
-    attachReport(divineId, parsed, 'ok');
+    attachReport(recId, parsed, 'ok');
     res.json({ provider: activeProvider()?.id, report: parsed, sections: parseSections(text) });
   } catch (e: any) {
     if (e.message === 'AI_UNCONFIGURED') {
@@ -120,28 +185,26 @@ router.post('/interpret/stream', async (req, res) => {
     res.status(400).json({ error: '缺少必要参数' });
     return;
   }
-  // 从 SQLite 读排盘数据（v6：divineId 必填）
-  const rec = divineId ? getDivination(divineId) : null;
-  if (!rec) {
-    res.status(400).json({ error: 'DIVINE_NOT_FOUND', message: '起占记录不存在，请重新起占' });
+  // 盘面来源：既有记录优先；记录缺失时按起占参数服务端重算并补建（2026-10-14 修「记录对不上即无法解读」）
+  const chart = resolveChartForInterpret(req, req.body);
+  if (!chart.ok) {
+    res.status(chart.status).json({ error: chart.error, message: chart.message });
     return;
   }
-  if (!canReadChart(req, rec.username)) {
-    res.status(403).json({ error: 'FORBIDDEN' });
-    return;
-  }
-  const resultRaw = rec.resultRaw;
+  const recId = chart.recId;
+  const recProfile = chart.recProfile;
+  const resultRaw = chart.resultRaw;
   try {
     // 两步管线（2026-08-20）：Step1 盘面解析（内部非流式，短输出，带缓存）→ Step2 深度报告（流式）
     let step1Text = '';
     try {
-      step1Text = await getStep1(divineId, artId, question || '', resultRaw, rec.profile);
+      step1Text = await getStep1(recId, artId, question || '', resultRaw, recProfile);
     } catch (e1: any) {
       console.warn('[ai] Step1 盘面解析失败，降级为单步模式:', e1.message);
       step1Text = '';
     }
     const messages = step1Text
-      ? buildStep2Messages(artId, question || '', resultRaw, step1Text, rec.profile, semantic, fit)
+      ? buildStep2Messages(artId, question || '', resultRaw, step1Text, recProfile, semantic, fit)
       : buildReportMessages(artId, question || '', resultRaw, profile, semantic, fit);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -168,10 +231,10 @@ router.post('/interpret/stream', async (req, res) => {
     const truncated = lastFinishReason === 'length';
     // 质量门槛：ok → 报告回写入库；poor/截断 → 不入库 + fail 留档
     if (rep.quality === 'ok' && !truncated) {
-      attachReport(divineId, rep, 'ok');
+      attachReport(recId, rep, 'ok');
     } else {
       const reason = truncated ? '输出截断（finish_reason=length）' : '质量评分未达标';
-      markAiFailed(divineId, artId, kind2, reason, full.slice(0, 4000));
+      markAiFailed(recId, artId, kind2, reason, full.slice(0, 4000));
     }
     res.write(`data: ${JSON.stringify({ type: 'done', report: rep, sections, full, truncated, quality: rep.quality || 'ok' })}\n\n`);
     res.end();

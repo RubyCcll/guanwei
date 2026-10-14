@@ -171,7 +171,7 @@ export interface AIReport {
  * onEvent: 收到字符块；onDone: 结束（含结构化 sections）；onError: 失败
  */
 export async function aiInterpretStream(
-  params: { artId: string; divineId?: string; question?: string; resultRaw?: unknown; semantic?: unknown; profile?: unknown; reportMode?: boolean; fit?: { suitable: boolean | 'partial'; reason: string; suggestion: string } },
+  params: { artId: string; divineId?: string; question?: string; resultRaw?: unknown; semantic?: unknown; profile?: unknown; reportMode?: boolean; inputs?: unknown; fit?: { suitable: boolean | 'partial'; reason: string; suggestion: string } },
   onEvent: (char: string) => void,
   onDone: (sections: AIInterpretSection[], full: string, report?: AIReport, truncated?: boolean, quality?: 'ok' | 'poor') => void,
   onError?: (code: string, message: string) => void,
