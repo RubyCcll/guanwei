@@ -130,7 +130,21 @@ describe('AI 解读：记录对不上时按起占参数服务端重算', () => {
     expect(res.status).toBe(401);
   });
 
-  it('⑦ 起占参数不合法 → 400（不会写入坏记录）', async () => {
+  it('⑦ 占位账号 + 旧凭据失效（本机来源、带 username 与起占参数）→ 仍可重算解读', async () => {
+    // 复现用户实况：浏览器里存的 claimToken 已与库中不符（换过数据库），
+    // 但来源是本机（可信）且带了 username → 服务端按占位账号口径重算，不再卡在 401/400
+    const ph = '占位旧凭据' + Date.now().toString().slice(-4);
+    const d = await post(BASE + '/api/divine', { username: ph, artId: 'liuyao', inputs: {} });
+    expect(d.status).toBe(200);                        // 本机匿名起占（占位账号）
+    const res = await post(BASE + '/api/ai/interpret/stream', {
+      artId: 'liuyao', divineId: 'd_旧库里的记录', username: ph, inputs: {}, question: '旧凭据还能解读吗',
+    }, { 'X-Guanwei-Token': 'f'.repeat(64) });         // 无效凭据（与库中不符）
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(400);
+    expect(divinationCount(ph)).toBe(2);               // 起占 1 条 + 重算补建 1 条
+  });
+
+  it('⑧ 起占参数不合法 → 400（不会写入坏记录）', async () => {
     const before = divinationCount(name);
     const res = await post(BASE + '/api/ai/interpret', {
       artId: 'xiaoliuren', divineId: 'd_不存在', username: name, inputs: { mode: 'bogus' },

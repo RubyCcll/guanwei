@@ -18,7 +18,7 @@ export function useAIInterpret() {
   // 请求代际号：起占/重置会使在途请求失效，防止旧档案的流式结果回流覆盖新状态
   const reqIdRef = useRef(0);
 
-  const interpret = useCallback(async (params: { artId: string; divineId?: string; question?: string; resultRaw?: unknown; semantic?: unknown; profile?: unknown; reportMode?: boolean; inputs?: unknown; fit?: { suitable: boolean | 'partial'; reason: string; suggestion: string } }) => {
+  const interpret = useCallback(async (params: { artId: string; divineId?: string; username?: string; question?: string; resultRaw?: unknown; semantic?: unknown; profile?: unknown; reportMode?: boolean; inputs?: unknown; fit?: { suitable: boolean | 'partial'; reason: string; suggestion: string } }) => {
     const myId = ++reqIdRef.current;
     abortRef.current = false;
     doneRef.current = false;

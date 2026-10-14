@@ -244,7 +244,7 @@ export default function ModulePage() {
                       style={{ marginTop: 'var(--sp-2)', fontSize: '.9rem', padding: '.5rem 1.4rem' }}
                       onClick={() => {
                       console.log('[观微 AI] 点击召请，artId=', art.id, 'question=', questionRef.current, 'API_BASE=', (window as any).__API_BASE__ || '/api');
-                      ai.interpret({ artId: art.id, divineId: divineIdRef.current || undefined, question: questionRef.current || undefined, profile: profileRef.current || undefined, reportMode: true, inputs: inputsRef.current || undefined, fit: fit || undefined });
+                      ai.interpret({ artId: art.id, divineId: divineIdRef.current || undefined, username: currentUser()?.username, question: questionRef.current || undefined, profile: profileRef.current || undefined, reportMode: true, inputs: inputsRef.current || undefined, fit: fit || undefined });
                     }}
                     >
                       召 AI 成报告
